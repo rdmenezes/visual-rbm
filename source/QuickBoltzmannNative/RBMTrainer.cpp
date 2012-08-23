@@ -643,7 +643,7 @@ void RBMTrainer::Train()
 {
 	assert(IsInitialized == true);
 
-	if(TrainingIndex % MinibatchSize)
+	if(TrainingIndex % MinibatchSize == 0)
 	{
 		// shuffle the minibatch order now
 		shuffle(VisibleTextures, Minibatches);
