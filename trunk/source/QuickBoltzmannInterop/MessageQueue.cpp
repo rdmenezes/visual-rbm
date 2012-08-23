@@ -11,20 +11,40 @@ namespace QuickBoltzmann
 
 	MessageQueue::MessageQueue()
 	{
-		_message_queue = gcnew ConcurrentQueue<Message^>();
+		_message_queue = gcnew Queue();
 	}
 
 	void MessageQueue::Enqueue(Message^ in_message)
 	{
-		_message_queue->Enqueue(in_message);
+		System::Threading::Monitor::Enter(_message_queue);
+		try
+		{
+			_message_queue->Enqueue(in_message);
+		}
+		finally
+		{
+			System::Threading::Monitor::Exit(_message_queue);
+		}
 	}
 
 	Message^ MessageQueue::Dequeue()
 	{
-		Message^ result;
-		if(_message_queue->TryDequeue(result))
-			return result;
-		return nullptr;
+		Message^ result = nullptr;
+
+		System::Threading::Monitor::Enter(_message_queue);
+		try
+		{
+			if(_message_queue->Count > 0)
+			{
+				result = dynamic_cast<Message^>(_message_queue->Dequeue());
+			}
+		}
+		finally
+		{
+			System::Threading::Monitor::Exit(_message_queue);
+		}
+
+		return result;
 	}
 
 }

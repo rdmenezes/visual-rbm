@@ -241,6 +241,8 @@ namespace QuickBoltzmann
 	{
 		Message^ m = gcnew Message("GetVisible");
 		m["done"] = false;
+
+		
 		_message_queue->Enqueue(m);
 		while((bool)m["done"] == false)
 		{

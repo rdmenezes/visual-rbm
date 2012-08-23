@@ -41,12 +41,10 @@ namespace QuickBoltzmann
 	public ref class MessageQueue
 	{
 	public:
-	
-	
 		MessageQueue();
 		void Enqueue(QuickBoltzmann::Message^);
 		QuickBoltzmann::Message^ Dequeue();
 	private:
-		ConcurrentQueue<QuickBoltzmann::Message^>^ _message_queue;
+		Queue^ _message_queue;
 	};
 }
