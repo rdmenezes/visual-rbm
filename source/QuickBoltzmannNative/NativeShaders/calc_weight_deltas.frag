@@ -13,10 +13,8 @@ uniform sampler2DRect prev_weights;
 
 // training parameters
 uniform float momentum;
-uniform float learning_rate;
 
-uniform float l1_regularization;
-uniform float l2_regularization;
+
 
 uniform int minibatch_size;
 
@@ -48,7 +46,7 @@ void main()
 
 			delta += hj - hj_prime;
 		}
-		delta *=  learning_rate / float(minibatch_size);
+		delta /=  float(minibatch_size);
 	}
 	// visible bias
 	else if(j == 0)
@@ -60,8 +58,9 @@ void main()
 
 			delta += vi - vi_prime;
 		}
-		delta *= learning_rate / float(minibatch_size);
+		delta /= float(minibatch_size);
 	}
+	// regular weight
 	else
 	{
 		for(int k = 0; k  < minibatch_size; k++)
@@ -74,13 +73,7 @@ void main()
 
 			delta += vi * hj - vi_prime * hj_prime;
 		}
-		delta *= learning_rate / float(minibatch_size);
-		// L1 regularization
-		float l1 = l1_regularization * sign(texture2DRect(prev_weights, tex_coordinate).x);
-		// L2 regulrization
-		float l2 = l2_regularization * texture2DRect(prev_weights, tex_coordinate).x;
-
-		delta -= learning_rate * (l1 + l2);
+		delta /= float(minibatch_size);
 	}
 
 	delta = (1.0 - momentum) * delta + momentum * texture2DRect(prev_weight_deltas, tex_coordinate).x;

@@ -29,7 +29,7 @@ namespace VisualRBM
 
 		float sigmoid(float x)
 		{
-			return (float)((1.0 / (1 + Math.Exp(-x))));
+			return (float)((1.0 / (1 + Math.Exp(-3.0 * x))));
 		}
 
 		protected override void Drawing()

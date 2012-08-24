@@ -64,7 +64,7 @@ float CalcMeanAbsValue(float* buffer, int count)
 	float result;
 	_mm_store_ss(&result, M);
 
-	return std::max(result / float(count), 0.001f);
+	return std::max(result / float(count), 0.0000001f);
 }
 
 float CalcMeanAbsValueParallel(float* buffer, int count)
@@ -122,5 +122,5 @@ float CalcMeanAbsValueParallel(float* buffer, int count)
 		result += my_result;
 	}
 
-	return std::max(result / float(count), 0.001f);
+	return std::max(result / float(count), 0.0000001f);
 }

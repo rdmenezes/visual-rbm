@@ -140,6 +140,17 @@
       <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="NativeShaders\calc_binary_states.frag" />
+    <None Include="NativeShaders\calc_error_vector.frag" />
+    <None Include="NativeShaders\calc_free_energy.frag" />
+    <None Include="NativeShaders\calc_hidden_probabilities.frag" />
+    <None Include="NativeShaders\calc_new_weights.frag" />
+    <None Include="NativeShaders\calc_random.frag" />
+    <None Include="NativeShaders\calc_texture_coordinates.vert" />
+    <None Include="NativeShaders\calc_visible_reconstructions.frag" />
+    <None Include="NativeShaders\calc_weight_deltas.frag" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
