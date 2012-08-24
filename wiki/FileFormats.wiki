@@ -1,13 +1,51 @@
-#summary One-sentence summary of this page.
+There are three file formats that users of VisualRBM need to be aware of if they intend to train RBMs on their own data-sets and subsequently use said RBMs in other applications:
+ * VRBMParameters
+ * IDX
+ * RBM
 
-= Introduction =
+----
 
-Add your content here.
+= VRBMParameters =
 
+Training parameters can be saved to and loaded from disk as .vrbmparameters file.  It is a simple text format consisting of lines of the form {{{ parameter_name = VALUE }}}.
+The default parameters would be saved as:
+{{{
+learning_rate = 0.001
+momentum = 0.5
+l1_regularization = 0
+l2_regularization = 0.0001
+minibatch_size = 10
+epochs = 100
+}}}
+Custom parameter files can be saved and loaded at anytime so long as the trainer is not running.
 
-= Details =
+----
 
-Add your content here.  Format your content with:
-  * Text in *bold* or _italic_
-  * Headings, paragraphs, and lists
-  * Automatic links to other wiki pages
+= IDX =
+
+VisualRBM makes use of a slightly modified version of the IDX file-format as described at the bottom of [http://yann.lecun.com/exdb/mnist/ Yann LeCun's MNIST page].  
+
+|| uint16_t || Endianness || 
+|| uint8_t || Data Format ||
+|| uint8_t || Dimensions ||
+|| uint32_t || Number of Elements in Dimension 1 ||
+|| ... || ... ||
+|| uint32_t || Number of Elements in Dimension N ||
+|| Data || 
+
+If Endianness is 0xFFFF, then all subsequent multi-byte data will be read with the assumption it is Little-Endian.  This includes the uint32_t  'Number of Elements' fields.  If Endianness is 0x0000 (as described on Yan !LeCun's page), then all subsequent data will be read in as Big Endian.  All other aspects of the format are identical.
+
+The allowed data formats are:
+
+|| 0x08 || uint8_t ||
+|| 0x09 || int8_t ||
+|| 0x0B || int16_t ||
+|| 0x0C || int32_t ||
+|| 0x0D || single precision float ( 4 bytes) ||
+|| 0x0E || double precision float ( 8 bytes) ||
+
+VisualRBM will only accept IDX files whose data format is a single precision floating point.  It seemed like a better choice than guessing how to convert the source data to the floating point format needed for training.
+
+----
+
+= RBM =
