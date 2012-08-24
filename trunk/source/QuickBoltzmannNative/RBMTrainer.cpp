@@ -73,9 +73,6 @@ ENUM(CalcWeightDeltaParams)
 	PrevWeights,
 	MinibatchSize,
 	Momentum,
-	LearningRate,
-	L1Regularization,
-	L2Regularization,
 	Count
 ENDENUM
 
@@ -85,6 +82,9 @@ ENUM(CalcWeightParams)
 	WeightFactor,
 	VisibleFactor,
 	HiddenFactor,
+	LearningRate,
+	L1Regularization,
+	L2Regularization,
 	Count
 ENDENUM
 
@@ -127,10 +127,10 @@ RBMTrainer::RBMTrainer()
 	ValidationMinibatches = 0;
 
 	// init training parameters
-	LearningRate = 0.0001f;
+	LearningRate = 0.001f;
 	Momentum = 0.5f;
 	L1Regularization = 0.0f;
-	L2Regularization = 0.001f;
+	L2Regularization = 0.0001f;
 	TrainingIndex = 0;
 
 	Textures = new GLuint[Tex::Count];
@@ -166,9 +166,6 @@ RBMTrainer::RBMTrainer()
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::PrevWeights, "prev_weights", Texture);
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::MinibatchSize, "minibatch_size", Int);
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::Momentum, "momentum", Float);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::LearningRate, "learning_rate", Float);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::L1Regularization, "l1_regularization", Float);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::L2Regularization, "l2_regularization", Float);
 
 	program_calc_weights.Build("NativeShaders/calc_new_weights.frag", "new_weight");
 		program_calc_weights.RegisterParameter(CalcWeightParams::DeltaWeights, "delta_weights", Texture);
@@ -176,6 +173,9 @@ RBMTrainer::RBMTrainer()
 		program_calc_weights.RegisterParameter(CalcWeightParams::WeightFactor, "weight_factor", Float);
 		program_calc_weights.RegisterParameter(CalcWeightParams::HiddenFactor, "hidden_factor", Float);
 		program_calc_weights.RegisterParameter(CalcWeightParams::VisibleFactor, "visible_factor", Float);
+		program_calc_weights.RegisterParameter(CalcWeightParams::LearningRate, "learning_rate", Float);
+		program_calc_weights.RegisterParameter(CalcWeightParams::L1Regularization, "l1_regularization", Float);
+		program_calc_weights.RegisterParameter(CalcWeightParams::L2Regularization, "l2_regularization", Float);
 
 	program_calc_error.Build("NativeShaders/calc_error_vector.frag", "mean_square_error");
 		program_calc_error.RegisterParameter(CalcErrorParams::Visible, "visible", Texture);
@@ -650,7 +650,6 @@ void RBMTrainer::Train()
 	}
 
 	Textures[Tex::Visible] = VisibleTextures[TrainingIndex % MinibatchSize];
-	TrainingIndex++;
 
 	CalcRandom();
 	CalcHiddenProbs(Textures[Tex::Visible], Textures[Tex::HiddenProbs]);
@@ -659,6 +658,8 @@ void RBMTrainer::Train()
 	CalcHiddenProbs(Textures[Tex::VisiblePrime], Textures[Tex::HiddenPrime]);
 	CalcWeightDeltas();
 	CalcWeights();
+
+	TrainingIndex++;
 }
 
 float* GetTexture(int width, int height, GLuint texture)
@@ -810,23 +811,23 @@ void RBMTrainer::CalcWeightDeltas()
 	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::PrevWeights, Textures[Tex::Weights0]);
 	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::MinibatchSize, MinibatchSize);
 	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::Momentum, Momentum);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::LearningRate, LearningRate);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::L1Regularization, L1Regularization);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::L2Regularization, L2Regularization);
 
 	// run
 	program_calc_weight_deltas.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::DeltaWeights1]);
 
-	// read back the deltas so we can get statistics about them
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glReadPixels(1, 0, HiddenCount, 1, GL_RED, GL_FLOAT, LocalHBiasBuffer);
-	glReadPixels(0, 1, 1, VisibleCount, GL_RED, GL_FLOAT, LocalVBiasBuffer);
-	glReadPixels(1, 1, HiddenCount, VisibleCount, GL_RED, GL_FLOAT, LocalWeightBuffer);
+	// only update these factors every 50 training iterations
+	if(TrainingIndex % 50 == 0)
+	{
+		// read back the deltas so we can get statistics about them
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		glReadPixels(1, 0, HiddenCount, 1, GL_RED, GL_FLOAT, LocalHBiasBuffer);
+		glReadPixels(0, 1, 1, VisibleCount, GL_RED, GL_FLOAT, LocalVBiasBuffer);
+		glReadPixels(1, 1, HiddenCount, VisibleCount, GL_RED, GL_FLOAT, LocalWeightBuffer);
 
-	DeltaWFactor = CalcMeanAbsValueParallel(LocalWeightBuffer, HiddenCount * VisibleCount);
-	DeltaVFactor = CalcMeanAbsValue(LocalVBiasBuffer, VisibleCount);
-	DeltaHFactor = CalcMeanAbsValue(LocalHBiasBuffer, HiddenCount);
-
+		DeltaWFactor = CalcMeanAbsValueParallel(LocalWeightBuffer, HiddenCount * VisibleCount);
+		DeltaVFactor = CalcMeanAbsValue(LocalVBiasBuffer, VisibleCount);
+		DeltaHFactor = CalcMeanAbsValue(LocalHBiasBuffer, HiddenCount);
+	}
 	// swap texture handles 
 	swap(Textures[Tex::DeltaWeights0], Textures[Tex::DeltaWeights1]);
 }
@@ -837,23 +838,32 @@ void RBMTrainer::CalcWeights()
 	program_calc_weights.SetParam(CalcWeightParams::DeltaWeights, Textures[Tex::DeltaWeights0]);
 	program_calc_weights.SetParam(CalcWeightParams::PrevWeights, Textures[Tex::Weights0]);
 
-	program_calc_weights.SetParam(CalcWeightParams::WeightFactor, std::max(WFactor / DeltaWFactor, 0.1f));
-	program_calc_weights.SetParam(CalcWeightParams::VisibleFactor, std::max(VFactor / DeltaVFactor, 0.1f));
-	program_calc_weights.SetParam(CalcWeightParams::HiddenFactor, std::max(HFactor / DeltaHFactor, 0.1f));
+	program_calc_weights.SetParam(CalcWeightParams::WeightFactor, WFactor / DeltaWFactor);
+	program_calc_weights.SetParam(CalcWeightParams::VisibleFactor, VFactor / DeltaVFactor);
+	program_calc_weights.SetParam(CalcWeightParams::HiddenFactor, HFactor / DeltaHFactor);
 	
+	program_calc_weights.SetParam(CalcWeightParams::LearningRate, LearningRate);
+	program_calc_weights.SetParam(CalcWeightParams::L1Regularization, L1Regularization);
+	program_calc_weights.SetParam(CalcWeightParams::L2Regularization, L2Regularization);
 
 	// run
 	program_calc_weights.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::Weights1]);
 
-	// read  bacak weights so we can get statistics
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glReadPixels(1, 1, HiddenCount, VisibleCount, GL_RED, GL_FLOAT, LocalWeightBuffer);
-	glReadPixels(0, 1, 1, VisibleCount, GL_RED, GL_FLOAT, LocalVBiasBuffer);
-	glReadPixels(1, 0, HiddenCount, 1, GL_RED, GL_FLOAT, LocalHBiasBuffer);
+	// only update these factors every 50 training iterations
+	if(TrainingIndex % 50 == 0)
+	{
+		printf("WFactor: %f\n", WFactor);
+		printf("DeltaWFactor: %f\n", DeltaWFactor);
+		// read  bacak weights so we can get statistics
+		glReadBuffer(GL_COLOR_ATTACHMENT0);
+		glReadPixels(1, 1, HiddenCount, VisibleCount, GL_RED, GL_FLOAT, LocalWeightBuffer);
+		glReadPixels(0, 1, 1, VisibleCount, GL_RED, GL_FLOAT, LocalVBiasBuffer);
+		glReadPixels(1, 0, HiddenCount, 1, GL_RED, GL_FLOAT, LocalHBiasBuffer);
 
-	WFactor = CalcMeanAbsValueParallel(LocalWeightBuffer, HiddenCount * VisibleCount);
-	VFactor = CalcMeanAbsValue(LocalVBiasBuffer, VisibleCount);
-	HFactor = CalcMeanAbsValue(LocalHBiasBuffer, HiddenCount);
+		WFactor = CalcMeanAbsValueParallel(LocalWeightBuffer, HiddenCount * VisibleCount);
+		VFactor = CalcMeanAbsValue(LocalVBiasBuffer, VisibleCount);
+		HFactor = CalcMeanAbsValue(LocalHBiasBuffer, HiddenCount);
+	}
 
 	swap(Textures[Tex::Weights0], Textures[Tex::Weights1]);
 }

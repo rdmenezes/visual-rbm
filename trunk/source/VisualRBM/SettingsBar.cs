@@ -1083,12 +1083,12 @@ namespace VisualRBM
 		{
 			if (MessageBox.Show("Reset training parameters to defaults?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
 			{
-				RBMProcessor.LearningRate = 0.0001f;
+				RBMProcessor.LearningRate = 0.001f;
 				RBMProcessor.Momentum = 0.5f;
 				RBMProcessor.MinibatchSize = 10;
 				RBMProcessor.Epochs = 100;
 				RBMProcessor.L1Regularization = 0.0f;
-				RBMProcessor.L2Regularization = 0.001f;
+				RBMProcessor.L2Regularization = 0.0001f;
 
 				learningRateTextBox.Text = RBMProcessor.LearningRate.ToString();
 				momentumTextBox.Text = RBMProcessor.Momentum.ToString();
