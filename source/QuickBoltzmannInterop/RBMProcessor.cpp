@@ -293,7 +293,7 @@ namespace QuickBoltzmann
 		System::Runtime::InteropServices::Marshal::FreeHGlobal(p);
 
 		// verify it's the right data type
-		if(idx->GetDataType() != DataType::Single)
+		if(idx->GetDataType() != DataFormat::Single)
 		{
 			ShowError("Error: IDX training data must have type 'Float' (0x0D)");
 			_has_training_data = false;
@@ -342,7 +342,7 @@ namespace QuickBoltzmann
 			IDX* idx = new IDX(filename);
 			System::Runtime::InteropServices::Marshal::FreeHGlobal(p);
 
-			if(idx->GetDataType() != DataType::Single)
+			if(idx->GetDataType() != DataFormat::Single)
 			{
 				ShowError("Error: IDX validation data must have type 'Float' (0x0D)");
 				_has_validation_data = false;
