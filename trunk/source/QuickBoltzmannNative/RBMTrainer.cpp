@@ -498,7 +498,7 @@ void RBMTrainer::Initialize()
 				else
 				{
 					// finally, gaussian noise for the rest
-					val = (float)(NextGaussian() * 0.1);
+					val = (float)(NextGaussian() * 0.01);
 				}
 				// set val
 				initial_rbm_weights[i * (HiddenCount + 1) + j] = val;

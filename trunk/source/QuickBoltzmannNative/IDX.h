@@ -11,7 +11,7 @@ enum Endianness : uint16_t
 	BigEndian = 0x0000,
 	LittleEndian = 0xFFFF
 };
-enum DataType : uint8_t
+enum DataFormat : uint8_t
 {
 	UInt8 = 0x08,
 	SInt8 = 0x09,
@@ -32,7 +32,7 @@ private:
 	uint32_t _row_length;
 	Endianness _idx_endianness;
 	Endianness _system_endianness;
-	DataType _file_data;
+	DataFormat _file_data;
 
 	// bookkeeping data
 	FILE* _idx_file;
@@ -45,7 +45,7 @@ public:
 	uint32_t Rows() const {return _rows;};
 	void ReadRow(uint32_t row, void* dest);
 	inline uint32_t RowLength() const {return _row_length;};
-	inline DataType GetDataType() const {return _file_data;};
+	inline DataFormat GetDataType() const {return _file_data;};
 private:
 	
 	// binary reading methods

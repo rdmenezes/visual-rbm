@@ -30,7 +30,7 @@ IDX::IDX(const char* in_filename)
 	_idx_endianness = (Endianness)read<uint16_t>(_idx_file);
 	
 	// figure out our filetype
-	_file_data = (DataType)fgetc(_idx_file);
+	_file_data = (DataFormat)fgetc(_idx_file);
 	// read number of dimensions
 	uint8_t dimensions = read<uint8_t>(_idx_file);
 	// first number is always the number of rows
