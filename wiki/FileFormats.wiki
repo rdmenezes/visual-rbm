@@ -61,3 +61,5 @@ Trained networks can be imported to and exported from VisualRBM using a custom b
 || float`[`v`]` || Visible biases ||
 || float`[`h`]` || Hidden biases ||
 || float`[`v `*` h`]` || Weights stored in row major order, V rows containing H weights each ||
+
+If the visible units are sigmoidal, then the visible statistics arrays are omitted.
