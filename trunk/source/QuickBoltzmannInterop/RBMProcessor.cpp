@@ -22,6 +22,12 @@ namespace QuickBoltzmann
 	{
 		rbmtrainer = new RBMTrainer();
 
+		if(rbmtrainer->GetLastErrorCode() == RequiredOpenGLVersionUnsupported)
+		{
+			ShowError("VisualRBM requires a GPU that supports at least OpenGL 3.3.  ");
+			exit(1);
+		}
+
 		_message_queue = gcnew MessageQueue();
 
 		_currentState = RBMProcessorState::Ready;
@@ -184,6 +190,15 @@ namespace QuickBoltzmann
 
 					System::Runtime::InteropServices::Marshal::FreeHGlobal(p);
 
+					m["done"] = true;
+				}
+				else if(m->Type == "Shutdown")
+				{
+					if(rbmtrainer->GetIsInitialized() == true)
+					{
+						rbmtrainer->Reset();
+					}
+					delete rbmtrainer;
 					m["done"] = true;
 				}
 			}
@@ -359,7 +374,7 @@ namespace QuickBoltzmann
 			_has_validation_data = false;
 			switch(rbmtrainer->GetLastErrorCode())
 			{
-			case ValidationDataHasIncorrectVisibleInputs:
+			case ValidationDataHasIncorrectNumberOfVisibleInputs:
 				ShowError(String::Format("Training data is length {0} while Validation data is length {1}", VisibleUnits, idx->RowLength()));
 				break;
 			case BinaryDataOutsideZeroOne:
@@ -395,5 +410,16 @@ namespace QuickBoltzmann
 		}
 		hidden_units = rbmtrainer->GetHiddenCount();
 		linear_units = rbmtrainer->GetVisibleType() == Gaussian;
+	}
+
+	void RBMProcessor::Shutdown()
+	{
+		Message^ m = gcnew Message("Shutdown");
+		m["done"] = false;
+		_message_queue->Enqueue(m);
+		while((bool)m["done"] == false)
+		{
+			Thread::Sleep(16);
+		}
 	}
 }

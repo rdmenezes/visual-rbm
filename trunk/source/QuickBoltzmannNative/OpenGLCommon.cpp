@@ -12,24 +12,47 @@ GLuint VertexBufferObject;
 
 // has opengl context been created
 bool ContextCreated = false;
+int WindowId;
 
-void StartupOpenGL()
+
+bool StartupOpenGL()
 {
 	if(ContextCreated)
-		return;
+		return true;
 
 	// opengl initialization stuff
 	static char* name = "QuickBoltzmannNative";
 	static int32_t count = 1;
 
 	glutInit(&count, &name);
-	glutInitContextVersion(3, 3);
-	glutCreateWindow(name);
+	// creates context as new as it can by default
+	WindowId = glutCreateWindow(name);
 
-	// we have to set this to true with a 4.2 context or else we won't get all the functions we need
-	glewExperimental = TRUE;
-	glewInit();
+	int major, minor;
+	glGetIntegerv(GL_MAJOR_VERSION, &major);
+	glGetIntegerv(GL_MINOR_VERSION, &minor);
+
+	int version = major * 10 + minor;
+
+	if(version != 33)
+	{
+		glutDestroyWindow(WindowId);
+		if(version < 33)
+		{
+			return false;
+		}
+		else
+		{
+			// newer context, rollback to old
+			glutInitContextVersion(3, 3);
+			WindowId = glutCreateWindow(name);
+		}
+	}
+
 	ContextCreated = true;
+	// we have to set this to true or else we won't get all the functions we need
+	glewExperimental=TRUE;
+	glewInit();
 
 	// some bookkeeping
 	glPolygonMode(GL_FRONT, GL_FILL);
@@ -41,6 +64,15 @@ void StartupOpenGL()
 	glGenBuffers(1, &VertexBufferObject);
 
 	glEnableClientState(GL_VERTEX_ARRAY);
+}
+
+void ShutdownOpenGL()
+{
+	if(ContextCreated)
+	{
+		ContextCreated = false;
+		glutDestroyWindow(WindowId);
+	}
 }
 
 struct SourceBuffer
