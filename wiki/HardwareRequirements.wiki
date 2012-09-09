@@ -1,5 +1,4 @@
 VisualRBM makes use of some fancy stuff to ensure speedy RBM training.  As such, their are some minimum hardware requirements/recommendations:
 
- * A GPU that supports at least *OpenGL 3.3*.  This means an Nvidia card from the *GeForce 8* series or newer or an ATI/AMD card from the *Radeon HD* series or newer (according to Wikipedia)
- * A CPU with the SSE2 Instruction set.  That's basically every x86/x64 CPU out there at the moment.
+ * A GPU that supports at least *OpenGL 3.3*.  This means an Nvidia card from the *!GeForce 8* series or newer or an ATI/AMD card from the *Radeon HD* series or newer (according to Wikipedia)
  * A Multi-Core CPU.  Some of the big CPU math is parallelized with OpenMP, so a multi-core CPU will perform better (but isn't required).
