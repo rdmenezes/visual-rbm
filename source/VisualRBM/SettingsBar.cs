@@ -263,20 +263,21 @@ namespace VisualRBM
 			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Gaussian);
 
 			// setup all our tooltips
-			SetToolTip("Dataset to use for training RBM", this.labelInputData);
-			SetToolTip("Dataset to use to evaluate training progress", this.labelValidationData);
-			SetToolTip("Format of pixel data representation of training images", this.labelPixelFormat);
-			SetToolTip("Width of training image in pixels", this.labelWidth);
-			SetToolTip("Height of training image in pixels", this.labelHeight);
-			SetToolTip("Model type to train", this.labelModelType);
-			SetToolTip("Activation of function of visible units: Binary (Sigmoid) or Linear", this.labelVisibleType);
-			SetToolTip("Number of visible units in each training vector of loaded Input Data", this.labelVisibleUnits);
-			SetToolTip("Number of hidden units to use in trained model", this.labelHiddenUnits);
+			SetToolTip("Load training dataset", this.selectTrainingIdxButton);
+			SetToolTip("Load validation dataset", this.selectValidationIdxButton);
+			SetToolTip("Clear out the validation data", this.clearValidationDataButton);
+			SetToolTip("Format of pixel data representation of training images (for visualization)", this.pixelFormatComboBox);
+			SetToolTip("Width of training image in pixels (for visualization)", this.widthTextBox);
+			SetToolTip("Height of training image in pixels (for visualization)", this.heightTextBox);
+			SetToolTip("Model type to train", this.modelTypeComboBox);
+			SetToolTip("Activation of function of visible units: Binary (Sigmoid) or Linear", this.visibleTypeComboBox);
+			SetToolTip("Number of visible units in each training vector of loaded training data", this.visibleUnitsLabel);
+			SetToolTip("Number of hidden units to use in trained model", this.hiddenUnitsTextBox);
 			SetToolTip("Load saved parameters file", this.loadParametersButton);
 			SetToolTip("Save parameters to disk", this.saveParametersButton);
 			SetToolTip("Reset training parameters to default", this.resetParametersButton);
-			SetToolTip("Speed of learning; reasonable values are around 0.0001", this.learningRateTextBox);
-			SetToolTip("Ratio of previous weight deltas to current weight deltas contribute to current weights", this.momentumTextBox);
+			SetToolTip("Speed of learning; reasonable values are around 0.001 (less for Gaussian visible units)", this.learningRateTextBox);
+			SetToolTip("Smooths learning by having the previous weight update contribute to the current update by the given percent.  Valid values range from 0 to 1.", this.momentumTextBox);
 			SetToolTip("L1 Regularization punishes all weights equally.  Many weights will be near zero with this method while others will grow large.", this.l1TextBox);
 			SetToolTip("L2 Regularization more heavily punishes large weights, resulting in blurrier weights that can be harder to interpret", this.l2TextBox);
 			SetToolTip("Number of training to vectors to show the model for each weight update", this.minibatchSizeTextBox);
