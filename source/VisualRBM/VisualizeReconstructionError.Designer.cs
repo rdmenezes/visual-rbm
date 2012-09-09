@@ -86,7 +86,7 @@
 			this.chart1.Text = "chart1";
 			title1.Font = new System.Drawing.Font("Microsoft Sans Serif", 15.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			title1.Name = "Title1";
-			title1.Text = "Reconstruction Error (500x Moving Average)";
+			title1.Text = "Reconstruction Error (250x Moving Average)";
 			this.chart1.Titles.Add(title1);
 			// 
 			// VisualizeReconstructionError
