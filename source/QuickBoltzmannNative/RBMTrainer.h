@@ -18,11 +18,12 @@ enum UnitType
 };
 enum ErrorCode
 {
-	Success,
+	NoError,
 	BinaryDataOutsideZeroOne,
 	DataContainsNaN,
 	DataContainsInfinite,
-	ValidationDataHasIncorrectVisibleInputs
+	ValidationDataHasIncorrectNumberOfVisibleInputs,
+	RequiredOpenGLVersionUnsupported
 };
 
 typedef uint32_t GLuint;
@@ -34,6 +35,7 @@ class RBMTrainer
 public:
 
 	RBMTrainer();
+	~RBMTrainer();
 
 	virtual void Reset();
 

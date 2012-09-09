@@ -6,7 +6,8 @@
 #include <GL/freeglut.h>
 
 
-extern void StartupOpenGL();
+extern bool StartupOpenGL();
+extern void ShutdownOpenGL();
 // returns handle to the compiled fragment program
 extern GLint BuildFragmentProgram(const char* filename, GLint& width_handle, GLint& height_handle);
 // framebuffer handle

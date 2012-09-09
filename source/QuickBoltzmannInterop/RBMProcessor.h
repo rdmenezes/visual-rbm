@@ -174,6 +174,7 @@ namespace QuickBoltzmann
 		static void Start(Action^);
 		static void Pause();
 		static void Stop();
+		static void Shutdown();	// for application exit
 
 		static void GetCurrentVisible(List<array<float>^>^% visible_data, List<array<float>^>^% visible_reconstruction);
 		static void GetCurrentHidden(List<array<float>^>^% hidden_prob);

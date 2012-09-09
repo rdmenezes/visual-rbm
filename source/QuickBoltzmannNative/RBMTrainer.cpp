@@ -109,34 +109,33 @@ Shader<CalcWeightParams> program_calc_weights;
 Shader<CalcErrorParams> program_calc_error;
 
 
-RBMTrainer::RBMTrainer()
+RBMTrainer::RBMTrainer() 
+: Textures(NULL)
+, IsInitialized(false)
+, LoadedRBM(NULL)
+, TrainingData(NULL)
+, ValidationData(NULL)
+, PreviousError(NoError)
+, VisibleType(Binary)
+, VisibleCount(0)
+, HiddenCount(0)
+, MinibatchSize(10)
+, Minibatches(0)
+, ValidationMinibatches(0)
+, LearningRate(0.001f)
+, Momentum(0.5f)
+, L1Regularization(0.0f)
+, L2Regularization(0.0001f)
+, TrainingIndex(0)
 {
-	// book keeping data
-	IsInitialized = false;
-	LoadedRBM = NULL;
-	TrainingData = NULL;
-	ValidationData = NULL;
-	PreviousError = Success;
-
-	// init model parameters
-	VisibleType = Binary;
-	VisibleCount = 0;
-	HiddenCount = 100;
-	MinibatchSize = 10;
-	Minibatches = 0; 
-	ValidationMinibatches = 0;
-
-	// init training parameters
-	LearningRate = 0.001f;
-	Momentum = 0.5f;
-	L1Regularization = 0.0f;
-	L2Regularization = 0.0001f;
-	TrainingIndex = 0;
+	// startup opengl
+	if(!StartupOpenGL())
+	{
+		PreviousError = RequiredOpenGLVersionUnsupported;
+		return;
+	}
 
 	Textures = new GLuint[Tex::Count];
-	
-	// startup opengl
-	StartupOpenGL();
 
 	/**  Build our Shaders **/
 	program_calc_randoms.Build("NativeShaders/calc_random.frag", "next_int");
@@ -181,6 +180,16 @@ RBMTrainer::RBMTrainer()
 		program_calc_error.RegisterParameter(CalcErrorParams::Visible, "visible", Texture);
 		program_calc_error.RegisterParameter(CalcErrorParams::VisiblePrime, "visible_reconstruction", Texture);
 		program_calc_error.RegisterParameter(CalcErrorParams::Minibatchsize, "minibatch_size", Int);
+}
+
+RBMTrainer::~RBMTrainer()
+{
+	if(Textures)
+	{
+		delete[] Textures;
+	}
+
+	ShutdownOpenGL();
 }
 
 void RBMTrainer::Reset()
@@ -262,7 +271,7 @@ bool RBMTrainer::SetValidationData(IDX* in_data)
 
 	if(in_data->RowLength() != VisibleCount)
 	{
-		PreviousError = ValidationDataHasIncorrectVisibleInputs;
+		PreviousError = ValidationDataHasIncorrectNumberOfVisibleInputs;
 		return false;
 	}
 
@@ -346,7 +355,7 @@ bool RBMTrainer::ValidateData(IDX* in_data)
 	float* temp_data_buffer = new float[in_data->RowLength()];
 	assert(temp_data_buffer != 0);
 
-	PreviousError = Success;
+	PreviousError = NoError;
 	for(uint32_t k = 0; k < in_data->Rows(); k++)
 	{
 		in_data->ReadRow(k, temp_data_buffer);
@@ -375,7 +384,7 @@ bool RBMTrainer::ValidateData(IDX* in_data)
 Finished:
 	delete[] temp_data_buffer;
 
-	return PreviousError == Success;
+	return PreviousError == NoError;
 }
 
 void RBMTrainer::CalcStatistics()
