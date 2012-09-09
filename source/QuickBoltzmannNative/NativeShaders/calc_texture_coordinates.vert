@@ -1,4 +1,4 @@
-#version 420
+#version 330
 // calculate the texture coordinates 
  
 layout (location = 0) in vec2 position; 

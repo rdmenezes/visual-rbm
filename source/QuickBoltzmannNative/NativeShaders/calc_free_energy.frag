@@ -1,5 +1,4 @@
-#version 420
-#extension GL_ARB_texture_rectangle : enable
+#version 330
 
 uniform sampler2DRect visible;
 uniform sampler2DRect rbm;
@@ -18,15 +17,15 @@ void main()
 	// calc the first term
 	for(int i = 0; i < visible_units; i++)
 	{
-		float vi = texture2DRect(visible, vec2(float(i) + 0.5, tex_coordinate.x)).x;
-		float ai = texture2DRect(rbm, vec2(0.5, float(i) + 1.5)).x;
+		float vi = texture(visible, vec2(float(i) + 0.5, tex_coordinate.x)).x;
+		float ai = texture(rbm, vec2(0.5, float(i) + 1.5)).x;
 		free_energy -= vi * ai;
 	}
 
 	// calc the second term
 	for(int j = 0; j < hidden_units; j++)
 	{
-		float xj = texture2DRect(hidden_accumulation, vec2(float(j) + 0.5, tex_coordinate.x)).x;
+		float xj = texture(hidden_accumulation, vec2(float(j) + 0.5, tex_coordinate.x)).x;
 		float exp_xj = min(exp(xj), 1E38);
 		free_energy -= log(1.0 + exp_xj);
 	}

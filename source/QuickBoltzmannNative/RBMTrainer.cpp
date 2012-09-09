@@ -656,6 +656,7 @@ void RBMTrainer::Train()
 	CalcHiddenStates(Textures[Tex::HiddenProbs], Textures[Tex::HiddenStates]);
 	CalcVisible(Textures[Tex::HiddenStates], Textures[Tex::VisiblePrime]);
 	CalcHiddenProbs(Textures[Tex::VisiblePrime], Textures[Tex::HiddenPrime]);
+
 	CalcWeightDeltas();
 	CalcWeights();
 
@@ -679,17 +680,28 @@ void RBMTrainer::CalcRandom()
 	// run
 	program_calc_randoms.Run(HiddenCount, MinibatchSize, Textures[Tex::Random1]);
 
-	/*
-	unsigned int* buffer = new unsigned int[HiddenCount * MinibatchSize];
+/*
+	unsigned int* buffer0 = new unsigned int[HiddenCount * MinibatchSize];
 
 	glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::Random0]);
-	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, buffer);
+	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, buffer0);
+
+	unsigned int* buffer1 = new unsigned int[HiddenCount * MinibatchSize];
+
+	const uint32_t a = 1664525;  
+	const uint32_t c = 1013904223;  
+
+	for(int i = 0; i < HiddenCount * MinibatchSize; i++)
+	{
+		buffer1[i] = buffer0[i] * a + c;
+	}
 
 	glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::Random1]);
-	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, buffer);
+	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, buffer0);
 
-	delete[] buffer;
-	*/
+	delete[] buffer0;
+	delete[] buffer1;
+*/
 
 	// swap those textures
 	swap(Textures[Tex::Random0], Textures[Tex::Random1]);
@@ -815,8 +827,8 @@ void RBMTrainer::CalcWeightDeltas()
 	// run
 	program_calc_weight_deltas.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::DeltaWeights1]);
 
-	// only update these factors every 50 training iterations
-	if(TrainingIndex % 50 == 0)
+	// only update these factors every 250 training iterations
+	if(TrainingIndex % 250 == 0)
 	{
 		// read back the deltas so we can get statistics about them
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -849,11 +861,11 @@ void RBMTrainer::CalcWeights()
 	// run
 	program_calc_weights.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::Weights1]);
 
-	// only update these factors every 50 training iterations
-	if(TrainingIndex % 50 == 0)
+	// only update these factors every 250 training iterations
+	if(TrainingIndex % 250 == 0)
 	{
-		printf("WFactor: %f\n", WFactor);
-		printf("DeltaWFactor: %f\n", DeltaWFactor);
+		//printf("WFactor: %f\n", WFactor);
+		//printf("DeltaWFactor: %f\n", DeltaWFactor);
 		// read  bacak weights so we can get statistics
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
 		glReadPixels(1, 1, HiddenCount, VisibleCount, GL_RED, GL_FLOAT, LocalWeightBuffer);

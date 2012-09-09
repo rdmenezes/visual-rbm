@@ -1,5 +1,4 @@
-#version 420
-#extension GL_ARB_texture_rectangle : enable
+#version 330
 
 // textures
 uniform sampler2DRect visible;
@@ -32,29 +31,29 @@ void main()
 	float vi, vi_prime;
 	float hj, hj_prime;
 
-	if(i == 0 && j == 0)
+	if(i == 0u && j == 0u)
 	{
 		return;
 	}
 	// hidden bias
-	else if(i == 0)
+	else if(i == 0u)
 	{
 		for(int k = 0; k  < minibatch_size; k++)
 		{
-			hj = texture2DRect(hidden, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
-			hj_prime = texture2DRect(hidden_prime, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
+			hj = texture(hidden, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
+			hj_prime = texture(hidden_prime, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
 
 			delta += hj - hj_prime;
 		}
 		delta /=  float(minibatch_size);
 	}
 	// visible bias
-	else if(j == 0)
+	else if(j == 0u)
 	{
 		for(int k = 0; k  < minibatch_size; k++)
 		{
-			vi = texture2DRect(visible, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
-			vi_prime = texture2DRect(visible_prime, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
+			vi = texture(visible, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
+			vi_prime = texture(visible_prime, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
 
 			delta += vi - vi_prime;
 		}
@@ -65,16 +64,16 @@ void main()
 	{
 		for(int k = 0; k  < minibatch_size; k++)
 		{
-			vi = texture2DRect(visible, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
-			vi_prime = texture2DRect(visible_prime, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
+			vi = texture(visible, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
+			vi_prime = texture(visible_prime, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
 			
-			hj = texture2DRect(hidden, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
-			hj_prime = texture2DRect(hidden_prime, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
+			hj = texture(hidden, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
+			hj_prime = texture(hidden_prime, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
 
 			delta += vi * hj - vi_prime * hj_prime;
 		}
 		delta /= float(minibatch_size);
 	}
 
-	delta = (1.0 - momentum) * delta + momentum * texture2DRect(prev_weight_deltas, tex_coordinate).x;
+	delta = (1.0 - momentum) * delta + momentum * texture(prev_weight_deltas, tex_coordinate).x;
 }

@@ -23,10 +23,8 @@ void StartupOpenGL()
 	static int32_t count = 1;
 
 	glutInit(&count, &name);
-	glutInitContextVersion(4, 2);
-	//glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);
+	glutInitContextVersion(3, 3);
 	glutCreateWindow(name);
-	glutHideWindow();
 
 	// we have to set this to true with a 4.2 context or else we won't get all the functions we need
 	glewExperimental = TRUE;
