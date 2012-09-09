@@ -27,21 +27,12 @@ namespace VisualRBM
 			visualizeHidden.MainForm = this;
 			visualizeWeights.MainForm = this;
 
-			//this.HandleCreated += new EventHandler(Main_Load);
 			this.FormClosing += new FormClosingEventHandler(Main_FormClosing);
 		}
 
 		void Main_FormClosing(object sender, FormClosingEventArgs e)
 		{
 			RBMProcessor.Shutdown();
-		}
-
-		[System.Runtime.InteropServices.DllImport("User32.dll")]
-		public static extern Int32 SetForegroundWindow(int hWnd);   
-
-		void Main_Load(object sender, EventArgs e)
-		{
-			SetForegroundWindow((sender as Main).Handle.ToInt32());
 		}
 	}
 }
