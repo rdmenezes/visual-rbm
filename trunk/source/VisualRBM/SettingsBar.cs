@@ -142,7 +142,7 @@ namespace VisualRBM
 							momentumTextBox.Enabled = true;
 							l1TextBox.Enabled = true;
 							l2TextBox.Enabled = true;
-							minibatchSizeTextBox.Enabled = true;							
+							minibatchSizeTextBox.Enabled = false;							
 							epochsTextBox.Enabled = true;
 
 							importButton.Enabled = false;
@@ -180,8 +180,6 @@ namespace VisualRBM
 					}
 					current_state = value;
 				}));
-
-				
 			}
 			get
 			{

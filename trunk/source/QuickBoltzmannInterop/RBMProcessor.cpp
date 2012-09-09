@@ -61,8 +61,8 @@ namespace QuickBoltzmann
 				}
 				else if(m->Type == "GetVisible")
 				{
-					float* image_buff = new float[rbmtrainer->GetMinibatches() * rbmtrainer->GetVisibleCount()];
-					float* recon_buff = new float[rbmtrainer->GetMinibatches() * rbmtrainer->GetVisibleCount()];
+					float* image_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetVisibleCount()];
+					float* recon_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetVisibleCount()];
 
 					if(rbmtrainer->DumpVisible(image_buff, recon_buff))
 					{
@@ -86,8 +86,8 @@ namespace QuickBoltzmann
 							}
 						} interop_copy;
 
-						interop_copy(rbmtrainer->GetMinibatches(), rbmtrainer->GetVisibleCount(), image_buff, images);
-						interop_copy(rbmtrainer->GetMinibatches(), rbmtrainer->GetVisibleCount(), recon_buff, recons);
+						interop_copy(rbmtrainer->GetMinibatchSize(), rbmtrainer->GetVisibleCount(), image_buff, images);
+						interop_copy(rbmtrainer->GetMinibatchSize(), rbmtrainer->GetVisibleCount(), recon_buff, recons);
 
 
 						m["image"] = images;
@@ -105,13 +105,13 @@ namespace QuickBoltzmann
 				}
 				else if(m->Type == "GetHidden")
 				{
-					float* hidden_buff = new float[rbmtrainer->GetMinibatches() * rbmtrainer->GetHiddenCount()];
+					float* hidden_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetHiddenCount()];
 
 					if(rbmtrainer->DumpHidden(hidden_buff))
 					{
 						List<array<float>^>^ probs = gcnew List<array<float>^>();
 						float* h_vec = hidden_buff;
-						for(uint32_t k = 0; k < rbmtrainer->GetMinibatches(); k++)
+						for(uint32_t k = 0; k < rbmtrainer->GetMinibatchSize(); k++)
 						{
 							array<float>^ activations = gcnew array<float>(rbmtrainer->GetHiddenCount());
 							probs->Add(activations);
