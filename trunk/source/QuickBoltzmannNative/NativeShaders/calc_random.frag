@@ -1,5 +1,4 @@
-#version 420 
-#extension GL_EXT_gpu_shader4 : enable
+#version 330
 // calculate next values using Numerical recipes LCRG:  
 // http://en.wikipedia.org/wiki/Linear_congruential_generator  
 
@@ -14,5 +13,5 @@ out uint next_int;
   
 void main()  
 {  
-	next_int = texture2DRect(seeds, tex_coordinate).x * a + c;  
+	next_int = texture(seeds, tex_coordinate).x * a + c;  
 } 

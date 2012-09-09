@@ -1,5 +1,4 @@
-#version 420 
-#extension GL_ARB_texture_rectangle : enable
+#version 330
  
 uniform sampler2DRect prev_weights; 
 uniform sampler2DRect delta_weights; 
@@ -25,20 +24,21 @@ void main()
 	uint j = uint(tex_coordinate.x);
 
 	
-	float delta = texture2DRect(delta_weights, tex_coordinate).x;
+	float delta = texture(delta_weights, tex_coordinate).x;
+	float prev = texture(prev_weights, tex_coordinate).x;
 
 	float factor;
 
-	if(i == 0 && j == 0)
+	if(i == 0u && j == 0u)
 	{
-		new_weight = 0.0f;
+		new_weight = 0.0;
 		return;
 	}
-	else if(i == 0)
+	else if(i == 0u)
 	{
 		factor = hidden_factor;
 	}
-	else if(j == 0)
+	else if(j == 0u)
 	{
 		factor = visible_factor;
 	}
@@ -46,13 +46,13 @@ void main()
 	{
 		factor = weight_factor;
 
-		float l1 = l1_regularization * sign(texture2DRect(prev_weights, tex_coordinate).x);
-		float l2 = l2_regularization * texture2DRect(prev_weights, tex_coordinate).x;
+		float l1 = l1_regularization * sign(prev);
+		float l2 = l2_regularization * prev;
 
 		delta -= (l1 + l2);
 	}
 
 	// add weight deltas 
-	new_weight = texture2DRect(prev_weights, tex_coordinate).x + (factor * learning_rate * delta);
+	new_weight = prev + (factor * learning_rate * delta);
 
 }

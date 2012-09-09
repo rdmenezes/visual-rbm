@@ -1,5 +1,4 @@
-#version 420 
-#extension GL_ARB_texture_rectangle : enable
+#version 330 
  
 uniform sampler2DRect visible; 
 uniform sampler2DRect visible_reconstruction; 
@@ -16,8 +15,8 @@ void main()
  
 	for(int k = 0; k < minibatch_size; k++) 
 	{ 
-		float v = texture2DRect(visible, vec2(tex_coordinate.x, float(k) + 0.5)).x; 
-		float v_prime = texture2DRect(visible_reconstruction, vec2(tex_coordinate.x, float(k) + 0.5)).x; 
+		float v = texture(visible, vec2(tex_coordinate.x, float(k) + 0.5)).x; 
+		float v_prime = texture(visible_reconstruction, vec2(tex_coordinate.x, float(k) + 0.5)).x; 
  
 		float diff = v - v_prime;  
 		mean_square_error += diff*diff; 
