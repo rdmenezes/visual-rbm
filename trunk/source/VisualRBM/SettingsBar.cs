@@ -646,15 +646,15 @@ namespace VisualRBM
 			float l2;
 			if (float.TryParse(tb.Text, out l2) && l2 >= 0.0f)
 			{
-				if (l2 != RBMProcessor.L1Regularization)
+				if (l2 != RBMProcessor.L2Regularization)
 				{
-					RBMProcessor.L1Regularization = l2;
+					RBMProcessor.L2Regularization = l2;
 					_main_form.trainingLog.AddLog("L2Regularization = {0}", RBMProcessor.L2Regularization);
 					return true;
 				}
 				return false;
 			}
-			tb.Text = RBMProcessor.L1Regularization.ToString();
+			tb.Text = RBMProcessor.L2Regularization.ToString();
 			return false;
 		}
 
