@@ -16,6 +16,7 @@ extern GLuint VertexArrayObject;
 extern GLuint VertexBufferObject;
 // allocate textures
 extern GLuint AllocateFloatTexture(uint32_t rows, uint32_t columns, float* initial_data=0);
+extern GLuint AllocateUInt8Texture(uint32_t rows, uint32_t columns, uint8_t* initial_data=0);
 extern GLuint AllocateUInt32Texture(uint32_t rows, uint32_t columns, uint32_t* initial_data=0);
 extern void ReleaseTextures(GLuint* tex_head, uint32_t count);
 

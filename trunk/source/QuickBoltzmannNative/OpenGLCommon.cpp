@@ -34,7 +34,7 @@ bool StartupOpenGL()
 
 	int version = major * 10 + minor;
 
-	if(version != 33)
+	if(version != 33)	// version 3.3
 	{
 		glutDestroyWindow(WindowId);
 		if(version < 33)
@@ -144,7 +144,7 @@ GLint BuildFragmentProgram(const char* filename, GLint& width_handle, GLint& hei
 	assert(compile_status == GL_TRUE );
 	
 	GLint program_handle = glCreateProgram();
-	
+
 	// attach the fragment shader to the program
 	glAttachShader(program_handle, shader_handle);
 	if(vertex_shader_handle == -1)
@@ -209,12 +209,52 @@ GLuint AllocateUInt32Texture(uint32_t rows, uint32_t columns, uint32_t* initial_
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP);
 
-	glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32UI, columns, rows, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, initial_data);
+	if(initial_data == NULL)
+	{
+		initial_data = new uint32_t[rows * columns];
+		memset(initial_data, 0, sizeof(uint32_t) * rows * columns);
+		glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32UI, columns, rows, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, initial_data);
+	}
+	else
+	{
+		glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32UI, columns, rows, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, initial_data);
+	}
 
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 
 	return result;
 }
+
+GLuint AllocateUInt8Texture(uint32_t rows, uint32_t columns, uint8_t* initial_data)
+{
+	GLuint result;
+	glGenTextures(1, &result);
+
+	glBindTexture(GL_TEXTURE_RECTANGLE, result);
+
+	// use nearest neighbor sampling
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	// clamp uv coordinates
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP);
+
+	if(initial_data == NULL)
+	{
+		initial_data = new uint8_t[rows * columns];
+		memset(initial_data, 0, sizeof(uint8_t) * rows * columns);
+		glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R8UI, columns, rows, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, initial_data);
+	}
+	else
+	{
+		glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R8UI, columns, rows, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, initial_data);
+	}
+
+	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+
+	return result;
+}
+
 void ReleaseTextures(GLuint* tex_head, uint32_t count)
 {
 	glDeleteTextures(count, tex_head);
