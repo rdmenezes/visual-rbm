@@ -20,22 +20,23 @@
 #define ENDENUM };};
 
 ENUM(Tex)
-		Visible = 0,
-		Weights0,
-		Weights1,
-		HiddenProbs,
-		HiddenStates,
-		VisiblePrime,
-		HiddenPrime,
-		DeltaWeights0,
-		DeltaWeights1,
-		Random0,
-		Random1,
-		Error,
-		ValidationVisiblePrime,
-		ValidationHiddenProbs,
-		ValidationHidddenStates,
-		Count
+	Visible = 0,
+	Weights0,
+	Weights1,
+	HiddenProbs,
+	HiddenStates,
+	VisiblePrime,
+	HiddenPrime,
+	DeltaWeights0,
+	DeltaWeights1,
+	Random0,
+	Random1,
+	Error,
+	ValidationVisiblePrime,
+	ValidationHiddenProbs,
+	ValidationHidddenStates,
+	EnabledHiddenUnits,
+	Count
 ENDENUM
 
 ENUM(CalcRandomParams)
@@ -44,10 +45,11 @@ Count
 ENDENUM
 
 ENUM(CalcHiddenProbParams)
-		VisibleUnits = 0,
-		VisibleStates,
-		Weights,
-		Count
+	VisibleUnits = 0,
+	VisibleStates,
+	Weights,
+	EnabledHidden,
+	Count
 ENDENUM
 
 ENUM(CalcHiddenStateParams)
@@ -73,6 +75,7 @@ ENUM(CalcWeightDeltaParams)
 	PrevWeights,
 	MinibatchSize,
 	Momentum,
+	EnabledHiddenUnits,
 	Count
 ENDENUM
 
@@ -85,6 +88,7 @@ ENUM(CalcWeightParams)
 	LearningRate,
 	L1Regularization,
 	L2Regularization,
+	EnabledHiddenUnits,
 	Count
 ENDENUM
 
@@ -111,6 +115,7 @@ Shader<CalcErrorParams> program_calc_error;
 
 RBMTrainer::RBMTrainer() 
 : Textures(NULL)
+, EnabledHiddenUnitBuffer(NULL)
 , IsInitialized(false)
 , LoadedRBM(NULL)
 , TrainingData(NULL)
@@ -126,6 +131,7 @@ RBMTrainer::RBMTrainer()
 , Momentum(0.5f)
 , L1Regularization(0.0f)
 , L2Regularization(0.0001f)
+, Dropout(0.5f)
 , TrainingIndex(0)
 {
 	// startup opengl
@@ -145,6 +151,7 @@ RBMTrainer::RBMTrainer()
 		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::VisibleUnits, "visible_units", Int);	
 		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::VisibleStates, "visible_states", Texture);
 		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::Weights, "rbm_weights", Texture);
+		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::EnabledHidden, "enabled_hidden", Texture);
 
 	program_calc_hidden_states.Build("NativeShaders/calc_binary_states.frag", "state");
 		program_calc_hidden_states.RegisterParameter(CalcHiddenStateParams::Random, "random", Texture);
@@ -165,6 +172,7 @@ RBMTrainer::RBMTrainer()
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::PrevWeights, "prev_weights", Texture);
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::MinibatchSize, "minibatch_size", Int);
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::Momentum, "momentum", Float);
+		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::EnabledHiddenUnits, "enabled_hidden", Texture);
 
 	program_calc_weights.Build("NativeShaders/calc_new_weights.frag", "new_weight");
 		program_calc_weights.RegisterParameter(CalcWeightParams::DeltaWeights, "delta_weights", Texture);
@@ -175,6 +183,7 @@ RBMTrainer::RBMTrainer()
 		program_calc_weights.RegisterParameter(CalcWeightParams::LearningRate, "learning_rate", Float);
 		program_calc_weights.RegisterParameter(CalcWeightParams::L1Regularization, "l1_regularization", Float);
 		program_calc_weights.RegisterParameter(CalcWeightParams::L2Regularization, "l2_regularization", Float);
+		program_calc_weights.RegisterParameter(CalcWeightParams::EnabledHiddenUnits, "enabled_hidden", Texture);
 
 	program_calc_error.Build("NativeShaders/calc_error_vector.frag", "mean_square_error");
 		program_calc_error.RegisterParameter(CalcErrorParams::Visible, "visible", Texture);
@@ -184,10 +193,8 @@ RBMTrainer::RBMTrainer()
 
 RBMTrainer::~RBMTrainer()
 {
-	if(Textures)
-	{
-		delete[] Textures;
-	}
+	delete[] Textures;
+	delete[] EnabledHiddenUnitBuffer;
 
 	ShutdownOpenGL();
 }
@@ -204,6 +211,9 @@ void RBMTrainer::Reset()
 	LocalHBiasBuffer.Release();
 	LocalVBiasBuffer.Release();
 	LocalErrorBuffer.Release();
+
+	delete[] EnabledHiddenUnitBuffer;
+	EnabledHiddenUnitBuffer = 0;
 
 	// deallocate training textures
 	ReleaseTextures(Textures + 1, Tex::Count - 1);	// don't want to release Visible here because it is temporary, lives in VisibleTextures
@@ -462,6 +472,9 @@ void RBMTrainer::Initialize()
 	LocalVBiasBuffer.Acquire(VisibleCount);
 	LocalErrorBuffer.Acquire(VisibleCount);
 
+	// allocate space for enabled hidden units
+	EnabledHiddenUnitBuffer = new uint8_t[HiddenCount];
+
 	// setup initial random values
 	uint32_t* initial_random_seeds = new uint32_t[MinibatchSize * HiddenCount];
 	for(uint32_t k = 0; k < MinibatchSize * HiddenCount; k++)
@@ -591,6 +604,9 @@ void RBMTrainer::Initialize()
 	Textures[Tex::ValidationHiddenProbs] = AllocateFloatTexture(MinibatchSize, HiddenCount);
 	Textures[Tex::ValidationHidddenStates] = AllocateFloatTexture(MinibatchSize, HiddenCount);
 
+	// enabled hidden units for dropout
+	Textures[Tex::EnabledHiddenUnits] = AllocateUInt8Texture(1, HiddenCount);
+
 	// delete these buffers
 	delete[] initial_rbm_weights;
 	delete[] initial_random_seeds;
@@ -661,6 +677,7 @@ void RBMTrainer::Train()
 	Textures[Tex::Visible] = VisibleTextures[TrainingIndex % MinibatchSize];
 
 	CalcRandom();
+	CalcEnabledHiddenUnits();
 	CalcHiddenProbs(Textures[Tex::Visible], Textures[Tex::HiddenProbs]);
 	CalcHiddenStates(Textures[Tex::HiddenProbs], Textures[Tex::HiddenStates]);
 	CalcVisible(Textures[Tex::HiddenStates], Textures[Tex::VisiblePrime]);
@@ -716,13 +733,32 @@ void RBMTrainer::CalcRandom()
 	swap(Textures[Tex::Random0], Textures[Tex::Random1]);
 }
 
+void RBMTrainer::CalcEnabledHiddenUnits()
+{
+	for(int j = 0; j < HiddenCount; j++)
+	{
+		EnabledHiddenUnitBuffer[j] = rand() < Dropout * RAND_MAX ? 255 : 0;
+	}
+
+	// copy this buffer to GPU
+	glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::EnabledHiddenUnits]);
+	glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, HiddenCount, 1, GL_RED_INTEGER, GL_UNSIGNED_BYTE, EnabledHiddenUnitBuffer);
+
+
+	//uint8_t* enabled_hidden_gpu = new uint8_t[HiddenCount];
+	//glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED_INTEGER, GL_UNSIGNED_BYTE, enabled_hidden_gpu);
+	//glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+	//delete[] enabled_hidden_gpu;
+}
+
 void RBMTrainer::CalcHiddenProbs(GLuint visible_tex, GLuint hidden_tex)
 {
 	// set params
 	program_calc_hidden_probs.SetParam(CalcHiddenProbParams::VisibleStates, visible_tex);
 	program_calc_hidden_probs.SetParam(CalcHiddenProbParams::VisibleUnits, VisibleCount);
 	program_calc_hidden_probs.SetParam(CalcHiddenProbParams::Weights, Textures[Tex::Weights0]);
-	
+	program_calc_hidden_probs.SetParam(CalcHiddenProbParams::EnabledHidden, Textures[Tex::EnabledHiddenUnits]);
+
 	// run
 	program_calc_hidden_probs.Run(HiddenCount, MinibatchSize, hidden_tex);
 
@@ -735,20 +771,30 @@ void RBMTrainer::CalcHiddenProbs(GLuint visible_tex, GLuint hidden_tex)
 
 	//	for(int j = 0; j < HiddenCount; j++)
 	//	{
-	//		for(int k = 0; k < MinibatchSize; k++)
+	//		if(EnabledHiddenUnitBuffer[j] != 0)
 	//		{
-	//			int index = k * HiddenCount + j;
-	//			h[index] = rbm[j + 1];
-	//			for(int i = 0; i < VisibleCount; i++)
+	//			for(int k = 0; k < MinibatchSize; k++)
 	//			{
-	//				h[index] += v[k * VisibleCount + i] * rbm[j + 1 + (HiddenCount + 1) * ( i + 1)];
+	//				int index = k * HiddenCount + j;
+	//				h[index] = rbm[j + 1];
+	//				for(int i = 0; i < VisibleCount; i++)
+	//				{
+	//					h[index] += v[k * VisibleCount + i] * rbm[j + 1 + (HiddenCount + 1) * ( i + 1)];
+	//				}
+	//				h[index] = 1.0f / (1.0f + exp(-h[index]));
 	//			}
-	//			h[index] = 1.0f / (1.0f + exp(-h[index]));
+	//		}
+	//		else
+	//		{
+	//			for(int k = 0; k < MinibatchSize; k++)
+	//			{
+	//				int index = k * HiddenCount + j;
+	//				h[index] = 0.0f;
+	//			}
 	//		}
 	//	}
 
-	//	float* h_prime = GetTexture(HiddenCount, MinibatchSize, hidden_tex);
-
+	//	float* h_prime5 = GetTexture(HiddenCount, MinibatchSize, hidden_tex);
 	//	__debugbreak();
 	//}
 }
@@ -832,6 +878,7 @@ void RBMTrainer::CalcWeightDeltas()
 	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::PrevWeights, Textures[Tex::Weights0]);
 	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::MinibatchSize, MinibatchSize);
 	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::Momentum, Momentum);
+	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::EnabledHiddenUnits, Textures[Tex::EnabledHiddenUnits]);
 
 	// run
 	program_calc_weight_deltas.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::DeltaWeights1]);
@@ -866,6 +913,8 @@ void RBMTrainer::CalcWeights()
 	program_calc_weights.SetParam(CalcWeightParams::LearningRate, LearningRate);
 	program_calc_weights.SetParam(CalcWeightParams::L1Regularization, L1Regularization);
 	program_calc_weights.SetParam(CalcWeightParams::L2Regularization, L2Regularization);
+
+	program_calc_weights.SetParam(CalcWeightParams::EnabledHiddenUnits, Textures[Tex::EnabledHiddenUnits]);
 
 	// run
 	program_calc_weights.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::Weights1]);

@@ -13,7 +13,7 @@ uniform sampler2DRect prev_weights;
 // training parameters
 uniform float momentum;
 
-
+uniform usampler2DRect enabled_hidden;
 
 uniform int minibatch_size;
 
@@ -23,57 +23,67 @@ out float delta;
 
 void main()
 {
-	delta = 0.0;
-
-	uint i = uint(tex_coordinate.y);
-	uint j = uint(tex_coordinate.x);
-
-	float vi, vi_prime;
-	float hj, hj_prime;
-
-	if(i == 0u && j == 0u)
+	if(tex_coordinate.x > 1.0 &&
+		texture(enabled_hidden, vec2(tex_coordinate.x - 1.0, 0.5)).x == 0u)
 	{
-		return;
+		// just set to previous
+		delta = texture(prev_weight_deltas, tex_coordinate).x;
 	}
-	// hidden bias
-	else if(i == 0u)
-	{
-		for(int k = 0; k  < minibatch_size; k++)
-		{
-			hj = texture(hidden, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
-			hj_prime = texture(hidden_prime, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
-
-			delta += hj - hj_prime;
-		}
-		delta /=  float(minibatch_size);
-	}
-	// visible bias
-	else if(j == 0u)
-	{
-		for(int k = 0; k  < minibatch_size; k++)
-		{
-			vi = texture(visible, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
-			vi_prime = texture(visible_prime, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
-
-			delta += vi - vi_prime;
-		}
-		delta /= float(minibatch_size);
-	}
-	// regular weight
 	else
 	{
-		for(int k = 0; k  < minibatch_size; k++)
+
+		delta = 0.0;
+
+		uint i = uint(tex_coordinate.y);
+		uint j = uint(tex_coordinate.x);
+
+		float vi, vi_prime;
+		float hj, hj_prime;
+
+		if(i == 0u && j == 0u)
 		{
-			vi = texture(visible, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
-			vi_prime = texture(visible_prime, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
-			
-			hj = texture(hidden, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
-			hj_prime = texture(hidden_prime, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
-
-			delta += vi * hj - vi_prime * hj_prime;
+			return;
 		}
-		delta /= float(minibatch_size);
-	}
+		// hidden bias
+		else if(i == 0u)
+		{
+			for(int k = 0; k  < minibatch_size; k++)
+			{
+				hj = texture(hidden, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
+				hj_prime = texture(hidden_prime, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
 
-	delta = (1.0 - momentum) * delta + momentum * texture(prev_weight_deltas, tex_coordinate).x;
+				delta += hj - hj_prime;
+			}
+			delta /=  float(minibatch_size);
+		}
+		// visible bias
+		else if(j == 0u)
+		{
+			for(int k = 0; k  < minibatch_size; k++)
+			{
+				vi = texture(visible, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
+				vi_prime = texture(visible_prime, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
+
+				delta += vi - vi_prime;
+			}
+			delta /= float(minibatch_size);
+		}
+		// regular weight
+		else
+		{
+			for(int k = 0; k  < minibatch_size; k++)
+			{
+				vi = texture(visible, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
+				vi_prime = texture(visible_prime, vec2(tex_coordinate.y - 1.0, float(k) + 0.5)).x;
+			
+				hj = texture(hidden, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
+				hj_prime = texture(hidden_prime, vec2(tex_coordinate.x - 1.0, float(k) + 0.5)).x;
+
+				delta += vi * hj - vi_prime * hj_prime;
+			}
+			delta /= float(minibatch_size);
+		}
+
+		delta = (1.0 - momentum) * delta + momentum * texture(prev_weight_deltas, tex_coordinate).x;
+	}
 }

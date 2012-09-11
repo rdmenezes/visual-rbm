@@ -117,7 +117,8 @@ protected:
 	float Momentum;
 	float L1Regularization;
 	float L2Regularization;
-	
+	float Dropout;
+
 
 	/** Weight Factors **/
 	float HFactor;
@@ -137,13 +138,14 @@ protected:
 	GLuint* VisibleValidationTextures;
 
 	/** Training Methods **/
-	virtual void CalcRandom();
-	virtual void CalcHiddenProbs(GLuint v, GLuint h);
-	virtual void CalcHiddenStates(GLuint hprob, GLuint hstate);
-	virtual void CalcVisible(GLuint hstate, GLuint v);
-	virtual void CalcWeightDeltas();
-	virtual void CalcWeights();
-	virtual float CalcError(GLuint v, GLuint vp);
+	void CalcEnabledHiddenUnits();
+	void CalcRandom();
+	void CalcHiddenProbs(GLuint v, GLuint h);
+	void CalcHiddenStates(GLuint hprob, GLuint hstate);
+	void CalcVisible(GLuint hstate, GLuint v);
+	void CalcWeightDeltas();
+	void CalcWeights();
+	float CalcError(GLuint v, GLuint vp);
 
 	/** Some helper methods **/
 	
@@ -160,5 +162,7 @@ protected:
 	AlignedMemoryBlock<float> LocalHBiasBuffer;
 	AlignedMemoryBlock<float> LocalVBiasBuffer;
 	AlignedMemoryBlock<float> LocalErrorBuffer;
+
+	uint8_t* EnabledHiddenUnitBuffer;
 
 };

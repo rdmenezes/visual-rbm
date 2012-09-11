@@ -14,45 +14,56 @@ uniform float learning_rate;
 uniform float l1_regularization;
 uniform float l2_regularization;
 
+uniform usampler2DRect enabled_hidden;
+
 in vec2 tex_coordinate; 
 
 out float new_weight; 
 
 void main() 
-{ 
-	uint i = uint(tex_coordinate.y);
-	uint j = uint(tex_coordinate.x);
-
-	
-	float delta = texture(delta_weights, tex_coordinate).x;
-	float prev = texture(prev_weights, tex_coordinate).x;
-
-	float factor;
-
-	if(i == 0u && j == 0u)
+{
+	if(tex_coordinate.x > 1.0 &&
+		texture(enabled_hidden, vec2(tex_coordinate.x - 1.0, 0.5)).x == 0u)
 	{
-		new_weight = 0.0;
-		return;
-	}
-	else if(i == 0u)
-	{
-		factor = hidden_factor;
-	}
-	else if(j == 0u)
-	{
-		factor = visible_factor;
+		// just set to previous
+		new_weight = texture(prev_weights, tex_coordinate).x;
 	}
 	else
 	{
-		factor = weight_factor;
 
-		float l1 = l1_regularization * sign(prev);
-		float l2 = l2_regularization * prev;
+		uint i = uint(tex_coordinate.y);
+		uint j = uint(tex_coordinate.x);
 
-		delta -= (l1 + l2);
+	
+		float delta = texture(delta_weights, tex_coordinate).x;
+		float prev = texture(prev_weights, tex_coordinate).x;
+
+		float factor;
+
+		if(i == 0u && j == 0u)
+		{
+			new_weight = 0.0;
+			return;
+		}
+		else if(i == 0u)
+		{
+			factor = hidden_factor;
+		}
+		else if(j == 0u)
+		{
+			factor = visible_factor;
+		}
+		else
+		{
+			factor = weight_factor;
+
+			float l1 = l1_regularization * sign(prev);
+			float l2 = l2_regularization * prev;
+
+			delta -= (l1 + l2);
+		}
+
+		// add weight deltas 
+		new_weight = prev + (factor * learning_rate * delta);
 	}
-
-	// add weight deltas 
-	new_weight = prev + (factor * learning_rate * delta);
-
 }
