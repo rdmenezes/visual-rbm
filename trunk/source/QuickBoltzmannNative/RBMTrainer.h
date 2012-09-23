@@ -23,6 +23,7 @@ enum ErrorCode
 	DataContainsNaN,
 	DataContainsInfinite,
 	ValidationDataHasIncorrectNumberOfVisibleInputs,
+	ImportedRBMHasIncorrectNumberOfVisibleInputs,
 	RequiredOpenGLVersionUnsupported
 };
 
@@ -56,6 +57,7 @@ public:
 	void SetMomentum(float in_momentum) { Momentum = in_momentum;};
 	void SetL1Regularization(float in_reg) {L1Regularization = in_reg;};
 	void SetL2Regularization(float in_reg) {L2Regularization = in_reg;};
+	void SetDropout(float in_dropout) {Dropout = in_dropout;};
 
 	// getters
 	uint32_t GetMinibatches() const {return Minibatches;};
@@ -68,7 +70,7 @@ public:
 	float GetMomentum() const {return Momentum;};
 	float GetL1Regularization() const {return L1Regularization;};
 	float GetL2Regularization() const {return L2Regularization;};
-	
+	float GetDropout() const {return Dropout;};
 
 	float GetReconstructionError();
 	float GetValidationReconstructionError();
