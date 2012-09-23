@@ -304,7 +304,7 @@ namespace QuickBoltzmann
 		IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(in_filename);
 		char* filename = static_cast<char*>(p.ToPointer());
 
-		IDX* idx = new IDX(filename);
+		IDX* idx = IDX::Load(filename);
 		System::Runtime::InteropServices::Marshal::FreeHGlobal(p);
 
 		// verify it's the right data type
@@ -354,7 +354,7 @@ namespace QuickBoltzmann
 			IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(in_filename);
 			char* filename = static_cast<char*>(p.ToPointer());
 
-			IDX* idx = new IDX(filename);
+			IDX* idx = IDX::Load(filename);
 			System::Runtime::InteropServices::Marshal::FreeHGlobal(p);
 
 			if(idx->GetDataType() != DataFormat::Single)

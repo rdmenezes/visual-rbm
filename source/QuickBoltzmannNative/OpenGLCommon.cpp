@@ -64,6 +64,8 @@ bool StartupOpenGL()
 	glGenBuffers(1, &VertexBufferObject);
 
 	glEnableClientState(GL_VERTEX_ARRAY);
+
+	return true;
 }
 
 void ShutdownOpenGL()

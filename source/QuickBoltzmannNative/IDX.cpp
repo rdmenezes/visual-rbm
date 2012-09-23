@@ -4,59 +4,65 @@
 #include "IDX.h"
 
 
-inline Endianness GetSystemEndianness()
+
+
+IDX::IDX()
+: _rows(0)
+, _row_length(0)
+, _idx_endianness(Endianness::BigEndian)
+, _file_data(DataFormat::Invalid)
+, _idx_file(NULL)
+, _header_size(0)
+, _row_length_bytes(0)
+{ }
+
+IDX* IDX::Load(const char* in_filename)
 {
-	union
-	{
-		uint32_t u32;
-		uint16_t u16[2];
-	};
-	u32 = 0x0000FFFF;
-	return (Endianness)u16[0];
-}
+	FILE* file = fopen(in_filename, "rb");
 
-
-
-IDX::IDX(const char* in_filename)
-{
-	_idx_file = fopen(in_filename, "rb");
 	// make sure we could open the file
-	assert(_idx_file != 0);
+	if(file == NULL)
+	{
+		return NULL;
+	}
 
-	// get the systems endianness so that we can determine if we need to 
-	// byte swap the data
-	_system_endianness = GetSystemEndianness();	
+	IDX* result = new IDX();
+	IDX& idx = *result;
 
-	_idx_endianness = (Endianness)read<uint16_t>(_idx_file);
+	idx._idx_file = file;	
+
+	idx._idx_endianness = (Endianness)idx.read<uint16_t>();
 	
 	// figure out our filetype
-	_file_data = (DataFormat)fgetc(_idx_file);
+	idx._file_data = (DataFormat)idx.read<uint8_t>();
 	// read number of dimensions
-	uint8_t dimensions = read<uint8_t>(_idx_file);
+	uint8_t dimensions = idx.read<uint8_t>();
 	// first number is always the number of rows
-	_rows = read<uint32_t>(_idx_file);
-	_row_length = 1;
+	idx._rows = idx.read<uint32_t>();
+	idx._row_length = 1;
 	for(int k = 1; k < dimensions; k++)
-		_row_length *= read<uint32_t>(_idx_file);
+		idx._row_length *= idx.read<uint32_t>();
 
-	_header_size = 4 + 4 * dimensions;
-	switch(_file_data)
+	idx._header_size = 4 + 4 * dimensions;
+	switch(idx._file_data)
 	{
 	case UInt8:
 	case SInt8:
-		_row_length_bytes = _row_length;
+		idx._row_length_bytes = idx._row_length;
 		break;
 	case SInt16:
-		_row_length_bytes = _row_length * 2;
+		idx._row_length_bytes = idx._row_length * 2;
 		break;
 	case SInt32:
 	case Single:
-		_row_length_bytes = _row_length * 4;
+		idx._row_length_bytes = idx._row_length * 4;
 		break;
 	case Double:
-		_row_length_bytes = _row_length * 8;
+		idx._row_length_bytes = idx._row_length * 8;
 		break;
 	}
+
+	return result;
 }
 
 IDX::~IDX()
@@ -75,16 +81,16 @@ void IDX::ReadRow(uint32_t row, void* buffer)
 		fread(buffer, 1, _row_length, _idx_file);
 		break;
 	case SInt16:
-		read_row<int16_t>(_idx_file, (int16_t*)buffer);
+		read_row<int16_t>((int16_t*)buffer);
 		break;
 	case SInt32:
-		read_row<int32_t>(_idx_file, (int32_t*)buffer);
+		read_row<int32_t>((int32_t*)buffer);
 		break;
 	case Single:
-		read_row<float>(_idx_file, (float*)buffer);
+		read_row<float>((float*)buffer);
 		break;
 	case Double:
-		read_row<double>(_idx_file, (double*)buffer);
+		read_row<double>((double*)buffer);
 		break;
 	}
 }

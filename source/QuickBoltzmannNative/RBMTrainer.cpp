@@ -338,7 +338,12 @@ void RBMTrainer::SetRBM(RBM* in_RBM)
 {
 	assert(IsInitialized == false);
 	assert(TrainingData != NULL);
-	assert(in_RBM->_visible_count == VisibleCount);
+
+	if(in_RBM->_visible_count != VisibleCount)
+	{
+		PreviousError = ImportedRBMHasIncorrectNumberOfVisibleInputs;
+		return;
+	}
 	
 	// set the data
 	LoadedRBM = in_RBM;
