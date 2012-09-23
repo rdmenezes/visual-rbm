@@ -515,6 +515,7 @@ int main(int argc, char** argv)
 		printf("Training Parameters:\n");
 		printf(" Model = %s\n", parameters.model == Model_RBM ? "RBM" : "SRBM");
 		printf(" Visible Type = %s\n", parameters.visible_type== Binary ? "Binary" : "Gaussian");
+		printf(" Hidden Units = %u\n", parameters.hiddden_units);
 		printf(" Learning Rate = %f\n", parameters.learning_rate);
 		printf(" Momentum = %f\n", parameters.momentum);
 		printf(" L1 Regularization = %f\n", parameters.l1_regularization);
