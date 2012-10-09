@@ -22,7 +22,7 @@ enum DataFormat : uint8_t
 	Double = 0x0E
 };
 
-const inline Endianness SystemEndianness()
+inline const Endianness SystemEndianness()
 {
 	union
 	{

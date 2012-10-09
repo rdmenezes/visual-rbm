@@ -134,14 +134,14 @@ namespace VisualRBM
 							visibleTypeComboBox.Enabled = false;
 							hiddenUnitsTextBox.Enabled = false;
 							
-							loadParametersButton.Enabled = true;
-							saveParametersButton.Enabled = true;
-							resetParametersButton.Enabled = true;
+							loadParametersButton.Enabled = false;
+							saveParametersButton.Enabled = false;
+							resetParametersButton.Enabled = false;
 							
-							learningRateTextBox.Enabled = true;
-							momentumTextBox.Enabled = true;
-							l1TextBox.Enabled = true;
-							l2TextBox.Enabled = true;
+							learningRateTextBox.Enabled = false;
+							momentumTextBox.Enabled = false;
+							l1TextBox.Enabled = false;
+							l2TextBox.Enabled = false;
 							minibatchSizeTextBox.Enabled = false;							
 							epochsTextBox.Enabled = true;
 
@@ -875,7 +875,7 @@ namespace VisualRBM
 					{
 						line++;
 
-						String[] valid_keys = { "learning_rate", "momentum", "l1_regularization", "l2_regularization", "minibatch_size", "epochs" };
+						String[] valid_keys = { "model", "visible_type", "hidden_units", "learning_rate", "momentum", "l1_regularization", "l2_regularization", "visible_dropout", "hidden_dropout", "minibatch_size", "epochs", "print_interval"};
 
 						for(String text = sr.ReadLine(); text != null; text = sr.ReadLine())
 						{
@@ -915,6 +915,58 @@ namespace VisualRBM
 						{
 
 							String val;
+
+							if (parameter_map.TryGetValue("model", out val))
+							{
+								if (String.Compare(val, "rbm", true) != 0)
+								{
+									MessageBox.Show(String.Format("Could not parse \"model = {0};\" currently only RBM is supported", val));
+									return;
+								}
+							}
+
+							if (parameter_map.TryGetValue("visible_type", out val))
+							{
+								if (String.Compare(val, "binary", true) == 0)
+								{
+									visibleTypeComboBox.SelectedItem = UnitType.Binary;
+									RBMProcessor.VisibleType = UnitType.Binary;
+								}
+								else if (String.Compare(val, "gaussian", true) == 0)
+								{
+									visibleTypeComboBox.SelectedItem = UnitType.Gaussian;
+									RBMProcessor.VisibleType = UnitType.Gaussian;
+								}
+								else
+								{
+									MessageBox.Show(String.Format("Could not parse \"visible_type = {0};\" must be Binary or Gaussian", val));
+									return;
+								}
+							}
+
+							if (parameter_map.TryGetValue("hidden_units", out val))
+							{
+								int hidden;
+								if(int.TryParse(val, out hidden))
+								{
+									if (hidden > 0)
+									{
+										RBMProcessor.HiddenUnits = hidden;
+										hiddenUnitsTextBox.Text = hidden.ToString();
+									}
+									else
+									{
+										MessageBox.Show("Hidden Units must be a positive integer");
+										return;
+									}
+								}
+								else
+								{
+									MessageBox.Show(String.Format("Could not parse \"hidden_units = {0}\"", val));
+									return;
+								}
+							}
+
 							if (parameter_map.TryGetValue("learning_rate", out val))
 							{
 								float lr;
@@ -935,13 +987,110 @@ namespace VisualRBM
 								float mo;
 								if (float.TryParse(val, out mo))
 								{
-									RBMProcessor.Momentum = mo;
-									momentumTextBox.Text = mo.ToString();
+									if (mo >= 0.0f && mo <= 1.0f)
+									{
+										RBMProcessor.Momentum = mo;
+										momentumTextBox.Text = mo.ToString();
+
+									}
+									else
+									{
+										MessageBox.Show("Momentum must be a real value on [0,1]");
+										return;
+									}
 								}
 								else
 								{
 									MessageBox.Show(String.Format("Could not parse \"momentum = {0}\"", val));
 									return;
+								}
+							}
+
+							if (parameter_map.TryGetValue("l1_regularization", out val))
+							{
+								float l1;
+								if (float.TryParse(val, out l1))
+								{
+									if (l1 >= 0.0f)
+									{
+										RBMProcessor.L1Regularization = l1;
+										l1TextBox.Text = l1.ToString();
+									}
+									else
+									{
+										MessageBox.Show("L1 Regularization must be non-negative");
+										return;
+									}
+								}
+								else
+								{
+									MessageBox.Show(String.Format("Could not parse \"l1_regulrization = {0}\"", val));
+									return;
+								}
+							}
+
+							if (parameter_map.TryGetValue("l2_regularization", out val))
+							{
+								float l2;
+								if (float.TryParse(val, out l2))
+								{
+									if (l2 >= 0.0f)
+									{
+										RBMProcessor.L2Regularization = l2;
+										l2TextBox.Text = l2.ToString();
+									}
+									else
+									{
+										MessageBox.Show("L2 Regularization must be non-negative");
+										return;
+									}
+								}
+								else
+								{
+									MessageBox.Show(String.Format("Could not parse \"l2_regulrization = {0}\"", val));
+									return;
+								}
+							}
+
+							if (parameter_map.TryGetValue("visible_dropout", out val))
+							{
+								float vd;
+								if (float.TryParse(val, out vd))
+								{
+									if (vd >= 0.0f && vd < 1.0f)
+									{
+										RBMProcessor.VisibleDropout = vd;
+									}
+									else
+									{
+										MessageBox.Show("Visible Dropout must be a positive real value less than 1.0");
+										return;
+									}
+								}
+								else
+								{
+									MessageBox.Show(String.Format("Could not parse \"visible_dropout = {0}\"", val));
+								}
+							}
+
+							if (parameter_map.TryGetValue("hidden_dropout", out val))
+							{
+								float hd;
+								if (float.TryParse(val, out hd))
+								{
+									if (hd >= 0.0f && hd < 1.0f)
+									{
+										RBMProcessor.HiddenDropout = hd;
+									}
+									else
+									{
+										MessageBox.Show("Hidden Dropout must be a positive real value less than 1.0");
+										return;
+									}
+								}
+								else
+								{
+									MessageBox.Show(String.Format("Could not parse \"hidden_dropout = {0}\"", val));
 								}
 							}
 
@@ -991,54 +1140,8 @@ namespace VisualRBM
 								}
 							}
 
-							if(parameter_map. TryGetValue("l1_regularization", out val))
-							{
-								float l1;
-								if(float.TryParse(val, out l1))
-								{
-									if(l1 >= 0.0f)
-									{
-										RBMProcessor.L1Regularization = l1;
-										l1TextBox.Text = l1.ToString();
-									}
-									else
-									{
-										MessageBox.Show("L1 Regularization must be non-negative");
-										return;
-									}
-								}
-								else
-								{
-									MessageBox.Show(String.Format("Could not parse \"l1_regulrization = {0}\"", val));
-									return;
-								}
-							}
-
-							if(parameter_map. TryGetValue("l2_regularization", out val))
-							{
-								float l2;
-								if(float.TryParse(val, out l2))
-								{
-									if(l2 >= 0.0f)
-									{
-										RBMProcessor.L2Regularization = l2;
-										l2TextBox.Text = l2.ToString();
-									}
-									else
-									{
-										MessageBox.Show("L2 Regularization must be non-negative");
-										return;
-									}
-								}
-								else
-								{
-									MessageBox.Show(String.Format("Could not parse \"l2_regulrization = {0}\"", val));
-									return;
-								}
-							}
-
 							_main_form.trainingLog.AddLog("Loaded Parameters from {0}", ofd.FileName);
-						}
+						}	
 					}
 				}
 				catch (System.Exception ex)
@@ -1060,10 +1163,15 @@ namespace VisualRBM
 				{
 					using (StreamWriter sw = new StreamWriter(new FileStream(sfd.FileName, FileMode.Create)))
 					{
+						sw.WriteLine("model = RBM");
+						sw.WriteLine("visible_type = {0}", RBMProcessor.VisibleType);
+						sw.WriteLine("hidden_units = {0}", RBMProcessor.HiddenUnits);
 						sw.WriteLine("learning_rate = {0}", RBMProcessor.LearningRate);
 						sw.WriteLine("momentum = {0}", RBMProcessor.Momentum);
 						sw.WriteLine("l1_regularization = {0}", RBMProcessor.L1Regularization);
 						sw.WriteLine("l2_regularization = {0}", RBMProcessor.L2Regularization);
+						sw.WriteLine("visible_dropout = {0}", RBMProcessor.VisibleDropout);
+						sw.WriteLine("hidden_dropout = {0}", RBMProcessor.HiddenDropout);
 						sw.WriteLine("minibatch_size = {0}", RBMProcessor.MinibatchSize);
 						sw.WriteLine("epochs = {0}", RBMProcessor.Epochs);
 
@@ -1082,19 +1190,26 @@ namespace VisualRBM
 		{
 			if (MessageBox.Show("Reset training parameters to defaults?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
 			{
+				RBMProcessor.VisibleType = UnitType.Binary;
+				RBMProcessor.HiddenUnits = 100;
 				RBMProcessor.LearningRate = 0.001f;
 				RBMProcessor.Momentum = 0.5f;
+				RBMProcessor.L1Regularization = 0.0f;
+				RBMProcessor.L2Regularization = 0.0f;
+				RBMProcessor.VisibleDropout = 0.0f;
+				RBMProcessor.HiddenDropout = 0.5f;
 				RBMProcessor.MinibatchSize = 10;
 				RBMProcessor.Epochs = 100;
-				RBMProcessor.L1Regularization = 0.0f;
-				RBMProcessor.L2Regularization = 0.0001f;
 
+				visibleTypeComboBox.SelectedItem = UnitType.Binary.ToString();
+				hiddenUnitsTextBox.Text = RBMProcessor.HiddenUnits.ToString();
 				learningRateTextBox.Text = RBMProcessor.LearningRate.ToString();
 				momentumTextBox.Text = RBMProcessor.Momentum.ToString();
 				l1TextBox.Text = RBMProcessor.L1Regularization.ToString();
 				l2TextBox.Text = RBMProcessor.L2Regularization.ToString();
 				minibatchSizeTextBox.Text = RBMProcessor.MinibatchSize.ToString();
 				epochsTextBox.Text = RBMProcessor.Epochs.ToString();
+				
 				_main_form.trainingLog.AddLog("Reset Parameters to Defaults");
 			}
 		}

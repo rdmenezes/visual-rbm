@@ -57,7 +57,8 @@ public:
 	void SetMomentum(float in_momentum) { Momentum = in_momentum;};
 	void SetL1Regularization(float in_reg) {L1Regularization = in_reg;};
 	void SetL2Regularization(float in_reg) {L2Regularization = in_reg;};
-	void SetDropout(float in_dropout) {Dropout = in_dropout;};
+	void SetHiddenDropout(float in_dropout) {HiddenDropout = in_dropout;};
+	void SetVisibleDropout(float in_droput) {VisibleDropout = in_droput;};
 
 	// getters
 	uint32_t GetMinibatches() const {return Minibatches;};
@@ -70,7 +71,8 @@ public:
 	float GetMomentum() const {return Momentum;};
 	float GetL1Regularization() const {return L1Regularization;};
 	float GetL2Regularization() const {return L2Regularization;};
-	float GetDropout() const {return Dropout;};
+	float GetVisibleDropout() const {return VisibleDropout;};
+	float GetHiddenDropout() const {return HiddenDropout;};
 
 	float GetReconstructionError();
 	float GetValidationReconstructionError();
@@ -119,8 +121,8 @@ protected:
 	float Momentum;
 	float L1Regularization;
 	float L2Regularization;
-	float Dropout;
-
+	float HiddenDropout;
+	float VisibleDropout;
 
 	/** Weight Factors **/
 	float HFactor;
@@ -140,12 +142,27 @@ protected:
 	GLuint* VisibleValidationTextures;
 
 	/** Training Methods **/
-	void CalcEnabledHiddenUnits();
-	void CalcRandom();
+	// calculate which visible/hidden units are enabled
+	void CalcEnabledUnits();	
+	// update the random number buffers
+	void CalcRandom();			
+	// calculate depth mask for visible units (given the enabled visible texture)
+	void CalcVisibleDepth(GLuint v);
+	// calculate depth mask for hidden units (given the enabled hidden textures)
+	void CalcHiddenDepth(GLuint h);
+	// calculate the depth mask for the weights (given the enabled visible and hidden textures)
+	void CalcWeightDepth(GLuint prev_w, GLuint w);
+	// copy visible data into new texture
+	void CalcVisibleCopy(GLuint in_v, GLuint out_v);
+	// calculate hidden probabilities
 	void CalcHiddenProbs(GLuint v, GLuint h);
+	// calculate the hidden states
 	void CalcHiddenStates(GLuint hprob, GLuint hstate);
+	// calculate the visible activation/probabilities
 	void CalcVisible(GLuint hstate, GLuint v);
+	// calculate the weight deltas
 	void CalcWeightDeltas();
+	// calculate the new weights
 	void CalcWeights();
 	float CalcError(GLuint v, GLuint vp);
 
