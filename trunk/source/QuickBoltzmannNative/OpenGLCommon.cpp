@@ -56,12 +56,21 @@ bool StartupOpenGL()
 
 	// some bookkeeping
 	glPolygonMode(GL_FRONT, GL_FILL);
+	glEnable(GL_DEPTH_TEST);
 	// build our framebuffer
 	glGenFramebuffers(1, &FrameBuffer);
-	
+	// set up render target framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, FrameBuffer);
+
+	// construct our vertex arrays
 	glGenVertexArrays(1, &VertexArrayObject);
 	glBindVertexArray(VertexArrayObject);
+	// generate the buffer
 	glGenBuffers(1, &VertexBufferObject);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferObject);
+	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
 	glEnableClientState(GL_VERTEX_ARRAY);
 
@@ -130,7 +139,7 @@ GLint BuildVertexShader(const char* filename)
 	return shader_handle;
 }
 
-GLint BuildFragmentProgram(const char* filename, GLint& width_handle, GLint& height_handle)
+GLint BuildFragmentProgram(const char* filename, GLint& size_handle, GLint& depth_handle)
 {
 	SourceBuffer fragment_source;
 	LoadFile(filename, fragment_source);
@@ -147,6 +156,7 @@ GLint BuildFragmentProgram(const char* filename, GLint& width_handle, GLint& hei
 	
 	GLint program_handle = glCreateProgram();
 
+
 	// attach the fragment shader to the program
 	glAttachShader(program_handle, shader_handle);
 	if(vertex_shader_handle == -1)
@@ -158,11 +168,15 @@ GLint BuildFragmentProgram(const char* filename, GLint& width_handle, GLint& hei
 	glLinkProgram(program_handle);
 
 	// get the location for width and height params (for vertex shader)
-	width_handle = glGetUniformLocation(program_handle, "width");
-	height_handle = glGetUniformLocation(program_handle, "height");
+	//width_handle = glGetUniformLocation(program_handle, "width");
+	//height_handle = glGetUniformLocation(program_handle, "height");
+
+	size_handle = glGetUniformLocation(program_handle, "size");
+	depth_handle = glGetUniformLocation(program_handle, "depth");
 
 	return program_handle;
 }
+
 
 GLuint AllocateFloatTexture(uint32_t rows, uint32_t columns, float* initial_data)
 {
@@ -267,4 +281,21 @@ void PrintError()
 	GLenum error = glGetError();
 
 	printf("%s: %x\n", gluErrorString(error), error);
+}
+
+GLuint depth_buffer;
+void BindDepthBuffer(uint32_t rows, uint32_t columns)
+{
+	glGenRenderbuffers(1, &depth_buffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, columns, rows);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
+	
+	glEnable(GL_DEPTH_TEST);
+	glDepthRange(0.0f, 1.0f);
+}
+
+void DeleteDepthBuffer()
+{
+	glDeleteRenderbuffers(1, &depth_buffer);
 }

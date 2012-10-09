@@ -56,6 +56,8 @@ public:
 		_user_size = byte_count + back_padding;
 
 		_head = malloc(_total_size);
+		memset(_head, 0, _total_size);
+
 		uint32_t head_offset = (Alignment - ((uint32_t)_head % Alignment)) % Alignment;
 
 		_pointer = (T*)((uint32_t)_head + head_offset);

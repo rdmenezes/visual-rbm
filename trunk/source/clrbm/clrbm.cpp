@@ -21,7 +21,8 @@ struct
 	float momentum;
 	float l1_regularization;
 	float l2_regularization;
-	float dropout_probability;
+	float visible_dropout_probability;
+	float hidden_dropout_probability;
 	uint32_t minibatch_size;
 	uint32_t epochs;
 	uint32_t print_interval;
@@ -37,8 +38,51 @@ bool quiet = false;
 
 void print_help()
 {
+	printf("\nUsage: clrbm [ARGS]\n");
+	printf("Train an RBM using OpenGL\n\n");
+	printf("Required Arguments:\n");
+	printf("  -train=IDX         Specifies the input idx training data file.\n");
+	printf("  -params=PARAMS     Load training parameters to use during training.\n");
+	printf("  -export=OUT        Specifies filename to save trained RBM as.\n\n");
+	printf(" Optional Arguments:\n");
+	printf("   -valid=IDX        Specifies an optional validation data file.\n");
+	printf("   -import=RBM       Specifies filename of optional RBM to import and train.\n");
+	printf("   -quiet            Suppresses all stdout output\n");
+	printf("   -defaults         Save a default configuration file to default.vrbmparameters\n");
 
 }
+
+const char* params[] = 
+{
+	"model=",
+	"visible_type=",
+	"hidden_units=",
+	"learning_rate=",
+	"momentum=",
+	"l1_regularization=",
+	"l2_regularization=",
+	"visible_dropout=",
+	"hidden_dropout=",
+	"minibatch_size=",
+	"epochs=",
+	"print_interval="
+};
+
+const char* param_defaults[] =
+{
+	"rbm",
+	"binary",
+	"100",
+	"0.001",
+	"0.5",
+	"0.0",
+	"0.0",
+	"0.0",
+	"0.5",
+	"10",
+	"100",
+	"100",
+};
 
 bool load_parameters(const char* filename)
 {
@@ -65,26 +109,12 @@ bool load_parameters(const char* filename)
 		Momentum,
 		L1Regularization,
 		L2Regularization,
-		Dropout,
+		VisibleDropout,
+		HiddenDropout,
 		MinibatchSize,
 		Epochs,
 		PrintInterval,
 		Count
-	};
-
-	const char* params[] = 
-	{
-		"model=",
-		"visible_type=",
-		"hidden_units=",
-		"learning_rate=",
-		"momentum=",
-		"l1_regularization=",
-		"l2_regularization=",
-		"dropout=",
-		"minibatch_size=",
-		"epochs=",
-		"print_interval="
 	};
 
 	char* values[Count] = {0};
@@ -95,6 +125,8 @@ bool load_parameters(const char* filename)
 
 	std::vector<char*> line_list;
 	char* line_front = data;
+
+	
 
 	// get the lines
 	for(int i = 0; i < length; i++)
@@ -131,7 +163,7 @@ bool load_parameters(const char* filename)
 	// close the parameters file
 	fclose(file);
 
-	// fidn the values
+	// find the values
 	for(int k = 0; k < line_list.size(); k++)
 	{
 		char* line = line_list[k];
@@ -145,9 +177,7 @@ bool load_parameters(const char* filename)
 				}
 				else
 				{
-					printf("Duplicate parameter found:\n  \"");
-					printf(line);
-					printf("\"");
+					printf("Duplicate parameter found:\n  \"%s\"", line);
 					goto ERROR;
 				}
 			}
@@ -158,11 +188,9 @@ bool load_parameters(const char* filename)
 
 #pragma region Parameter Parsing
 
-	if(values[Model] && strcmp(values[Model], "RBM") != 0)
+	if(values[Model] && strcmp(values[Model], "rbm") != 0)
 	{
-		printf("Problem parsing \"");
-		printf(values[Model]);
-		printf("\" as model");
+		printf("Problem parsing \"%s\" as model", values[Model]);
 		goto ERROR;
 	}
 	else
@@ -172,19 +200,17 @@ bool load_parameters(const char* filename)
 
 	if(values[VisibleType])
 	{
-		if(strcmp(values[VisibleType], "Binary") == 0)
+		if(strcmp(values[VisibleType], "binary") == 0)
 		{
 			parameters.visible_type = Binary;
 		}
-		else if(strcmp(values[VisibleType], "Gaussian") == 0)
+		else if(strcmp(values[VisibleType], "gaussian") == 0)
 		{
 			parameters.visible_type = Gaussian;
 		}
 		else
 		{
-			printf("Problem parsing \"");
-			printf(values[VisibleType]);
-			printf("\" as unit type");
+			printf("Problem parsing \"%s\" as unit type; must be either 'binary' or 'gaussian'", values[VisibleType]);
 			goto ERROR;
 		}
 	}
@@ -197,16 +223,12 @@ bool load_parameters(const char* filename)
 	{
 		if(sscanf(values[HiddenUnits], "%u", &parameters.hiddden_units) != 1)
 		{
-			printf("Problem parsing \"");
-			printf(values[HiddenUnits]);
-			printf("\" as hidden unit count");
+			printf("Problem parsing \"%s\" as hidden unit count", values[HiddenUnits]);
 			goto ERROR;
 		}
 		else if(parameters.hiddden_units == 0)
 		{
-			printf("Invalid hidden unit couont value \"");
-			printf(values[HiddenUnits]);
-			printf(";\" must be a positive integer ");
+			printf("Invalid hidden unit count value \"%s;\" must be a positive integer", values[HiddenUnits]);
 			goto ERROR;
 		}
 	}
@@ -220,16 +242,12 @@ bool load_parameters(const char* filename)
 	{
 		if(sscanf(values[LearningRate], "%f", &parameters.learning_rate) != 1)
 		{
-			printf("Problem parsing \"");
-			printf(values[LearningRate]);
-			printf("\" as learning rate");
+			printf("Problem parsing \"%s\" as learning rate", values[LearningRate]);
 			goto ERROR;
 		}
 		else if(parameters.learning_rate <= 0)
 		{
-			printf("Invalid learning rate value \"");
-			printf(values[LearningRate]);
-			printf(";\" must be a positive real value");
+			printf("Invalid learning rate value \"%s;\" must be a positive real value", values[LearningRate]);
 			goto ERROR;
 		}
 	}
@@ -243,16 +261,12 @@ bool load_parameters(const char* filename)
 	{
 		if(sscanf(values[Momentum], "%f", &parameters.momentum) != 1)
 		{
-			printf("Problem parsing \"");
-			printf(values[Momentum]);
-			printf("\" as momentum");
+			printf("Problem parsing \"%s\" as momentum", values[Momentum]);
 			goto ERROR;
 		}
 		else if(parameters.momentum < 0.0f || parameters.momentum > 1.0f)
 		{
-			printf("Invalid momentum value \"");
-			printf(values[Momentum]);
-			printf(";\" must be real on [0,1]");
+			printf("Invalid momentum value \"%s;\" must be real value on [0,1]", values[Momentum]);
 			goto ERROR;
 		}
 	}
@@ -266,16 +280,12 @@ bool load_parameters(const char* filename)
 	{
 		if(sscanf(values[L1Regularization], "%f", &parameters.l1_regularization) != 1)
 		{
-			printf("Problem parsing \"");
-			printf(values[L1Regularization]);
-			printf("\" as L1 regularization");
+			printf("Problem parsing \"%s\" as L1 regularization", values[L1Regularization]);
 			goto ERROR;
 		}
 		else if(parameters.l1_regularization < 0.0f)
 		{
-			printf("Invalid L1 regularization value \"");
-			printf(values[L1Regularization]);
-			printf(";\" must be a non-negative real value");
+			printf("Invalid L1 regularization value \"%s;\" must be a non-negative real value", values[L1Regularization]);
 			goto ERROR;
 		}
 	}
@@ -289,16 +299,12 @@ bool load_parameters(const char* filename)
 	{
 		if(sscanf(values[L2Regularization], "%f", &parameters.l2_regularization) != 1)
 		{
-			printf("Problem parsing \"");
-			printf(values[L2Regularization]);
-			printf("\" as L2 regularization");
+			printf("Problem parsing \"%s\" as L2 regularization", values[L2Regularization]);
 			goto ERROR;
 		}
 		else if(parameters.l2_regularization < 0.0f)
 		{
-			printf("Invalid L2 regularization value \"");
-			printf(values[L2Regularization]);
-			printf(";\" must be a non-negative real value");
+			printf("Invalid L2 regularization value \"%s;\" must be a non-negative real value", values[L2Regularization]);
 			goto ERROR;
 		}
 	}
@@ -308,26 +314,41 @@ bool load_parameters(const char* filename)
 	}
 
 	// real value on (0,1]
-	if(values[Dropout])
+	if(values[VisibleDropout])
 	{
-		if(sscanf(values[Dropout], "%f", &parameters.dropout_probability) != 1)
+		if(sscanf(values[VisibleDropout], "%f", &parameters.visible_dropout_probability) != 1)
 		{
-			printf("Problem parsing \"");
-			printf(values[Dropout]);
-			printf("\" as dropout probability");
+			printf("Problem parsing \"%s\" as visible dropout probability", values[VisibleDropout]);
 			goto ERROR;
 		}
-		else if(parameters.dropout_probability < 0.0f || parameters.dropout_probability >= 1.0f)
+		else if(parameters.visible_dropout_probability < 0.0f || parameters.visible_dropout_probability >= 1.0f)
 		{
-			printf("Invalid dropout probability value \"");
-			printf(values[Dropout]);
-			printf(";\" must be a non-negative real value less than 1.0");
+			printf("Invalid visible dropout probability value \"%s;\" must be a non-negative real value less than 1.0", values[VisibleDropout]);
 			goto ERROR;
 		}
 	}
 	else
 	{
-		parameters.dropout_probability = 0.5f;
+		parameters.visible_dropout_probability = 0.0f;
+	}
+
+	// real value on (0,1]
+	if(values[HiddenDropout])
+	{
+		if(sscanf(values[HiddenDropout], "%f", &parameters.hidden_dropout_probability) != 1)
+		{
+			printf("Problem parsing \"%s\" as hidden dropout probability", values[HiddenDropout]);
+			goto ERROR;
+		}
+		else if(parameters.hidden_dropout_probability < 0.0f || parameters.hidden_dropout_probability >= 1.0f)
+		{
+			printf("Invalid hidden dropout probability value \"%s;\" must be a non-negative real value less than 1.0", values[HiddenDropout]);
+			goto ERROR;
+		}
+	}
+	else
+	{
+		parameters.hidden_dropout_probability = 0.5f;
 	}
 
 	// positive integer
@@ -335,9 +356,7 @@ bool load_parameters(const char* filename)
 	{
 		if(sscanf(values[MinibatchSize], "%u", &parameters.minibatch_size) != 1)
 		{
-			printf("Problem parsing \"");
-			printf(values[MinibatchSize]);
-			printf("\" as minibatch size");
+			printf("Problem parsing \"%s\" as minibatch size", values[MinibatchSize]);
 			goto ERROR;
 		}
 		else if(parameters.minibatch_size == 0)
@@ -355,9 +374,7 @@ bool load_parameters(const char* filename)
 	{
 		if(sscanf(values[Epochs], "%u", &parameters.epochs) != 1)
 		{
-			printf("Problem parsing \"");
-			printf(values[Epochs]);
-			printf("\" as epoch count");
+			printf("Problem parsing \"%s\" as epoch count", values[Epochs]);
 			goto ERROR;
 		}
 		else if(parameters.epochs == 0)
@@ -375,9 +392,8 @@ bool load_parameters(const char* filename)
 	{
 		if(sscanf(values[PrintInterval], "%u", &parameters.print_interval) != 1)
 		{
-			printf("Problem parsing \"");
-			printf(values[PrintInterval]);
-			printf("\' as print interval");
+			printf("Problem parsing \"%s\" as print interval", values[PrintInterval]);
+			goto ERROR;
 		}
 		else if(parameters.print_interval == 0)
 		{
@@ -400,7 +416,14 @@ ERROR:
 	return result;
 }
 
-bool handle_arguments(int argc, char** argv)
+enum HandleArgumentsResults
+{
+	Success,
+	Error,
+	CreateDefaults
+};
+
+HandleArgumentsResults handle_arguments(int argc, char** argv)
 {
 	enum Arguments
 	{
@@ -410,10 +433,11 @@ bool handle_arguments(int argc, char** argv)
 		Import,
 		Export,
 		Quiet,
+		Defaults,
 		Count
 	};
 
-	const char* flags[Count] = {"-train=", "-valid=", "-params=", "-import=", "-export=", "-quiet"};
+	const char* flags[Count] = {"-train=", "-valid=", "-params=", "-import=", "-export=", "-quiet", "-defaults"};
 	char* arguments[Count] = {0};
 
 	for(int i = 1; i < argc; i++)
@@ -429,7 +453,12 @@ bool handle_arguments(int argc, char** argv)
 			}
 		}
 
-		if(arguments[index] == NULL)
+		if(index == -1)
+		{
+			printf("Unknown argument \"%s\" found\n", argv[i]);
+			return Error;
+		}
+		else if(arguments[index] == NULL)
 		{
 			// set string 
 			arguments[index] = argv[i] + strlen(flags[index]);
@@ -438,48 +467,55 @@ bool handle_arguments(int argc, char** argv)
 		else
 		{
 			// duplicate flag detected
-			printf("Duplicate flag \"");
-			printf(flags[index]);
-			printf("\" found");
-			return false;
+			printf("Duplicate flag \"%s\" found", flags[index]);
+			return Error;
 		}
+	}
+
+	if(arguments[Defaults] != 0)
+	{
+		return CreateDefaults;
 	}
 
 	// error handling
 	if(arguments[TrainingData] == NULL)
 	{
 		printf("Need training data\n");
-		return false;
+		return Error;
 	}
 
 	if(arguments[Parameters] == NULL)
 	{
 		printf("Need parameters\n");
-		return false;
+		return Error;
 	}
 
 	if(arguments[Export] == NULL)
 	{
 		printf("Need export destination filename\n");
-		return false;
+		return Error;
 	}
 
 	// get training data file
 	training_data = IDX::Load(arguments[TrainingData]);
+	if(training_data == NULL)
+	{
+		printf("Problem loading idx training data \"%s\"\n", arguments[TrainingData]);
+		return Error;
+	}
 
 	// get optional validation data file
 	if(arguments[ValidationData])
 	{
 		validation_data = IDX::Load(arguments[ValidationData]);
+		printf("Problem loading idx validation data \"%s\"\n", arguments[ValidationData]);
 	}
 
 	// load parameters here
 	if(!load_parameters(arguments[Parameters]))
 	{
-		printf("\nProblem parsing parameters file:\n  \"");
-		printf(arguments[Parameters]);
-		printf("\"\n");
-		return false;
+		printf("\nProblem parsing parameters file:\n  \"%s\"\n", arguments[Parameters]);
+		return Error;
 	}
 
 	// get rbm to start from
@@ -488,146 +524,183 @@ bool handle_arguments(int argc, char** argv)
 		imported = RBM::Load(arguments[Import]);
 		if(imported == NULL)
 		{
-			printf("Problem loading RBM file:\n  \"");
-			printf(arguments[Import]);
-			printf("\"n");
-			return false;
+			printf("Problem loading RBM file:\n  \"%s\"\n", arguments[Import]);
+			return Error;
 		}
 	}
 
 	// filename to export to
 	export_file = arguments[Export];
+	if(export_file == NULL)
+	{
+		printf("No export filename given for RBM\n");
+		return Error;
+	}
+
 
 	// should we calculate error/free energy
 	quiet = arguments[Quiet] != NULL;
 
-	return true;
+	return Success;
 }
 
 RBMTrainer* trainer = NULL;
 
 int main(int argc, char** argv)
 {
-	if(handle_arguments(argc, argv))
+	if(argc == 1)
 	{
-		// print out the used training parameters
+		goto ERROR;
+	}
 
-		printf("Training Parameters:\n");
-		printf(" Model = %s\n", parameters.model == Model_RBM ? "RBM" : "SRBM");
-		printf(" Visible Type = %s\n", parameters.visible_type== Binary ? "Binary" : "Gaussian");
-		printf(" Hidden Units = %u\n", parameters.hiddden_units);
-		printf(" Learning Rate = %f\n", parameters.learning_rate);
-		printf(" Momentum = %f\n", parameters.momentum);
-		printf(" L1 Regularization = %f\n", parameters.l1_regularization);
-		printf(" L2 Regularization = %f\n", parameters.l2_regularization);
-		printf(" Dropout Probability = %f\n", parameters.dropout_probability);
-		printf(" Minibatch Size = %u\n", parameters.minibatch_size);
-		printf(" Training Epochs %u\n", parameters.epochs);
-		
-		
-		trainer = new RBMTrainer();
-		if(trainer->GetLastErrorCode() == RequiredOpenGLVersionUnsupported)
-		{
-			printf("OpenGL version 3.3 is required to run this program\n");
-			goto ERROR;
-		}
-
-			trainer->SetVisibleType(parameters.visible_type);
-			trainer->SetHiddenCount(parameters.hiddden_units);
-			trainer->SetLearningRate(parameters.learning_rate);
-			trainer->SetMomentum(parameters.momentum);
-			trainer->SetL1Regularization(parameters.l1_regularization);
-			trainer->SetL2Regularization(parameters.l2_regularization);
-			trainer->SetDropout(parameters.dropout_probability);
-			trainer->SetMinibatchSize(parameters.minibatch_size);
+	switch(handle_arguments(argc, argv))
+	{
+	case Success:
+		{		
+			// print out the used training parameters
+			printf("Training Parameters:\n");
+			printf(" Model = %s\n", parameters.model == Model_RBM ? "RBM" : "SRBM");
+			printf(" Visible Type = %s\n", parameters.visible_type== Binary ? "Binary" : "Gaussian");
+			printf(" Hidden Units = %u\n", parameters.hiddden_units);
+			printf(" Learning Rate = %f\n", parameters.learning_rate);
+			printf(" Momentum = %f\n", parameters.momentum);
+			printf(" L1 Regularization = %f\n", parameters.l1_regularization);
+			printf(" L2 Regularization = %f\n", parameters.l2_regularization);
+			printf(" Visible Dropout Probability = %f\n", parameters.visible_dropout_probability);
+			printf(" Hidden Dropout Probability = %f\n", parameters.hidden_dropout_probability);
+			printf(" Minibatch Size = %u\n", parameters.minibatch_size);
+			printf(" Training Epochs = %u\n", parameters.epochs);
 			
-		// load the training data
-		if(!trainer->SetTrainingData(training_data))
-		{
-			printf("Training Data contains invalid values");
-			goto ERROR;
-		}
-
-
-		// load the validation data
-		if(!trainer->SetValidationData(validation_data))
-		{
-			if(trainer->GetLastErrorCode() == ValidationDataHasIncorrectNumberOfVisibleInputs)
+			fflush(stdout);
+			
+			trainer = new RBMTrainer();
+			if(trainer->GetLastErrorCode() == RequiredOpenGLVersionUnsupported)
 			{
-				printf("Validation data has different number of visible inputs as training data");
-			}
-			else
-			{
-				printf("Validation Data contains invalid values");
-			}
-			goto ERROR;
-		}
-
-		// load rbm
-		if(imported != NULL)
-		{
-			trainer->SetRBM(imported);
-			if(trainer->GetLastErrorCode() == ImportedRBMHasIncorrectNumberOfVisibleInputs)
-			{
-				printf("Imported RBM has different number of visible inputs as training data");
+				printf("OpenGL version 3.3 is required to run this program\n");
 				goto ERROR;
 			}
-		}
 
-		uint64_t total_iterations = 0;
-		uint32_t print_counter = 0;
-		
-		if (!quiet)
-		{
-			if(validation_data)
+				trainer->SetVisibleType(parameters.visible_type);
+				trainer->SetHiddenCount(parameters.hiddden_units);
+				trainer->SetLearningRate(parameters.learning_rate);
+				trainer->SetMomentum(parameters.momentum);
+				trainer->SetL1Regularization(parameters.l1_regularization);
+				trainer->SetL2Regularization(parameters.l2_regularization);
+				trainer->SetVisibleDropout(parameters.visible_dropout_probability);
+				trainer->SetHiddenDropout(parameters.hidden_dropout_probability);
+				trainer->SetMinibatchSize(parameters.minibatch_size);
+			
+			// load the training data
+			if(!trainer->SetTrainingData(training_data))
 			{
-				printf("interval; training reconstruction; validation reconstruction\n");
-			}
-			else
-			{
-				printf("interval; training reconstruction\n");
-			}
-		}
-
-		trainer->Initialize();
-
-		while(parameters.epochs)
-		{
-			trainer->Train();
-
-			total_iterations++;
-
-			// decrement
-			if((total_iterations % trainer->GetMinibatches()) == 0)
-			{
-				--parameters.epochs;
+				printf("Training Data contains invalid values");
+				goto ERROR;
 			}
 
-			// print our update
-			if( !quiet)
+
+			// load the validation data
+			if(!trainer->SetValidationData(validation_data))
 			{
-				if((total_iterations % parameters.print_interval) == 0)
+				if(trainer->GetLastErrorCode() == ValidationDataHasIncorrectNumberOfVisibleInputs)
 				{
-					float train_error = trainer->GetReconstructionError();
-					if(validation_data)
-					{
-						float valid_error = trainer->GetValidationReconstructionError();
+					printf("Validation data has different number of visible inputs as training data");
+				}
+				else
+				{
+					printf("Validation Data contains invalid values");
+				}
+				goto ERROR;
+			}
 
-						printf("%u; %f; %f\n", ++print_counter, train_error, valid_error);
-					}
-					else
+			// load rbm
+			if(imported != NULL)
+			{
+				trainer->SetRBM(imported);
+				if(trainer->GetLastErrorCode() == ImportedRBMHasIncorrectNumberOfVisibleInputs)
+				{
+					printf("Imported RBM has different number of visible inputs as training data");
+					goto ERROR;
+				}
+			}
+
+			uint64_t total_iterations = 0;
+		
+			if (!quiet)
+			{
+				if(validation_data)
+				{
+					printf("interval; training reconstruction; validation reconstruction\n");
+				}
+				else
+				{
+					printf("interval; training reconstruction\n");
+				}
+			}
+
+			trainer->Initialize();
+
+			while(parameters.epochs)
+			{
+				trainer->Train();
+
+				total_iterations++;
+
+				// decrement
+				if((total_iterations % trainer->GetMinibatches()) == 0)
+				{
+					--parameters.epochs;
+				}
+
+				// print our update
+				if( !quiet)
+				{
+					if((total_iterations % parameters.print_interval) == 0)
 					{
-						printf("%u; %f\n", ++print_counter, train_error);
+						float train_error = trainer->GetReconstructionError();
+						if(validation_data)
+						{
+							float valid_error = trainer->GetValidationReconstructionError();
+
+							printf("%llu; %f; %f\n", total_iterations, train_error, valid_error);
+						}
+						else
+						{
+							printf("%llu; %f\n", total_iterations, train_error);
+						}
+
+						fflush(stdout);
 					}
 				}
 			}
+		
+			printf("Exporting trained RBM to \"%s\"\n", export_file);
+			fflush(stdout);
+			RBM* rbm = trainer->GetRBM();
+			rbm->Save(export_file);
+			delete rbm;
+			goto FINISHED;
 		}
+	case Error:
+		goto ERROR;
+	case CreateDefaults:
+		{
+			printf("Generating \"default.vrbmparameters\" file\n");
+			FILE* defaults = fopen("default.vrbmparameters", "wb");
 
-		goto FINISHED;
+			for(int k = 0; k < sizeof(params)/sizeof(params[0]); k++)
+			{
+				fprintf(defaults, "%s%s\n",params[k], param_defaults[k]);
+			}
+
+			fflush(defaults);
+			fclose(defaults);
+			goto FINISHED;
+		}
 	}
 
 ERROR:
 	print_help();
+	fflush(stdout);
 FINISHED:
 	// cleanup
 	if(training_data)
@@ -644,6 +717,4 @@ FINISHED:
 	{
 		delete imported;
 	}
-
-	getc(stdin);
 }

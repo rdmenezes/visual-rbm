@@ -158,6 +158,24 @@ namespace QuickBoltzmann
 			}
 		}
 
+		static property float VisibleDropout
+		{
+			float get() {return rbmtrainer->GetVisibleDropout();};
+			void set(float vd)
+			{
+				rbmtrainer->SetVisibleDropout(vd);
+			}
+		}
+
+		static property float HiddenDropout
+		{
+			float get() {return rbmtrainer->GetHiddenDropout();};
+			void set(float hd)
+			{
+				rbmtrainer->SetHiddenDropout(hd);
+			}
+		}
+
 		static float Sigmoid(float x)
 		{
 			return float(1.0 / (1.0 + Math::Exp(-x)));

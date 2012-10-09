@@ -142,6 +142,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="NativeShaders\calc_binary_states.frag" />
+    <None Include="NativeShaders\calc_clear_depth.frag" />
+    <None Include="NativeShaders\calc_copy_texture.frag" />
+    <None Include="NativeShaders\calc_depthmap.frag" />
+    <None Include="NativeShaders\calc_enabled_unit.frag" />
     <None Include="NativeShaders\calc_error_vector.frag" />
     <None Include="NativeShaders\calc_free_energy.frag" />
     <None Include="NativeShaders\calc_hidden_probabilities.frag" />
