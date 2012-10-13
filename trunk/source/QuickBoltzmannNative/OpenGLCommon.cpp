@@ -54,8 +54,12 @@ bool StartupOpenGL()
 	glewExperimental=TRUE;
 	glewInit();
 
+	while(glGetError() != GL_NO_ERROR);
+	
+
 	// some bookkeeping
-	glPolygonMode(GL_FRONT, GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK , GL_FILL);
+
 	glEnable(GL_DEPTH_TEST);
 	// build our framebuffer
 	glGenFramebuffers(1, &FrameBuffer);
@@ -72,7 +76,6 @@ bool StartupOpenGL()
 	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
 
-	glEnableClientState(GL_VERTEX_ARRAY);
 
 	return true;
 }

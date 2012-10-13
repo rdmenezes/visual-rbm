@@ -20,7 +20,8 @@ namespace VisualRBM
 		{
 			InitializeComponent();
 
-			this.MinimumSize = new System.Drawing.Size(this.Size.Width, 350);
+			this.ClientSize = new Size(this.settingsBar.Width, 500);
+			this.MinimumSize = this.Size;
 
 			settingsBar.MainForm = this;
 			visualizeVisible.MainForm = this;
