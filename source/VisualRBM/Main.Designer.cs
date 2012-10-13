@@ -165,14 +165,14 @@
 			this.settingsBar.Location = new System.Drawing.Point(0, 0);
 			this.settingsBar.Margin = new System.Windows.Forms.Padding(0);
 			this.settingsBar.Name = "settingsBar";
-			this.settingsBar.Size = new System.Drawing.Size(1080, 104);
+			this.settingsBar.Size = new System.Drawing.Size(1150, 100);
 			this.settingsBar.TabIndex = 2;
 			// 
 			// Main
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(1063, 500);
+			this.ClientSize = new System.Drawing.Size(1150, 500);
 			this.Controls.Add(this.Maintabs);
 			this.Controls.Add(this.settingsBar);
 			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));

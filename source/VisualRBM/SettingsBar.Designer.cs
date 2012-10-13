@@ -30,30 +30,38 @@
 		{
 			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(SettingsBar));
 			this.modelPanel = new System.Windows.Forms.Panel();
+			this.panel7 = new System.Windows.Forms.Panel();
+			this.modelTypeComboBox = new System.Windows.Forms.ComboBox();
+			this.labelModelType = new System.Windows.Forms.Label();
+			this.panel6 = new System.Windows.Forms.Panel();
+			this.visibleTypeComboBox = new System.Windows.Forms.ComboBox();
+			this.labelVisibleType = new System.Windows.Forms.Label();
 			this.panel14 = new System.Windows.Forms.Panel();
 			this.hiddenUnitsTextBox = new System.Windows.Forms.TextBox();
 			this.labelHiddenUnits = new System.Windows.Forms.Label();
 			this.visibleUnitsLabel = new System.Windows.Forms.Label();
 			this.labelVisibleUnits = new System.Windows.Forms.Label();
-			this.panel6 = new System.Windows.Forms.Panel();
-			this.visibleTypeComboBox = new System.Windows.Forms.ComboBox();
-			this.labelVisibleType = new System.Windows.Forms.Label();
 			this.label10 = new System.Windows.Forms.Label();
-			this.panel7 = new System.Windows.Forms.Panel();
-			this.modelTypeComboBox = new System.Windows.Forms.ComboBox();
-			this.labelModelType = new System.Windows.Forms.Label();
 			this.parametersPanel = new System.Windows.Forms.Panel();
-			this.panel9 = new System.Windows.Forms.Panel();
-			this.resetParametersButton = new System.Windows.Forms.Button();
-			this.saveParametersButton = new System.Windows.Forms.Button();
-			this.loadParametersButton = new System.Windows.Forms.Button();
-			this.panel4 = new System.Windows.Forms.Panel();
 			this.panel5 = new System.Windows.Forms.Panel();
+			this.epochsTextBox = new System.Windows.Forms.TextBox();
+			this.labelEpochs = new System.Windows.Forms.Label();
+			this.minibatchSizeTextBox = new System.Windows.Forms.TextBox();
+			this.labelMinibatchSize = new System.Windows.Forms.Label();
 			this.panel15 = new System.Windows.Forms.Panel();
+			this.l2TextBox = new System.Windows.Forms.TextBox();
+			this.labelL2 = new System.Windows.Forms.Label();
+			this.momentumTextBox = new System.Windows.Forms.TextBox();
+			this.labelMomentum = new System.Windows.Forms.Label();
 			this.panel3 = new System.Windows.Forms.Panel();
+			this.l1TextBox = new System.Windows.Forms.TextBox();
+			this.labelL1 = new System.Windows.Forms.Label();
 			this.learningRateTextBox = new System.Windows.Forms.TextBox();
 			this.labelLearningRate = new System.Windows.Forms.Label();
 			this.label14 = new System.Windows.Forms.Label();
+			this.resetParametersButton = new System.Windows.Forms.Button();
+			this.saveParametersButton = new System.Windows.Forms.Button();
+			this.loadParametersButton = new System.Windows.Forms.Button();
 			this.panel1 = new System.Windows.Forms.Panel();
 			this.traingingIdxPathTextBox = new System.Windows.Forms.TextBox();
 			this.selectTrainingIdxButton = new System.Windows.Forms.Button();
@@ -77,23 +85,17 @@
 			this.pauseButton = new System.Windows.Forms.Button();
 			this.exportButton = new System.Windows.Forms.Button();
 			this.importButton = new System.Windows.Forms.Button();
-			this.minibatchSizeTextBox = new System.Windows.Forms.TextBox();
-			this.labelMinibatchSize = new System.Windows.Forms.Label();
-			this.momentumTextBox = new System.Windows.Forms.TextBox();
-			this.labelMomentum = new System.Windows.Forms.Label();
-			this.labelEpochs = new System.Windows.Forms.Label();
-			this.epochsTextBox = new System.Windows.Forms.TextBox();
-			this.labelL1 = new System.Windows.Forms.Label();
-			this.labelL2 = new System.Windows.Forms.Label();
-			this.l1TextBox = new System.Windows.Forms.TextBox();
-			this.l2TextBox = new System.Windows.Forms.TextBox();
+			this.panel4 = new System.Windows.Forms.Panel();
+			this.label1 = new System.Windows.Forms.Label();
+			this.labelVisibleDropout = new System.Windows.Forms.Label();
+			this.labelHiddenDropout = new System.Windows.Forms.Label();
+			this.visibleDropoutTextBox = new System.Windows.Forms.TextBox();
+			this.hiddenDropoutTextBox = new System.Windows.Forms.TextBox();
 			this.modelPanel.SuspendLayout();
-			this.panel14.SuspendLayout();
-			this.panel6.SuspendLayout();
 			this.panel7.SuspendLayout();
+			this.panel6.SuspendLayout();
+			this.panel14.SuspendLayout();
 			this.parametersPanel.SuspendLayout();
-			this.panel9.SuspendLayout();
-			this.panel4.SuspendLayout();
 			this.panel5.SuspendLayout();
 			this.panel15.SuspendLayout();
 			this.panel3.SuspendLayout();
@@ -101,6 +103,7 @@
 			this.dataPanel.SuspendLayout();
 			this.panel8.SuspendLayout();
 			this.panel2.SuspendLayout();
+			this.panel4.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// modelPanel
@@ -108,13 +111,75 @@
 			this.modelPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
 			this.modelPanel.Controls.Add(this.panel14);
 			this.modelPanel.Controls.Add(this.panel6);
-			this.modelPanel.Controls.Add(this.label10);
 			this.modelPanel.Controls.Add(this.panel7);
+			this.modelPanel.Controls.Add(this.label10);
 			this.modelPanel.Dock = System.Windows.Forms.DockStyle.Left;
 			this.modelPanel.Location = new System.Drawing.Point(313, 0);
 			this.modelPanel.Name = "modelPanel";
-			this.modelPanel.Size = new System.Drawing.Size(221, 100);
+			this.modelPanel.Size = new System.Drawing.Size(235, 102);
 			this.modelPanel.TabIndex = 25;
+			// 
+			// panel7
+			// 
+			this.panel7.Controls.Add(this.modelTypeComboBox);
+			this.panel7.Controls.Add(this.labelModelType);
+			this.panel7.Dock = System.Windows.Forms.DockStyle.Top;
+			this.panel7.Location = new System.Drawing.Point(0, 0);
+			this.panel7.Name = "panel7";
+			this.panel7.Padding = new System.Windows.Forms.Padding(3);
+			this.panel7.Size = new System.Drawing.Size(233, 26);
+			this.panel7.TabIndex = 20;
+			// 
+			// modelTypeComboBox
+			// 
+			this.modelTypeComboBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.modelTypeComboBox.FormattingEnabled = true;
+			this.modelTypeComboBox.Location = new System.Drawing.Point(68, 3);
+			this.modelTypeComboBox.Name = "modelTypeComboBox";
+			this.modelTypeComboBox.Size = new System.Drawing.Size(161, 21);
+			this.modelTypeComboBox.TabIndex = 7;
+			this.modelTypeComboBox.SelectionChangeCommitted += new System.EventHandler(this.modelTypeComboBox_SelectionChangeCommitted);
+			// 
+			// labelModelType
+			// 
+			this.labelModelType.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelModelType.Location = new System.Drawing.Point(3, 3);
+			this.labelModelType.Name = "labelModelType";
+			this.labelModelType.Size = new System.Drawing.Size(65, 20);
+			this.labelModelType.TabIndex = 6;
+			this.labelModelType.Text = "Model Type";
+			this.labelModelType.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// panel6
+			// 
+			this.panel6.Controls.Add(this.visibleTypeComboBox);
+			this.panel6.Controls.Add(this.labelVisibleType);
+			this.panel6.Dock = System.Windows.Forms.DockStyle.Top;
+			this.panel6.Location = new System.Drawing.Point(0, 26);
+			this.panel6.Name = "panel6";
+			this.panel6.Padding = new System.Windows.Forms.Padding(3);
+			this.panel6.Size = new System.Drawing.Size(233, 26);
+			this.panel6.TabIndex = 29;
+			// 
+			// visibleTypeComboBox
+			// 
+			this.visibleTypeComboBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.visibleTypeComboBox.FormattingEnabled = true;
+			this.visibleTypeComboBox.Location = new System.Drawing.Point(68, 3);
+			this.visibleTypeComboBox.Name = "visibleTypeComboBox";
+			this.visibleTypeComboBox.Size = new System.Drawing.Size(161, 21);
+			this.visibleTypeComboBox.TabIndex = 5;
+			this.visibleTypeComboBox.SelectionChangeCommitted += new System.EventHandler(this.visibleTypeComboBox_SelectionChangeCommitted);
+			// 
+			// labelVisibleType
+			// 
+			this.labelVisibleType.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelVisibleType.Location = new System.Drawing.Point(3, 3);
+			this.labelVisibleType.Name = "labelVisibleType";
+			this.labelVisibleType.Size = new System.Drawing.Size(65, 20);
+			this.labelVisibleType.TabIndex = 4;
+			this.labelVisibleType.Text = "Visible Type";
+			this.labelVisibleType.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// panel14
 			// 
@@ -126,15 +191,15 @@
 			this.panel14.Location = new System.Drawing.Point(0, 52);
 			this.panel14.Name = "panel14";
 			this.panel14.Padding = new System.Windows.Forms.Padding(3);
-			this.panel14.Size = new System.Drawing.Size(219, 26);
+			this.panel14.Size = new System.Drawing.Size(233, 26);
 			this.panel14.TabIndex = 30;
 			// 
 			// hiddenUnitsTextBox
 			// 
 			this.hiddenUnitsTextBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.hiddenUnitsTextBox.Location = new System.Drawing.Point(180, 3);
+			this.hiddenUnitsTextBox.Location = new System.Drawing.Point(184, 3);
 			this.hiddenUnitsTextBox.Name = "hiddenUnitsTextBox";
-			this.hiddenUnitsTextBox.Size = new System.Drawing.Size(35, 20);
+			this.hiddenUnitsTextBox.Size = new System.Drawing.Size(45, 20);
 			this.hiddenUnitsTextBox.TabIndex = 15;
 			this.hiddenUnitsTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.hiddenUnitsTextBox_KeyPress);
 			this.hiddenUnitsTextBox.Leave += new System.EventHandler(this.hiddenUnitsTextBox_Leave);
@@ -142,7 +207,7 @@
 			// labelHiddenUnits
 			// 
 			this.labelHiddenUnits.Dock = System.Windows.Forms.DockStyle.Left;
-			this.labelHiddenUnits.Location = new System.Drawing.Point(109, 3);
+			this.labelHiddenUnits.Location = new System.Drawing.Point(113, 3);
 			this.labelHiddenUnits.Name = "labelHiddenUnits";
 			this.labelHiddenUnits.Padding = new System.Windows.Forms.Padding(3, 0, 0, 0);
 			this.labelHiddenUnits.Size = new System.Drawing.Size(71, 20);
@@ -157,7 +222,7 @@
 			this.visibleUnitsLabel.Location = new System.Drawing.Point(68, 3);
 			this.visibleUnitsLabel.Name = "visibleUnitsLabel";
 			this.visibleUnitsLabel.Padding = new System.Windows.Forms.Padding(3, 0, 0, 0);
-			this.visibleUnitsLabel.Size = new System.Drawing.Size(41, 20);
+			this.visibleUnitsLabel.Size = new System.Drawing.Size(45, 20);
 			this.visibleUnitsLabel.TabIndex = 13;
 			this.visibleUnitsLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -171,158 +236,30 @@
 			this.labelVisibleUnits.Text = "Visible Units";
 			this.labelVisibleUnits.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
-			// panel6
-			// 
-			this.panel6.Controls.Add(this.visibleTypeComboBox);
-			this.panel6.Controls.Add(this.labelVisibleType);
-			this.panel6.Dock = System.Windows.Forms.DockStyle.Top;
-			this.panel6.Location = new System.Drawing.Point(0, 26);
-			this.panel6.Name = "panel6";
-			this.panel6.Padding = new System.Windows.Forms.Padding(3);
-			this.panel6.Size = new System.Drawing.Size(219, 26);
-			this.panel6.TabIndex = 29;
-			// 
-			// visibleTypeComboBox
-			// 
-			this.visibleTypeComboBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.visibleTypeComboBox.FormattingEnabled = true;
-			this.visibleTypeComboBox.Location = new System.Drawing.Point(68, 3);
-			this.visibleTypeComboBox.Name = "visibleTypeComboBox";
-			this.visibleTypeComboBox.Size = new System.Drawing.Size(147, 21);
-			this.visibleTypeComboBox.TabIndex = 5;
-			this.visibleTypeComboBox.SelectionChangeCommitted += new System.EventHandler(this.visibleTypeComboBox_SelectionChangeCommitted);
-			// 
-			// labelVisibleType
-			// 
-			this.labelVisibleType.Dock = System.Windows.Forms.DockStyle.Left;
-			this.labelVisibleType.Location = new System.Drawing.Point(3, 3);
-			this.labelVisibleType.Name = "labelVisibleType";
-			this.labelVisibleType.Size = new System.Drawing.Size(65, 20);
-			this.labelVisibleType.TabIndex = 4;
-			this.labelVisibleType.Text = "Visible Type";
-			this.labelVisibleType.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
 			// label10
 			// 
 			this.label10.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.label10.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			this.label10.Location = new System.Drawing.Point(0, 76);
+			this.label10.Location = new System.Drawing.Point(0, 78);
 			this.label10.Name = "label10";
-			this.label10.Size = new System.Drawing.Size(219, 22);
+			this.label10.Size = new System.Drawing.Size(233, 22);
 			this.label10.TabIndex = 21;
 			this.label10.Text = "Model";
 			this.label10.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
-			// panel7
-			// 
-			this.panel7.Controls.Add(this.modelTypeComboBox);
-			this.panel7.Controls.Add(this.labelModelType);
-			this.panel7.Dock = System.Windows.Forms.DockStyle.Top;
-			this.panel7.Location = new System.Drawing.Point(0, 0);
-			this.panel7.Name = "panel7";
-			this.panel7.Padding = new System.Windows.Forms.Padding(3);
-			this.panel7.Size = new System.Drawing.Size(219, 26);
-			this.panel7.TabIndex = 20;
-			// 
-			// modelTypeComboBox
-			// 
-			this.modelTypeComboBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.modelTypeComboBox.FormattingEnabled = true;
-			this.modelTypeComboBox.Location = new System.Drawing.Point(68, 3);
-			this.modelTypeComboBox.Name = "modelTypeComboBox";
-			this.modelTypeComboBox.Size = new System.Drawing.Size(147, 21);
-			this.modelTypeComboBox.TabIndex = 7;
-			this.modelTypeComboBox.SelectionChangeCommitted += new System.EventHandler(this.modelTypeComboBox_SelectionChangeCommitted);
-			// 
-			// labelModelType
-			// 
-			this.labelModelType.Dock = System.Windows.Forms.DockStyle.Left;
-			this.labelModelType.Location = new System.Drawing.Point(3, 3);
-			this.labelModelType.Name = "labelModelType";
-			this.labelModelType.Size = new System.Drawing.Size(65, 20);
-			this.labelModelType.TabIndex = 6;
-			this.labelModelType.Text = "Model Type";
-			this.labelModelType.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
 			// parametersPanel
 			// 
 			this.parametersPanel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-			this.parametersPanel.Controls.Add(this.panel9);
+			this.parametersPanel.Controls.Add(this.panel5);
+			this.parametersPanel.Controls.Add(this.panel15);
+			this.parametersPanel.Controls.Add(this.panel3);
 			this.parametersPanel.Controls.Add(this.label14);
 			this.parametersPanel.Dock = System.Windows.Forms.DockStyle.Left;
-			this.parametersPanel.Location = new System.Drawing.Point(534, 0);
+			this.parametersPanel.Location = new System.Drawing.Point(548, 0);
 			this.parametersPanel.Name = "parametersPanel";
-			this.parametersPanel.Size = new System.Drawing.Size(269, 100);
+			this.parametersPanel.Size = new System.Drawing.Size(319, 102);
 			this.parametersPanel.TabIndex = 26;
-			// 
-			// panel9
-			// 
-			this.panel9.Controls.Add(this.resetParametersButton);
-			this.panel9.Controls.Add(this.saveParametersButton);
-			this.panel9.Controls.Add(this.loadParametersButton);
-			this.panel9.Controls.Add(this.panel4);
-			this.panel9.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.panel9.Location = new System.Drawing.Point(0, 0);
-			this.panel9.Name = "panel9";
-			this.panel9.Size = new System.Drawing.Size(267, 76);
-			this.panel9.TabIndex = 31;
-			// 
-			// resetParametersButton
-			// 
-			this.resetParametersButton.Dock = System.Windows.Forms.DockStyle.Top;
-			this.resetParametersButton.Image = ((System.Drawing.Image)(resources.GetObject("resetParametersButton.Image")));
-			this.resetParametersButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			this.resetParametersButton.Location = new System.Drawing.Point(0, 52);
-			this.resetParametersButton.Name = "resetParametersButton";
-			this.resetParametersButton.Size = new System.Drawing.Size(61, 26);
-			this.resetParametersButton.TabIndex = 33;
-			this.resetParametersButton.Text = "Reset";
-			this.resetParametersButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			this.resetParametersButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
-			this.resetParametersButton.UseVisualStyleBackColor = true;
-			this.resetParametersButton.Click += new System.EventHandler(this.resetParametersButton_Click);
-			// 
-			// saveParametersButton
-			// 
-			this.saveParametersButton.Dock = System.Windows.Forms.DockStyle.Top;
-			this.saveParametersButton.Image = ((System.Drawing.Image)(resources.GetObject("saveParametersButton.Image")));
-			this.saveParametersButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			this.saveParametersButton.Location = new System.Drawing.Point(0, 26);
-			this.saveParametersButton.Name = "saveParametersButton";
-			this.saveParametersButton.Size = new System.Drawing.Size(61, 26);
-			this.saveParametersButton.TabIndex = 32;
-			this.saveParametersButton.Text = "Save";
-			this.saveParametersButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			this.saveParametersButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
-			this.saveParametersButton.UseVisualStyleBackColor = true;
-			this.saveParametersButton.Click += new System.EventHandler(this.saveParametersButton_Click);
-			// 
-			// loadParametersButton
-			// 
-			this.loadParametersButton.Dock = System.Windows.Forms.DockStyle.Top;
-			this.loadParametersButton.Image = ((System.Drawing.Image)(resources.GetObject("loadParametersButton.Image")));
-			this.loadParametersButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			this.loadParametersButton.Location = new System.Drawing.Point(0, 0);
-			this.loadParametersButton.Name = "loadParametersButton";
-			this.loadParametersButton.Size = new System.Drawing.Size(61, 26);
-			this.loadParametersButton.TabIndex = 31;
-			this.loadParametersButton.Text = "Load";
-			this.loadParametersButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			this.loadParametersButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
-			this.loadParametersButton.UseVisualStyleBackColor = true;
-			this.loadParametersButton.Click += new System.EventHandler(this.loadParametersButton_Click);
-			// 
-			// panel4
-			// 
-			this.panel4.Controls.Add(this.panel5);
-			this.panel4.Controls.Add(this.panel15);
-			this.panel4.Controls.Add(this.panel3);
-			this.panel4.Dock = System.Windows.Forms.DockStyle.Right;
-			this.panel4.Location = new System.Drawing.Point(61, 0);
-			this.panel4.Name = "panel4";
-			this.panel4.Size = new System.Drawing.Size(206, 76);
-			this.panel4.TabIndex = 30;
 			// 
 			// panel5
 			// 
@@ -334,11 +271,53 @@
 			this.panel5.Location = new System.Drawing.Point(0, 52);
 			this.panel5.Name = "panel5";
 			this.panel5.Padding = new System.Windows.Forms.Padding(3);
-			this.panel5.Size = new System.Drawing.Size(206, 26);
+			this.panel5.Size = new System.Drawing.Size(317, 26);
 			this.panel5.TabIndex = 29;
+			// 
+			// epochsTextBox
+			// 
+			this.epochsTextBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.epochsTextBox.Location = new System.Drawing.Point(162, 3);
+			this.epochsTextBox.Name = "epochsTextBox";
+			this.epochsTextBox.Size = new System.Drawing.Size(40, 20);
+			this.epochsTextBox.TabIndex = 11;
+			this.epochsTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.epochsTextBox_KeyPress);
+			this.epochsTextBox.Leave += new System.EventHandler(this.epochsTextBox_Leave);
+			// 
+			// labelEpochs
+			// 
+			this.labelEpochs.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelEpochs.Location = new System.Drawing.Point(119, 3);
+			this.labelEpochs.Name = "labelEpochs";
+			this.labelEpochs.Size = new System.Drawing.Size(43, 20);
+			this.labelEpochs.TabIndex = 10;
+			this.labelEpochs.Text = "Epochs";
+			this.labelEpochs.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// minibatchSizeTextBox
+			// 
+			this.minibatchSizeTextBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.minibatchSizeTextBox.Location = new System.Drawing.Point(79, 3);
+			this.minibatchSizeTextBox.Name = "minibatchSizeTextBox";
+			this.minibatchSizeTextBox.Size = new System.Drawing.Size(40, 20);
+			this.minibatchSizeTextBox.TabIndex = 9;
+			this.minibatchSizeTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.minibatchSizeTextBox_KeyPress);
+			this.minibatchSizeTextBox.Leave += new System.EventHandler(this.minibatchSizeTextBox_Leave);
+			// 
+			// labelMinibatchSize
+			// 
+			this.labelMinibatchSize.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelMinibatchSize.Location = new System.Drawing.Point(3, 3);
+			this.labelMinibatchSize.Name = "labelMinibatchSize";
+			this.labelMinibatchSize.Size = new System.Drawing.Size(76, 20);
+			this.labelMinibatchSize.TabIndex = 8;
+			this.labelMinibatchSize.Text = "Minibatch Size";
+			this.labelMinibatchSize.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// panel15
 			// 
+			this.panel15.Controls.Add(this.hiddenDropoutTextBox);
+			this.panel15.Controls.Add(this.labelHiddenDropout);
 			this.panel15.Controls.Add(this.l2TextBox);
 			this.panel15.Controls.Add(this.labelL2);
 			this.panel15.Controls.Add(this.momentumTextBox);
@@ -347,11 +326,53 @@
 			this.panel15.Location = new System.Drawing.Point(0, 26);
 			this.panel15.Name = "panel15";
 			this.panel15.Padding = new System.Windows.Forms.Padding(3);
-			this.panel15.Size = new System.Drawing.Size(206, 26);
+			this.panel15.Size = new System.Drawing.Size(317, 26);
 			this.panel15.TabIndex = 26;
+			// 
+			// l2TextBox
+			// 
+			this.l2TextBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.l2TextBox.Location = new System.Drawing.Point(152, 3);
+			this.l2TextBox.Name = "l2TextBox";
+			this.l2TextBox.Size = new System.Drawing.Size(50, 20);
+			this.l2TextBox.TabIndex = 13;
+			this.l2TextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.l2TextBox_KeyPress);
+			this.l2TextBox.Leave += new System.EventHandler(this.l2TextBox_Leave);
+			// 
+			// labelL2
+			// 
+			this.labelL2.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelL2.Location = new System.Drawing.Point(129, 3);
+			this.labelL2.Name = "labelL2";
+			this.labelL2.Size = new System.Drawing.Size(23, 20);
+			this.labelL2.TabIndex = 12;
+			this.labelL2.Text = "L2";
+			this.labelL2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+			// 
+			// momentumTextBox
+			// 
+			this.momentumTextBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.momentumTextBox.Location = new System.Drawing.Point(79, 3);
+			this.momentumTextBox.Name = "momentumTextBox";
+			this.momentumTextBox.Size = new System.Drawing.Size(50, 20);
+			this.momentumTextBox.TabIndex = 11;
+			this.momentumTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.momentumTextBox_KeyPress);
+			this.momentumTextBox.Leave += new System.EventHandler(this.momentumTextBox_Leave);
+			// 
+			// labelMomentum
+			// 
+			this.labelMomentum.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelMomentum.Location = new System.Drawing.Point(3, 3);
+			this.labelMomentum.Name = "labelMomentum";
+			this.labelMomentum.Size = new System.Drawing.Size(76, 20);
+			this.labelMomentum.TabIndex = 10;
+			this.labelMomentum.Text = "Momentum";
+			this.labelMomentum.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// panel3
 			// 
+			this.panel3.Controls.Add(this.visibleDropoutTextBox);
+			this.panel3.Controls.Add(this.labelVisibleDropout);
 			this.panel3.Controls.Add(this.l1TextBox);
 			this.panel3.Controls.Add(this.labelL1);
 			this.panel3.Controls.Add(this.learningRateTextBox);
@@ -360,8 +381,28 @@
 			this.panel3.Location = new System.Drawing.Point(0, 0);
 			this.panel3.Name = "panel3";
 			this.panel3.Padding = new System.Windows.Forms.Padding(3);
-			this.panel3.Size = new System.Drawing.Size(206, 26);
+			this.panel3.Size = new System.Drawing.Size(317, 26);
 			this.panel3.TabIndex = 25;
+			// 
+			// l1TextBox
+			// 
+			this.l1TextBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.l1TextBox.Location = new System.Drawing.Point(152, 3);
+			this.l1TextBox.Name = "l1TextBox";
+			this.l1TextBox.Size = new System.Drawing.Size(50, 20);
+			this.l1TextBox.TabIndex = 3;
+			this.l1TextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.l1TextBox_KeyPress);
+			this.l1TextBox.Leave += new System.EventHandler(this.l1TextBox_Leave);
+			// 
+			// labelL1
+			// 
+			this.labelL1.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelL1.Location = new System.Drawing.Point(129, 3);
+			this.labelL1.Name = "labelL1";
+			this.labelL1.Size = new System.Drawing.Size(23, 20);
+			this.labelL1.TabIndex = 2;
+			this.labelL1.Text = "L1";
+			this.labelL1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
 			// learningRateTextBox
 			// 
@@ -388,12 +429,57 @@
 			this.label14.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.label14.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.label14.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			this.label14.Location = new System.Drawing.Point(0, 76);
+			this.label14.Location = new System.Drawing.Point(0, 78);
 			this.label14.Name = "label14";
-			this.label14.Size = new System.Drawing.Size(267, 22);
+			this.label14.Size = new System.Drawing.Size(317, 22);
 			this.label14.TabIndex = 29;
 			this.label14.Text = "Parameters";
 			this.label14.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+			// 
+			// resetParametersButton
+			// 
+			this.resetParametersButton.Dock = System.Windows.Forms.DockStyle.Top;
+			this.resetParametersButton.Image = ((System.Drawing.Image)(resources.GetObject("resetParametersButton.Image")));
+			this.resetParametersButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.resetParametersButton.Location = new System.Drawing.Point(0, 51);
+			this.resetParametersButton.Name = "resetParametersButton";
+			this.resetParametersButton.Size = new System.Drawing.Size(62, 25);
+			this.resetParametersButton.TabIndex = 33;
+			this.resetParametersButton.Text = "Reset";
+			this.resetParametersButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.resetParametersButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
+			this.resetParametersButton.UseVisualStyleBackColor = true;
+			this.resetParametersButton.Click += new System.EventHandler(this.resetParametersButton_Click);
+			// 
+			// saveParametersButton
+			// 
+			this.saveParametersButton.Dock = System.Windows.Forms.DockStyle.Top;
+			this.saveParametersButton.Image = ((System.Drawing.Image)(resources.GetObject("saveParametersButton.Image")));
+			this.saveParametersButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.saveParametersButton.Location = new System.Drawing.Point(0, 26);
+			this.saveParametersButton.Name = "saveParametersButton";
+			this.saveParametersButton.Size = new System.Drawing.Size(62, 25);
+			this.saveParametersButton.TabIndex = 32;
+			this.saveParametersButton.Text = "Save";
+			this.saveParametersButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.saveParametersButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
+			this.saveParametersButton.UseVisualStyleBackColor = true;
+			this.saveParametersButton.Click += new System.EventHandler(this.saveParametersButton_Click);
+			// 
+			// loadParametersButton
+			// 
+			this.loadParametersButton.Dock = System.Windows.Forms.DockStyle.Top;
+			this.loadParametersButton.Image = ((System.Drawing.Image)(resources.GetObject("loadParametersButton.Image")));
+			this.loadParametersButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.loadParametersButton.Location = new System.Drawing.Point(0, 1);
+			this.loadParametersButton.Name = "loadParametersButton";
+			this.loadParametersButton.Size = new System.Drawing.Size(62, 25);
+			this.loadParametersButton.TabIndex = 31;
+			this.loadParametersButton.Text = "Load";
+			this.loadParametersButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+			this.loadParametersButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
+			this.loadParametersButton.UseVisualStyleBackColor = true;
+			this.loadParametersButton.Click += new System.EventHandler(this.loadParametersButton_Click);
 			// 
 			// panel1
 			// 
@@ -444,7 +530,7 @@
 			this.label9.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
 			this.label9.Dock = System.Windows.Forms.DockStyle.Bottom;
 			this.label9.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-			this.label9.Location = new System.Drawing.Point(0, 76);
+			this.label9.Location = new System.Drawing.Point(0, 78);
 			this.label9.Name = "label9";
 			this.label9.Size = new System.Drawing.Size(311, 22);
 			this.label9.TabIndex = 17;
@@ -471,7 +557,7 @@
 			this.dataPanel.Dock = System.Windows.Forms.DockStyle.Left;
 			this.dataPanel.Location = new System.Drawing.Point(0, 0);
 			this.dataPanel.Name = "dataPanel";
-			this.dataPanel.Size = new System.Drawing.Size(313, 100);
+			this.dataPanel.Size = new System.Drawing.Size(313, 102);
 			this.dataPanel.TabIndex = 21;
 			// 
 			// panel8
@@ -607,9 +693,9 @@
 			this.startButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.startButton.Enabled = false;
 			this.startButton.Image = ((System.Drawing.Image)(resources.GetObject("startButton.Image")));
-			this.startButton.Location = new System.Drawing.Point(855, 0);
+			this.startButton.Location = new System.Drawing.Point(983, 0);
 			this.startButton.Name = "startButton";
-			this.startButton.Size = new System.Drawing.Size(52, 100);
+			this.startButton.Size = new System.Drawing.Size(52, 102);
 			this.startButton.TabIndex = 27;
 			this.startButton.Text = "Start";
 			this.startButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
@@ -622,9 +708,9 @@
 			this.stopButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.stopButton.Enabled = false;
 			this.stopButton.Image = ((System.Drawing.Image)(resources.GetObject("stopButton.Image")));
-			this.stopButton.Location = new System.Drawing.Point(959, 0);
+			this.stopButton.Location = new System.Drawing.Point(1087, 0);
 			this.stopButton.Name = "stopButton";
-			this.stopButton.Size = new System.Drawing.Size(52, 100);
+			this.stopButton.Size = new System.Drawing.Size(52, 102);
 			this.stopButton.TabIndex = 28;
 			this.stopButton.Text = "Stop";
 			this.stopButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
@@ -637,9 +723,9 @@
 			this.pauseButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.pauseButton.Enabled = false;
 			this.pauseButton.Image = ((System.Drawing.Image)(resources.GetObject("pauseButton.Image")));
-			this.pauseButton.Location = new System.Drawing.Point(907, 0);
+			this.pauseButton.Location = new System.Drawing.Point(1035, 0);
 			this.pauseButton.Name = "pauseButton";
-			this.pauseButton.Size = new System.Drawing.Size(52, 100);
+			this.pauseButton.Size = new System.Drawing.Size(52, 102);
 			this.pauseButton.TabIndex = 29;
 			this.pauseButton.Text = "Pause";
 			this.pauseButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
@@ -652,9 +738,9 @@
 			this.exportButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.exportButton.Enabled = false;
 			this.exportButton.Image = ((System.Drawing.Image)(resources.GetObject("exportButton.Image")));
-			this.exportButton.Location = new System.Drawing.Point(1011, 0);
+			this.exportButton.Location = new System.Drawing.Point(1139, 0);
 			this.exportButton.Name = "exportButton";
-			this.exportButton.Size = new System.Drawing.Size(52, 100);
+			this.exportButton.Size = new System.Drawing.Size(52, 102);
 			this.exportButton.TabIndex = 30;
 			this.exportButton.Text = "Export";
 			this.exportButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
@@ -667,9 +753,9 @@
 			this.importButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.importButton.Enabled = false;
 			this.importButton.Image = ((System.Drawing.Image)(resources.GetObject("importButton.Image")));
-			this.importButton.Location = new System.Drawing.Point(803, 0);
+			this.importButton.Location = new System.Drawing.Point(931, 0);
 			this.importButton.Name = "importButton";
-			this.importButton.Size = new System.Drawing.Size(52, 100);
+			this.importButton.Size = new System.Drawing.Size(52, 102);
 			this.importButton.TabIndex = 31;
 			this.importButton.Text = "Import";
 			this.importButton.TextAlign = System.Drawing.ContentAlignment.BottomCenter;
@@ -677,129 +763,93 @@
 			this.importButton.UseVisualStyleBackColor = true;
 			this.importButton.Click += new System.EventHandler(this.importButton_Click);
 			// 
-			// minibatchSizeTextBox
+			// panel4
 			// 
-			this.minibatchSizeTextBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.minibatchSizeTextBox.Location = new System.Drawing.Point(79, 3);
-			this.minibatchSizeTextBox.Name = "minibatchSizeTextBox";
-			this.minibatchSizeTextBox.Size = new System.Drawing.Size(40, 20);
-			this.minibatchSizeTextBox.TabIndex = 9;
-			this.minibatchSizeTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.minibatchSizeTextBox_KeyPress);
-			this.minibatchSizeTextBox.Leave += new System.EventHandler(this.minibatchSizeTextBox_Leave);
+			this.panel4.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+			this.panel4.Controls.Add(this.label1);
+			this.panel4.Controls.Add(this.resetParametersButton);
+			this.panel4.Controls.Add(this.saveParametersButton);
+			this.panel4.Controls.Add(this.loadParametersButton);
+			this.panel4.Dock = System.Windows.Forms.DockStyle.Left;
+			this.panel4.Location = new System.Drawing.Point(867, 0);
+			this.panel4.Name = "panel4";
+			this.panel4.Padding = new System.Windows.Forms.Padding(0, 1, 0, 0);
+			this.panel4.Size = new System.Drawing.Size(64, 102);
+			this.panel4.TabIndex = 32;
 			// 
-			// labelMinibatchSize
+			// label1
 			// 
-			this.labelMinibatchSize.Dock = System.Windows.Forms.DockStyle.Left;
-			this.labelMinibatchSize.Location = new System.Drawing.Point(3, 3);
-			this.labelMinibatchSize.Name = "labelMinibatchSize";
-			this.labelMinibatchSize.Size = new System.Drawing.Size(76, 20);
-			this.labelMinibatchSize.TabIndex = 8;
-			this.labelMinibatchSize.Text = "Minibatch Size";
-			this.labelMinibatchSize.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.label1.BorderStyle = System.Windows.Forms.BorderStyle.Fixed3D;
+			this.label1.Dock = System.Windows.Forms.DockStyle.Bottom;
+			this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+			this.label1.Location = new System.Drawing.Point(0, 78);
+			this.label1.Name = "label1";
+			this.label1.Size = new System.Drawing.Size(62, 22);
+			this.label1.TabIndex = 34;
+			this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
-			// momentumTextBox
+			// labelVisibleDropout
 			// 
-			this.momentumTextBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.momentumTextBox.Location = new System.Drawing.Point(79, 3);
-			this.momentumTextBox.Name = "momentumTextBox";
-			this.momentumTextBox.Size = new System.Drawing.Size(50, 20);
-			this.momentumTextBox.TabIndex = 11;
-			this.momentumTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.momentumTextBox_KeyPress);
-			this.momentumTextBox.Leave += new System.EventHandler(this.momentumTextBox_Leave);
+			this.labelVisibleDropout.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelVisibleDropout.Location = new System.Drawing.Point(202, 3);
+			this.labelVisibleDropout.Name = "labelVisibleDropout";
+			this.labelVisibleDropout.Size = new System.Drawing.Size(82, 20);
+			this.labelVisibleDropout.TabIndex = 4;
+			this.labelVisibleDropout.Text = "Visible Dropout";
+			this.labelVisibleDropout.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
-			// labelMomentum
+			// labelHiddenDropout
 			// 
-			this.labelMomentum.Dock = System.Windows.Forms.DockStyle.Left;
-			this.labelMomentum.Location = new System.Drawing.Point(3, 3);
-			this.labelMomentum.Name = "labelMomentum";
-			this.labelMomentum.Size = new System.Drawing.Size(76, 20);
-			this.labelMomentum.TabIndex = 10;
-			this.labelMomentum.Text = "Momentum";
-			this.labelMomentum.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.labelHiddenDropout.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelHiddenDropout.Location = new System.Drawing.Point(202, 3);
+			this.labelHiddenDropout.Name = "labelHiddenDropout";
+			this.labelHiddenDropout.Size = new System.Drawing.Size(82, 20);
+			this.labelHiddenDropout.TabIndex = 14;
+			this.labelHiddenDropout.Text = "Hidden Dropout";
+			this.labelHiddenDropout.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
-			// labelEpochs
+			// visibleDropoutTextBox
 			// 
-			this.labelEpochs.Dock = System.Windows.Forms.DockStyle.Left;
-			this.labelEpochs.Location = new System.Drawing.Point(119, 3);
-			this.labelEpochs.Name = "labelEpochs";
-			this.labelEpochs.Size = new System.Drawing.Size(43, 20);
-			this.labelEpochs.TabIndex = 10;
-			this.labelEpochs.Text = "Epochs";
-			this.labelEpochs.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			this.visibleDropoutTextBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.visibleDropoutTextBox.Location = new System.Drawing.Point(284, 3);
+			this.visibleDropoutTextBox.Name = "visibleDropoutTextBox";
+			this.visibleDropoutTextBox.Size = new System.Drawing.Size(30, 20);
+			this.visibleDropoutTextBox.TabIndex = 12;
+			this.visibleDropoutTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.visibleDropoutTextBox_KeyPress);
+			this.visibleDropoutTextBox.Leave += new System.EventHandler(this.visibleDropoutTextBox_Leave);
 			// 
-			// epochsTextBox
+			// hiddenDropoutTextBox
 			// 
-			this.epochsTextBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.epochsTextBox.Location = new System.Drawing.Point(162, 3);
-			this.epochsTextBox.Name = "epochsTextBox";
-			this.epochsTextBox.Size = new System.Drawing.Size(40, 20);
-			this.epochsTextBox.TabIndex = 11;
-			this.epochsTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.epochsTextBox_KeyPress);
-			this.epochsTextBox.Leave += new System.EventHandler(this.epochsTextBox_Leave);
-			// 
-			// labelL1
-			// 
-			this.labelL1.Dock = System.Windows.Forms.DockStyle.Left;
-			this.labelL1.Location = new System.Drawing.Point(129, 3);
-			this.labelL1.Name = "labelL1";
-			this.labelL1.Size = new System.Drawing.Size(23, 20);
-			this.labelL1.TabIndex = 2;
-			this.labelL1.Text = "L1";
-			this.labelL1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-			// 
-			// labelL2
-			// 
-			this.labelL2.Dock = System.Windows.Forms.DockStyle.Left;
-			this.labelL2.Location = new System.Drawing.Point(129, 3);
-			this.labelL2.Name = "labelL2";
-			this.labelL2.Size = new System.Drawing.Size(23, 20);
-			this.labelL2.TabIndex = 12;
-			this.labelL2.Text = "L2";
-			this.labelL2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-			// 
-			// l1TextBox
-			// 
-			this.l1TextBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.l1TextBox.Location = new System.Drawing.Point(152, 3);
-			this.l1TextBox.Name = "l1TextBox";
-			this.l1TextBox.Size = new System.Drawing.Size(50, 20);
-			this.l1TextBox.TabIndex = 3;
-			this.l1TextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.l1TextBox_KeyPress);
-			this.l1TextBox.Leave += new System.EventHandler(this.l1TextBox_Leave);
-			// 
-			// l2TextBox
-			// 
-			this.l2TextBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.l2TextBox.Location = new System.Drawing.Point(152, 3);
-			this.l2TextBox.Name = "l2TextBox";
-			this.l2TextBox.Size = new System.Drawing.Size(50, 20);
-			this.l2TextBox.TabIndex = 13;
-			this.l2TextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.l2TextBox_KeyPress);
-			this.l2TextBox.Leave += new System.EventHandler(this.l2TextBox_Leave);
+			this.hiddenDropoutTextBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.hiddenDropoutTextBox.Location = new System.Drawing.Point(284, 3);
+			this.hiddenDropoutTextBox.Name = "hiddenDropoutTextBox";
+			this.hiddenDropoutTextBox.Size = new System.Drawing.Size(30, 20);
+			this.hiddenDropoutTextBox.TabIndex = 15;
+			this.hiddenDropoutTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.hiddenDropoutTextBox_KeyPress);
+			this.hiddenDropoutTextBox.Leave += new System.EventHandler(this.hiddenDropoutTextBox_Leave);
 			// 
 			// SettingsBar
 			// 
-			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
 			this.Controls.Add(this.exportButton);
 			this.Controls.Add(this.stopButton);
 			this.Controls.Add(this.pauseButton);
 			this.Controls.Add(this.startButton);
 			this.Controls.Add(this.importButton);
+			this.Controls.Add(this.panel4);
 			this.Controls.Add(this.parametersPanel);
 			this.Controls.Add(this.modelPanel);
 			this.Controls.Add(this.dataPanel);
 			this.Margin = new System.Windows.Forms.Padding(0);
+			this.MinimumSize = new System.Drawing.Size(1190, 102);
 			this.Name = "SettingsBar";
-			this.Size = new System.Drawing.Size(1175, 100);
+			this.Size = new System.Drawing.Size(1190, 102);
 			this.modelPanel.ResumeLayout(false);
+			this.panel7.ResumeLayout(false);
+			this.panel6.ResumeLayout(false);
 			this.panel14.ResumeLayout(false);
 			this.panel14.PerformLayout();
-			this.panel6.ResumeLayout(false);
-			this.panel7.ResumeLayout(false);
 			this.parametersPanel.ResumeLayout(false);
-			this.panel9.ResumeLayout(false);
-			this.panel4.ResumeLayout(false);
 			this.panel5.ResumeLayout(false);
 			this.panel5.PerformLayout();
 			this.panel15.ResumeLayout(false);
@@ -813,6 +863,7 @@
 			this.panel8.PerformLayout();
 			this.panel2.ResumeLayout(false);
 			this.panel2.PerformLayout();
+			this.panel4.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -857,10 +908,8 @@
 		private System.Windows.Forms.Button pauseButton;
 		private System.Windows.Forms.Button exportButton;
 		private System.Windows.Forms.Button importButton;
-		private System.Windows.Forms.Panel panel9;
 		private System.Windows.Forms.Button saveParametersButton;
 		private System.Windows.Forms.Button loadParametersButton;
-		private System.Windows.Forms.Panel panel4;
 		private System.Windows.Forms.Panel panel5;
 		private System.Windows.Forms.Panel panel15;
 		private System.Windows.Forms.Panel panel3;
@@ -877,6 +926,12 @@
 		private System.Windows.Forms.Label labelL2;
 		private System.Windows.Forms.TextBox l1TextBox;
 		private System.Windows.Forms.Label labelL1;
+		private System.Windows.Forms.Panel panel4;
+		private System.Windows.Forms.Label label1;
+		private System.Windows.Forms.TextBox hiddenDropoutTextBox;
+		private System.Windows.Forms.Label labelHiddenDropout;
+		private System.Windows.Forms.TextBox visibleDropoutTextBox;
+		private System.Windows.Forms.Label labelVisibleDropout;
 
 	}
 }

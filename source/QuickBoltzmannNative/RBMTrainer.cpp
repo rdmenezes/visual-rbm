@@ -32,6 +32,7 @@ ENUM(Tex)
 	Random0,
 	Random1,
 	Error,
+	ValidationVisible,
 	ValidationVisiblePrime,
 	ValidationHiddenProbs,
 	ValidationHidddenStates,
@@ -164,7 +165,7 @@ RBMTrainer::RBMTrainer()
 , LearningRate(0.001f)
 , Momentum(0.5f)
 , L1Regularization(0.0f)
-, L2Regularization(0.0001f)
+, L2Regularization(0.0f)
 , HiddenDropout(0.5f)
 , VisibleDropout(0.0f)
 , TrainingIndex(0)
@@ -573,7 +574,7 @@ void RBMTrainer::Initialize()
 							val = 15.0f;
 						break;
 					case Gaussian:
-						val = DataMeans[i-1];
+						val = 0.0f;	// data is normalized, so the mean visible image is all 0
 						break;
 					default:
 						assert(false);
@@ -663,6 +664,7 @@ void RBMTrainer::Initialize()
 	Textures[Tex::Error] = AllocateFloatTexture(1, VisibleCount);
 
 	// extra buffers for getting reconstruction error on validation set
+	Textures[Tex::ValidationVisible] = AllocateFloatTexture(MinibatchSize, VisibleCount);
 	Textures[Tex::ValidationVisiblePrime] = AllocateFloatTexture(MinibatchSize, VisibleCount);
 	Textures[Tex::ValidationHiddenProbs] = AllocateFloatTexture(MinibatchSize, HiddenCount);
 	Textures[Tex::ValidationHidddenStates] = AllocateFloatTexture(MinibatchSize, HiddenCount);
@@ -1347,7 +1349,7 @@ float RBMTrainer::CalcError(GLuint v, GLuint vp)
 	float error;
 	_mm_store_ss(&error, result);
 	
-	return error / float(VisibleCount);
+	return (error / float(VisibleCount)) / (1.0f - VisibleDropout);
 }
 
 bool RBMTrainer::DumpVisible(float* image, float* recon)
@@ -1407,11 +1409,20 @@ float RBMTrainer::GetValidationReconstructionError()
 	
 		// calculate hidden states and reconstructions
 		CalcRandom();
-		CalcHiddenProbs(vis, Textures[Tex::ValidationHiddenProbs]);
+		CalcEnabledUnits();
+
+
+		CalcVisibleDepth(Textures[Tex::ValidationVisible]);
+		CalcVisibleCopy(vis, Textures[Tex::ValidationVisible]);
+
+		CalcHiddenDepth(Textures[Tex::ValidationHiddenProbs]);
+		CalcHiddenProbs(Textures[Tex::ValidationVisible], Textures[Tex::ValidationHiddenProbs]);
 		CalcHiddenStates(Textures[Tex::ValidationHiddenProbs], Textures[Tex::ValidationHidddenStates]);
+		
+		CalcVisibleDepth(Textures[Tex::ValidationVisiblePrime]);
 		CalcVisible(Textures[Tex::ValidationHidddenStates], Textures[Tex::ValidationVisiblePrime]);
 
-		float result = CalcError(vis, Textures[Tex::ValidationVisiblePrime]);
+		float result = CalcError(Textures[Tex::ValidationVisible], Textures[Tex::ValidationVisiblePrime]);
 
 		return result;
 	}
