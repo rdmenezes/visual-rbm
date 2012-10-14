@@ -22,7 +22,7 @@ enum ErrorCode
 	BinaryDataOutsideZeroOne,
 	DataContainsNaN,
 	DataContainsInfinite,
-	ValidationDataHasIncorrectNumberOfVisibleInputs,
+	DataHasIncorrectNumberOfVisibleInputs,
 	ImportedRBMHasIncorrectNumberOfVisibleInputs,
 	RequiredOpenGLVersionUnsupported
 };
@@ -43,7 +43,7 @@ public:
 	virtual void Train();
 
 	// training setters
-	bool SetTrainingData(IDX* in_data);	// returns true on success, false on error
+	bool SetTrainingData(IDX* in_data, bool recalculate_stats = true);	// returns true on success, false on error
 	bool SetValidationData(IDX* in_data);	// returns true on success, false on error
 	
 
@@ -172,6 +172,8 @@ protected:
 	bool ValidateData(IDX* data);
 	// calculates means and stddev of each piece of data
 	void CalcStatistics();
+	// transfer data to GPU
+	void TransferDataToGPU(IDX* data, GLuint*& TextureHandles, int& Count);
 
 	// allocate a block of data 16 byte aligned for the given number of floats
 	AlignedMemoryBlock<float> DataMeans;

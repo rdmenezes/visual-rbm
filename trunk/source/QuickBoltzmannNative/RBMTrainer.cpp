@@ -150,6 +150,8 @@ Shader<CalcErrorParams> program_calc_error;
 
 RBMTrainer::RBMTrainer() 
 : Textures(NULL)
+, VisibleTextures(NULL)
+, VisibleValidationTextures(NULL)
 , EnabledHiddenUnitBuffer(NULL)
 , IsInitialized(false)
 , LoadedRBM(NULL)
@@ -287,28 +289,74 @@ void RBMTrainer::Reset()
 	TrainingIndex = 0;
 }
 
-bool RBMTrainer::SetTrainingData(IDX* in_data)
+bool RBMTrainer::SetTrainingData(IDX* in_data, bool calculate_stats)
 {
-	// makes sure the data doesn't contain nans or infinities
-	if(!ValidateData(in_data))
+	// if we're not initialized, then we must calculate stats
+	assert(IsInitialized == true || calculate_stats == true);
+	
+	if(IsInitialized)
 	{
-		return false;
-	}
+		if(VisibleCount != TrainingData->RowLength())
+		{
+			PreviousError = DataHasIncorrectNumberOfVisibleInputs;
+			return false;
+		}
 
-	// clean up
-	if(TrainingData)
+		// makes sure the data doesn't contain nans or infinities
+		if(!ValidateData(in_data))
+		{
+			return false;
+		}
+
+		// clean up
+		if(TrainingData)
+		{
+			delete TrainingData;
+		}
+
+		// data is good, so keep it around
+		TrainingData = in_data;
+
+		// calculate data statistics (mean/stddev)
+		if(calculate_stats)
+		{
+			CalcStatistics();
+		}
+
+		// transfer to GPU
+		TransferDataToGPU(TrainingData, VisibleTextures, Minibatches);
+	}
+	else
 	{
-		delete TrainingData;
-		delete ValidationData;
-		ValidationData = NULL;
+		// we don't have any data here so we need to calc stats
+		assert(calculate_stats == true);
+
+		// makes sure the data doesn't contain nans or infinities
+		if(!ValidateData(in_data))
+		{
+			return false;
+		}
+
+		// clean up
+		if(TrainingData)
+		{
+			delete TrainingData;
+			delete ValidationData;
+			ValidationData = NULL;
+		}
+
+		// data is good, so keep it around
+		TrainingData = in_data;
+
+		// set visible count
+		VisibleCount = TrainingData->RowLength();
+
+		// calculate data statistics (mean/stddev)
+		if(calculate_stats)
+		{
+			CalcStatistics();
+		}
 	}
-
-	// data is good, so keep it around
-	TrainingData = in_data;
-
-	VisibleCount = TrainingData->RowLength();
-	// calculate data statistics (mean/stddev)
-	CalcStatistics();
 
 	return true;
 }
@@ -332,7 +380,7 @@ bool RBMTrainer::SetValidationData(IDX* in_data)
 
 	if(in_data->RowLength() != VisibleCount)
 	{
-		PreviousError = ValidationDataHasIncorrectNumberOfVisibleInputs;
+		PreviousError = DataHasIncorrectNumberOfVisibleInputs;
 		return false;
 	}
 
@@ -511,7 +559,55 @@ void RBMTrainer::CalcStatistics()
 	}
 }
 
+void RBMTrainer::TransferDataToGPU(IDX* Data, GLuint*& TextureHandles, int& Count)
+{
+	if(TextureHandles != NULL)
+	{
+		ReleaseTextures(TextureHandles, Count);
+		delete[] TextureHandles;
+		TextureHandles = NULL;
+	}
+	
+	// want to shuffle the order in which we add data
+	uint32_t* index_buffer = new uint32_t[Data->Rows()];
+	for(uint32_t k = 0; k < Data->Rows(); k++)
+		index_buffer[k] = k;
+	shuffle(index_buffer, Data->Rows());
 
+	// number of minibatches for this data
+	Count = Data->Rows() / MinibatchSize;
+	// array off texture handles
+	TextureHandles = new GLuint[Count];
+
+	float* minibatch_buffer = new float[MinibatchSize * VisibleCount];
+	uint32_t index = 0;
+	for(uint32_t b = 0; b < Count; b++)
+	{
+		float* buff = minibatch_buffer;
+		for(uint32_t k = 0; k < MinibatchSize; k++)
+		{
+			Data->ReadRow(index_buffer[index++], buff);
+
+			// normalize the data if we're dealing with Gaussian units
+			if(VisibleType == Gaussian)
+			{
+				for(uint32_t i = 0; i < VisibleCount; i++)
+				{
+					buff[i] -= DataMeans[i];
+					if(DataStdDev[i] != 0.0f)
+						buff[i] /= DataStdDev[i];
+				}
+			}
+
+			buff += VisibleCount;
+		}
+
+		TextureHandles[b] = AllocateFloatTexture(MinibatchSize, VisibleCount, minibatch_buffer);
+	}
+
+	delete[] index_buffer;
+	delete[] minibatch_buffer;
+}
 
 void RBMTrainer::Initialize()
 {
@@ -686,57 +782,14 @@ void RBMTrainer::Initialize()
 	delete[] initial_hidden_seeds;
 
 	/** Allocate Data's Texture Memory **/
-	auto IDXToTextureMemory = [&] (int32_t& texture_count, GLuint*& texture_array, IDX* idx_data)
-	{
-		// want to shuffle the order in which we add data
-		uint32_t* index_buffer = new uint32_t[idx_data->Rows()];
-		for(uint32_t k = 0; k < idx_data->Rows(); k++)
-			index_buffer[k] = k;
-		shuffle(index_buffer, idx_data->Rows());
-
-		// number of minibatches for this data
-		texture_count = idx_data->Rows() / MinibatchSize;
-		// array off texture handles
-		texture_array = new GLuint[texture_count];
-
-		float* minibatch_buffer = new float[MinibatchSize * VisibleCount];
-		uint32_t index = 0;
-		for(uint32_t b = 0; b < texture_count; b++)
-		{
-			float* buff = minibatch_buffer;
-			for(uint32_t k = 0; k < MinibatchSize; k++)
-			{
-				idx_data->ReadRow(index_buffer[index++], buff);
-
-				// normalize the data if we're dealing with Gaussian units
-				if(VisibleType == Gaussian)
-				{
-					for(uint32_t i = 0; i < VisibleCount; i++)
-					{
-						buff[i] -= DataMeans[i];
-						if(DataStdDev[i] != 0.0f)
-							buff[i] /= DataStdDev[i];
-					}
-				}
-
-				buff += VisibleCount;
-			}
-
-			texture_array[b] = AllocateFloatTexture(MinibatchSize, VisibleCount, minibatch_buffer);
-		}
-
-		delete[] index_buffer;
-		delete[] minibatch_buffer;
-	};
 
 	// copy training and validation data to GPU
-	IDXToTextureMemory(Minibatches, VisibleTextures, TrainingData);
+	TransferDataToGPU(TrainingData, VisibleTextures, Minibatches);
 	if(ValidationData)
 	{
-		IDXToTextureMemory(ValidationMinibatches, VisibleValidationTextures, ValidationData);
+		TransferDataToGPU(ValidationData, VisibleValidationTextures, ValidationMinibatches);
 	}
 
-	//BindDepthBuffer(VisibleCount + 1, HiddenCount + 1);
 	BindDepthBuffer(std::max(VisibleCount + 1, MinibatchSize), std::max(HiddenCount + 1, VisibleCount));
 }
 
@@ -744,14 +797,14 @@ void RBMTrainer::Train()
 {
 	assert(IsInitialized == true);
 
-	if(TrainingIndex % MinibatchSize == 0)
+	if(TrainingIndex % Minibatches == 0)
 	{
 		// shuffle the minibatch order now
 		shuffle(VisibleTextures, Minibatches);
 	}
 
 	// get next training minibatch
-	GLuint visible_data = VisibleTextures[TrainingIndex % MinibatchSize];
+	GLuint visible_data = VisibleTextures[TrainingIndex % Minibatches];
 
 	CalcRandom();
 	CalcEnabledUnits();

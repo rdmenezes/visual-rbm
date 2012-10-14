@@ -201,6 +201,14 @@ namespace QuickBoltzmann
 					delete rbmtrainer;
 					m["done"] = true;
 				}
+				else if(m->Type == "SetTrainingData")
+				{
+					IDX* data = (IDX*)(LONG_PTR)m["idx"];
+					bool recalc = (bool)m["recalculate"];
+
+					m["result"] = rbmtrainer->SetTrainingData(data, recalc);
+					m["done"] = true;
+				}
 			}
 
 			switch(_currentState)
@@ -299,7 +307,7 @@ namespace QuickBoltzmann
 		return 0.0f;
 	}
 
-	bool RBMProcessor::SetTrainingData(String^ in_filename)
+	bool RBMProcessor::SetTrainingData(String^ in_filename, bool recalculate_stats)
 	{
 		IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(in_filename);
 		char* filename = static_cast<char*>(p.ToPointer());
@@ -315,7 +323,18 @@ namespace QuickBoltzmann
 			return false;
 		}
 
-		if(rbmtrainer->SetTrainingData(idx))
+		Message^ m = gcnew Message("SetTrainingData");
+		m["idx"] = (LONG_PTR)idx;
+		m["recalculate"] = recalculate_stats;
+		m["done"] = false;
+		_message_queue->Enqueue(m);
+
+		while((bool)m["done"] == false)
+		{
+			Thread::Sleep(16);
+		}
+
+		if((bool)m["result"])
 		{
 			_has_training_data = true;
 			return true;		
@@ -325,6 +344,9 @@ namespace QuickBoltzmann
 		_has_training_data = false;
 		switch(rbmtrainer->GetLastErrorCode())
 		{
+		case DataHasIncorrectNumberOfVisibleInputs:
+			ShowError(String::Format("RBM has {0} visible units while proposed Training data is length {1}", VisibleUnits, idx->RowLength()));
+			break;
 		case BinaryDataOutsideZeroOne:
 			ShowError("Input data has values outside of [0,1] so 'Binary' Visible Type may not be used; instead use 'Gaussian'");
 			break;
@@ -374,7 +396,7 @@ namespace QuickBoltzmann
 			_has_validation_data = false;
 			switch(rbmtrainer->GetLastErrorCode())
 			{
-			case ValidationDataHasIncorrectNumberOfVisibleInputs:
+			case DataHasIncorrectNumberOfVisibleInputs:
 				ShowError(String::Format("Training data is length {0} while Validation data is length {1}", VisibleUnits, idx->RowLength()));
 				break;
 			case BinaryDataOutsideZeroOne:
