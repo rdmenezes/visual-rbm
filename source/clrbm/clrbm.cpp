@@ -601,7 +601,7 @@ int main(int argc, char** argv)
 			// load the validation data
 			if(!trainer->SetValidationData(validation_data))
 			{
-				if(trainer->GetLastErrorCode() == ValidationDataHasIncorrectNumberOfVisibleInputs)
+				if(trainer->GetLastErrorCode() == DataHasIncorrectNumberOfVisibleInputs)
 				{
 					printf("Validation data has different number of visible inputs as training data");
 				}

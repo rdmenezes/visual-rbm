@@ -20,7 +20,7 @@ namespace VisualRBM
 
 		enum ProgramState
 		{
-			None = 0,
+			ProgramStarted,
 			TrainerInitializing,
 			TrainerRunning,
 			TrainerPaused,
@@ -29,7 +29,7 @@ namespace VisualRBM
 
 		bool training_data_loaded = false;
 		bool validation_data_loaded = false;
-		ProgramState current_state = ProgramState.None;
+		ProgramState current_state = ProgramState.ProgramStarted;
 		ProgramState CurrentState
 		{
 			set
@@ -102,7 +102,7 @@ namespace VisualRBM
 
 							break;
 						case ProgramState.TrainerPaused:
-							selectTrainingIdxButton.Enabled = false;
+							selectTrainingIdxButton.Enabled = true;
 							selectValidationIdxButton.Enabled = false;
 							clearValidationDataButton.Enabled = false;
 
@@ -266,6 +266,8 @@ namespace VisualRBM
 			SetToolTip("Smooths learning by having the previous weight update contribute to the current update by the given percent.  Valid values range from 0 to 1.", this.momentumTextBox);
 			SetToolTip("L1 Regularization punishes all weights equally.  Many weights will be near zero with this method while others will grow large.", this.l1TextBox);
 			SetToolTip("L2 Regularization more heavily punishes large weights, resulting in blurrier weights that can be harder to interpret", this.l2TextBox);
+			SetToolTip("Probability any given visible unit will not be activated during a single training update.", this.visibleDropoutTextBox);
+			SetToolTip("Probability any given hidden unit will not be activated during a single training update.", this.hiddenDropoutTextBox);
 			SetToolTip("Number of training to vectors to show the model for each weight update", this.minibatchSizeTextBox);
 			SetToolTip("The number of weight updates to perform", this.epochsTextBox);
 			SetToolTip("Import RBM for further training", this.importButton);
@@ -334,15 +336,25 @@ namespace VisualRBM
 			ofd.Multiselect = false;
 			if (ofd.ShowDialog() == DialogResult.OK)
 			{
-				// load IDX file
 				_main_form.Cursor = Cursors.WaitCursor;
-
-				if (RBMProcessor.SetTrainingData(ofd.FileName) == false)
+				if (current_state == ProgramState.TrainerPaused)
 				{
-					_main_form.Cursor = Cursors.Default;
-					return;
+					// load IDX file
+					if (RBMProcessor.SetTrainingData(ofd.FileName, false) == false)
+					{
+						_main_form.Cursor = Cursors.Default;
+						return;
+					}
 				}
-
+				else
+				{
+					// load IDX file
+					if (RBMProcessor.SetTrainingData(ofd.FileName, true) == false)
+					{
+						_main_form.Cursor = Cursors.Default;
+						return;
+					}
+				}
 				_main_form.Cursor = Cursors.Default;
 
 				// update labels
@@ -368,9 +380,10 @@ namespace VisualRBM
 				RBMProcessor.SetValidationData(null);
 				validationIdxPathTextBox.Text = "";
 
-				
-
-				CurrentState = ProgramState.TrainerStopped;
+				if (current_state == ProgramState.ProgramStarted)
+				{
+					CurrentState = ProgramState.TrainerStopped;
+				}
 			}
 		}
 
@@ -394,7 +407,6 @@ namespace VisualRBM
 				_main_form.trainingLog.AddLog("Loaded Validation .IDX: {0}", ofd.FileName);
 
 				validation_data_loaded = true;
-				CurrentState = ProgramState.TrainerStopped;
 			}
 		}
 
@@ -406,7 +418,6 @@ namespace VisualRBM
 			_main_form.trainingLog.AddLog("Cleared Validation .IDX");
 
 			validation_data_loaded = false;
-			CurrentState = ProgramState.TrainerStopped;
 		}
 
 
@@ -929,7 +940,6 @@ namespace VisualRBM
 			{
 				try
 				{
-					Regex whitespace = new Regex("[ \t]+");
 					Dictionary<String, String> parameter_map = new Dictionary<String, String>();
 					uint line = 0;
 					using (StreamReader sr = new StreamReader(new FileStream(ofd.FileName, FileMode.Open, FileAccess.Read)))
@@ -943,16 +953,16 @@ namespace VisualRBM
 							text = text.Trim();
 							if (text != "")
 							{
-								String[] tokens = whitespace.Split(text);
+								String[] tokens = text.Split('=');
 
-								if(tokens.Length != 3 || tokens[1] != "=")
+								if(tokens.Length != 2)
 								{
 									MessageBox.Show(String.Format("Problem parsing line {0}: {1}", line, text));
 									return;
 								}
 
 								String key = tokens[0];
-								String val = tokens[2];
+								String val = tokens[1];
 
 								if(valid_keys.Contains(key) == false)
 								{
@@ -977,7 +987,7 @@ namespace VisualRBM
 
 							String val;
 
-							if (current_state == ProgramState.TrainerStopped || current_state == ProgramState.None)
+							if (current_state == ProgramState.TrainerStopped || current_state == ProgramState.ProgramStarted)
 							{
 								if (parameter_map.TryGetValue("model", out val))
 								{
@@ -1054,7 +1064,7 @@ namespace VisualRBM
 								}
 							}
 
-							if (current_state == ProgramState.TrainerPaused || current_state == ProgramState.TrainerStopped || current_state == ProgramState.None)
+							if (current_state == ProgramState.TrainerPaused || current_state == ProgramState.TrainerStopped || current_state == ProgramState.ProgramStarted)
 							{
 								if (parameter_map.TryGetValue("learning_rate", out val))
 								{
@@ -1149,6 +1159,7 @@ namespace VisualRBM
 										if (vd >= 0.0f && vd < 1.0f)
 										{
 											RBMProcessor.VisibleDropout = vd;
+											visibleDropoutTextBox.Text = vd.ToString();
 										}
 										else
 										{
@@ -1170,6 +1181,7 @@ namespace VisualRBM
 										if (hd >= 0.0f && hd < 1.0f)
 										{
 											RBMProcessor.HiddenDropout = hd;
+											hiddenDropoutTextBox.Text = hd.ToString();
 										}
 										else
 										{

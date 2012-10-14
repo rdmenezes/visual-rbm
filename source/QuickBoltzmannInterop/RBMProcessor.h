@@ -181,7 +181,7 @@ namespace QuickBoltzmann
 			return float(1.0 / (1.0 + Math::Exp(-x)));
 		}
 
-		static bool SetTrainingData(String^ filename);
+		static bool SetTrainingData(String^ filename, bool calculate_stats);
 		static bool SetValidationData(String^ filename);
 		static void SaveRBM(String^ filename);
 		static void LoadRBM(String^ filename, uint32_t% hidden_units, bool% linear_units);
