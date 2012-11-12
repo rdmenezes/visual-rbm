@@ -11,22 +11,20 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{FDFEEE4A-AE92-4D22-BF7F-B2AB4F64B874}</ProjectGuid>
-    <RootNamespace>QuickBoltzmannInterop</RootNamespace>
+    <ProjectGuid>{B8EDE148-D4AD-45EA-B6AC-B50C4D805336}</ProjectGuid>
+    <RootNamespace>FreeGLUT</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>MultiByte</CharacterSet>
-    <CLRSupport>true</CLRSupport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
-    <CLRSupport>true</CLRSupport>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -39,27 +37,34 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)..\bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)..\int\$(Configuration)\$(TargetName)\</IntDir>
+    <OutDir>$(SolutionDir)..\..\bin\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IntDir>$(SolutionDir)..\..\int\$(Configuration)\$(TargetName)\</IntDir>
+    <TargetName>$(TargetName)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)..\bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)..\int\$(Configuration)\$(TargetName)\</IntDir>
+    <OutDir>$(SolutionDir)..\..\bin\$(Configuration)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IntDir>$(SolutionDir)..\..\int\$(Configuration)\$(TargetName)\</IntDir>
+    <TargetName>$(TargetName)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../QuickBoltzmannNative/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
+    </Link>
+    <Lib>
       <AdditionalDependencies>
       </AdditionalDependencies>
-    </Link>
+      <TargetMachine>MachineX86</TargetMachine>
+    </Lib>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -67,39 +72,49 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>../QuickBoltzmannNative/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
     </Link>
-    <ProjectReference />
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="MessageQueue.h" />
-    <ClInclude Include="RBMProcessor.h" />
+    <ClCompile Include="src\freeglut_callbacks.c" />
+    <ClCompile Include="src\freeglut_cursor.c" />
+    <ClCompile Include="src\freeglut_display.c" />
+    <ClCompile Include="src\freeglut_ext.c" />
+    <ClCompile Include="src\freeglut_font.c" />
+    <ClCompile Include="src\freeglut_font_data.c" />
+    <ClCompile Include="src\freeglut_gamemode.c" />
+    <ClCompile Include="src\freeglut_geometry.c" />
+    <ClCompile Include="src\freeglut_glutfont_definitions.c" />
+    <ClCompile Include="src\freeglut_init.c" />
+    <ClCompile Include="src\freeglut_input_devices.c" />
+    <ClCompile Include="src\freeglut_joystick.c" />
+    <ClCompile Include="src\freeglut_main.c" />
+    <ClCompile Include="src\freeglut_menu.c" />
+    <ClCompile Include="src\freeglut_misc.c" />
+    <ClCompile Include="src\freeglut_overlay.c" />
+    <ClCompile Include="src\freeglut_spaceball.c" />
+    <ClCompile Include="src\freeglut_state.c" />
+    <ClCompile Include="src\freeglut_stroke_mono_roman.c" />
+    <ClCompile Include="src\freeglut_stroke_roman.c" />
+    <ClCompile Include="src\freeglut_structure.c" />
+    <ClCompile Include="src\freeglut_teapot.c" />
+    <ClCompile Include="src\freeglut_videoresize.c" />
+    <ClCompile Include="src\freeglut_window.c" />
+    <ClCompile Include="src\freeglut_xinput.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MessageQueue.cpp" />
-    <ClCompile Include="RBMProcessor.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="System.Windows.Forms" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\QuickBoltzmannNative\QuickBoltzmannNative.vcxproj">
-      <Project>{3b08e129-1309-4711-9324-e4cc1a0b2e64}</Project>
-      <Private>true</Private>
-      <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-      <CopyLocalSatelliteAssemblies>false</CopyLocalSatelliteAssemblies>
-      <LinkLibraryDependencies>true</LinkLibraryDependencies>
-      <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
-    </ProjectReference>
+    <ClInclude Include="include\gl\freeglut.h" />
+    <ClInclude Include="include\gl\freeglut_ext.h" />
+    <ClInclude Include="include\gl\freeglut_std.h" />
+    <ClInclude Include="include\GL\glut.h" />
+    <ClInclude Include="src\freeglut_internal.h" />
+    <ClInclude Include="src\freeglut_teapot_data.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
