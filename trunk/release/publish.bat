@@ -1,4 +1,4 @@
-set BIN="E:\pospeselr\Projects\VisualRBM\bin\Release"
+set BIN="..\bin\Release"
 set ZIP="C:\Program Files\7-Zip\7z.exe"
 
 
