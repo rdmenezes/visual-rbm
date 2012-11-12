@@ -1,0 +1,7 @@
+#summary One-sentence summary of this page.
+
+=Downloads=
+
+|| *File* || *Description* ||
+|| [http://visual-rbm.googlecode.com/svn/trunk/release/VisualRBM.zip VisualRBM.zip] || The latest VisualRBM client ||
+|| [http://visual-rbm.googlecode.com/svn/trunk/release/Tools.zip Tools.zip] || A set of tools for manipulating IDX data files and training RBMs from the command-line ||
