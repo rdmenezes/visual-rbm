@@ -14,7 +14,7 @@ uniform float learning_rate;
 uniform float l1_regularization;
 uniform float l2_regularization;
 
-in vec2 tex_coordinate; 
+smooth in vec2 tex_coordinate; 
 
 out float new_weight; 
 

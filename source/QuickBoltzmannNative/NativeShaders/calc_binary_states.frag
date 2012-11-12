@@ -2,7 +2,7 @@
 uniform usampler2DRect random; 
 uniform sampler2DRect probabilities; 
  
-in vec2 tex_coordinate; 
+smooth in vec2 tex_coordinate; 
  
 out float state; 
  
