@@ -7,7 +7,7 @@ uniform sampler2DRect hidden_accumulation;
 uniform int visible_units;
 uniform int hidden_units;
 
-in vec2 tex_coordinate;
+smooth in vec2 tex_coordinate;
 
 out float free_energy;
 

@@ -5,7 +5,7 @@ uniform sampler2DRect visible_reconstruction;
  
 uniform int minibatch_size; 
  
-in vec2 tex_coordinate; 
+smooth in vec2 tex_coordinate; 
  
 out float mean_square_error; 
  

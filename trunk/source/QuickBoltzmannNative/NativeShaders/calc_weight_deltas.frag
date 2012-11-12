@@ -15,7 +15,7 @@ uniform float momentum;
 
 uniform int minibatch_size;
 
-in vec2 tex_coordinate;
+smooth in vec2 tex_coordinate;
 
 out float delta;
 

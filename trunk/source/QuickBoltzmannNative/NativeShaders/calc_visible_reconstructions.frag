@@ -6,7 +6,7 @@ uniform sampler2DRect rbm_weights;
 uniform int hidden_units; 
 uniform bool sigmoid;
  
-in vec2 tex_coordinate; 
+smooth in vec2 tex_coordinate; 
  
 out float reconstruction; 
  

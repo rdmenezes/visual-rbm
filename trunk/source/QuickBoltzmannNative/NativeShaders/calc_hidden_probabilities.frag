@@ -5,7 +5,7 @@ uniform sampler2DRect rbm_weights;
 
 uniform int visible_units; 
  
-in vec2 tex_coordinate; 
+smooth in vec2 tex_coordinate; 
  
 
 out float probability; 

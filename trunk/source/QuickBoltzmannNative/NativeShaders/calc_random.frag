@@ -7,7 +7,7 @@ const uint c = 1013904223u;
 
 uniform usampler2DRect seeds;  
   
-in vec2 tex_coordinate;  
+smooth in vec2 tex_coordinate;  
  
 out uint next_int;  
   

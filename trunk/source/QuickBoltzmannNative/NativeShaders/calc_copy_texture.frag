@@ -2,7 +2,7 @@
 
 uniform sampler2DRect source;
 
-in vec2 tex_coordinate;
+smooth in vec2 tex_coordinate;
 
 out float value;
 

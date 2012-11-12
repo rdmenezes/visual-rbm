@@ -11,7 +11,7 @@ uniform int use_prev_vals;
 
 uniform vec2 offset;
 
-in vec2 tex_coordinate;
+smooth in vec2 tex_coordinate;
 
 out float value;
 
