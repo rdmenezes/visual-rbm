@@ -41,14 +41,14 @@ void print_help()
 	printf("\nUsage: clrbm [ARGS]\n");
 	printf("Train an RBM using OpenGL\n\n");
 	printf("Required Arguments:\n");
-	printf("  -train=IDX         Specifies the input idx training data file.\n");
-	printf("  -params=PARAMS     Load training parameters to use during training.\n");
-	printf("  -export=OUT        Specifies filename to save trained RBM as.\n\n");
+	printf("  -train=IDX        Specifies the input idx training data file.\n");
+	printf("  -params=PARAMS    Load training parameters to use during training.\n");
+	printf("  -export=OUT       Specifies filename to save trained RBM as.\n\n");
 	printf(" Optional Arguments:\n");
-	printf("   -valid=IDX        Specifies an optional validation data file.\n");
-	printf("   -import=RBM       Specifies filename of optional RBM to import and train.\n");
-	printf("   -quiet            Suppresses all stdout output\n");
-	printf("   -defaults         Save a default configuration file to default.vrbmparameters\n");
+	printf("  -valid=IDX        Specifies an optional validation data file.\n");
+	printf("  -import=RBM       Specifies filename of optional RBM to import and train.\n");
+	printf("  -quiet            Suppresses all stdout output\n");
+	printf("  -defaults         Save a default configuration file to default.vrbmparameters\n");
 
 }
 

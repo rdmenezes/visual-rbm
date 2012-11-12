@@ -348,8 +348,14 @@ namespace VisualRBM
 				}
 				else
 				{
+					bool calc_stats = true;
+					if (RBMProcessor.VisibleType == UnitType.Gaussian)
+					{
+						calc_stats = MessageBox.Show("Does the data need to be normalized?", "", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
+					}
+
 					// load IDX file
-					if (RBMProcessor.SetTrainingData(ofd.FileName, true) == false)
+					if (RBMProcessor.SetTrainingData(ofd.FileName, calc_stats) == false)
 					{
 						_main_form.Cursor = Cursors.Default;
 						return;
