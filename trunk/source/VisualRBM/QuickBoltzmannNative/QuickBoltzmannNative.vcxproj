@@ -37,12 +37,12 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <OutDir>$(SolutionDir)..\bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)..\int\$(Configuration)\$(TargetName)\</IntDir>
+    <OutDir>$(SolutionDir)..\..\bin\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\..\int\$(Configuration)\$(TargetName)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>$(SolutionDir)..\bin\$(Configuration)\</OutDir>
-    <IntDir>$(SolutionDir)..\int\$(Configuration)\$(TargetName)\</IntDir>
+    <OutDir>$(SolutionDir)..\..\bin\$(Configuration)\</OutDir>
+    <IntDir>$(SolutionDir)..\..\int\$(Configuration)\$(TargetName)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -68,7 +68,7 @@
       </AdditionalLibraryDirectories>
     </Lib>
     <PostBuildEvent>
-      <Command>xcopy NativeShaders "$(SolutionDir)..\bin\$(Configuration)\NativeShaders" /i /Y
+      <Command>xcopy NativeShaders "$(SolutionDir)..\..\bin\$(Configuration)\NativeShaders" /i /Y
 </Command>
     </PostBuildEvent>
     <PostBuildEvent>
@@ -103,7 +103,7 @@
       </AdditionalLibraryDirectories>
     </Lib>
     <PostBuildEvent>
-      <Command>xcopy NativeShaders "$(SolutionDir)..\bin\$(Configuration)\NativeShaders" /i /Y
+      <Command>xcopy NativeShaders "$(SolutionDir)..\..\bin\$(Configuration)\NativeShaders" /i /Y
 </Command>
     </PostBuildEvent>
     <PostBuildEvent>
