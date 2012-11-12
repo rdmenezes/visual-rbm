@@ -11,9 +11,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{554BE48D-FF3B-4B71-949D-A847780E7DE4}</ProjectGuid>
-    <RootNamespace>cvrbm</RootNamespace>
-    <ProjectName>clrbm</ProjectName>
+    <ProjectGuid>{CF47F9DB-47DB-4114-9580-CBF0B43E1B54}</ProjectGuid>
+    <RootNamespace>clrbm</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -53,9 +52,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\VisualRBM\QuickBoltzmannNative\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\bin\$(Configuration)\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>FreeGLUT.lib;GLEW.lib;QuickBoltzmannNative.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -64,24 +66,16 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\VisualRBM\QuickBoltzmannNative\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(SolutionDir)..\..\bin\$(Configuration)\</AdditionalLibraryDirectories>
+      <AdditionalDependencies>FreeGLUT.lib;GLEW.lib;QuickBoltzmannNative.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FreeGLUT\FreeGLUT.vcxproj">
-      <Project>{b8ede148-d4ad-45ea-b6ac-b50c4d805336}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\GLEW\GLEW.vcxproj">
-      <Project>{0a88f124-f8cb-4a0a-9515-07332f2cbaed}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\QuickBoltzmannNative\QuickBoltzmannNative.vcxproj">
-      <Project>{3b08e129-1309-4711-9324-e4cc1a0b2e64}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <ItemGroup>
     <ClCompile Include="clrbm.cpp" />
   </ItemGroup>
