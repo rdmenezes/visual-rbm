@@ -291,9 +291,7 @@ void RBMTrainer::Reset()
 
 bool RBMTrainer::SetTrainingData(IDX* in_data, bool calculate_stats)
 {
-	// if we're not initialized, then we must calculate stats
-	assert(IsInitialized == true || calculate_stats == true);
-	
+	// additional replacement data is being loaded
 	if(IsInitialized)
 	{
 		if(VisibleCount != TrainingData->RowLength())
@@ -326,11 +324,9 @@ bool RBMTrainer::SetTrainingData(IDX* in_data, bool calculate_stats)
 		// transfer to GPU
 		TransferDataToGPU(TrainingData, VisibleTextures, Minibatches);
 	}
+	// loading initial dataset
 	else
 	{
-		// we don't have any data here so we need to calc stats
-		assert(calculate_stats == true);
-
 		// makes sure the data doesn't contain nans or infinities
 		if(!ValidateData(in_data))
 		{
@@ -355,6 +351,21 @@ bool RBMTrainer::SetTrainingData(IDX* in_data, bool calculate_stats)
 		if(calculate_stats)
 		{
 			CalcStatistics();
+		}
+		else
+		{
+			// assume 0 mean 1 stddev
+			DataMeans.Acquire(VisibleCount);
+			DataStdDev.Acquire(VisibleCount);
+
+			float* m_ptr = DataMeans;
+			float* s_ptr = DataStdDev;
+
+			for(int i = 0; i < VisibleCount; i++)
+			{
+				m_ptr[i] = 0.0f;
+				s_ptr[i] = 1.0f;
+			}
 		}
 	}
 
@@ -663,6 +674,7 @@ void RBMTrainer::Initialize()
 					switch(VisibleType)
 					{
 					case Binary:
+						// logit
 						val = (float)log(DataMeans[i-1] / (1 - DataMeans[i-1]));
 						if(val < -15.0f)
 							val = -15.0f;
@@ -1369,32 +1381,14 @@ float RBMTrainer::CalcError(GLuint v, GLuint vp)
 	
 	__m128 result = _mm_set_ps1(0.0f);	// zero out initially
 
-	if(VisibleType == UnitType::Binary)
+	float* head = LocalErrorBuffer;
+	for(uint32_t k = 0; k < LocalErrorBuffer.BlockCount(); k++)
 	{
-		float* head = LocalErrorBuffer;
-		for(uint32_t k = 0; k < LocalErrorBuffer.BlockCount(); k++)
-		{
-			__m128 temp = _mm_load_ps(head);
-			result = _mm_add_ps(result, temp);
-			head += 4;
-		}
+		__m128 temp = _mm_load_ps(head);
+		result = _mm_add_ps(result, temp);
+		head += 4;
 	}
-	else if(VisibleType == UnitType::Gaussian)
-	{
-		uint32_t offset = 0;
-		for(uint32_t k = 0; k < LocalErrorBuffer.BlockCount(); k++)
-		{
-			// multiple data by visible unit variance so that error is back in terms of the data's statistics
-			__m128 data = _mm_load_ps((float*)LocalErrorBuffer + offset);	// get error
-			__m128 stddev = _mm_load_ps((float*)DataStdDev + offset);	// get stddev
-			stddev = _mm_mul_ps(stddev, stddev);	// make it variance
 
-			data = _mm_mul_ps(data, stddev);
-
-			result = _mm_add_ps(result, data);
-			offset += 4;
-		}
-	}
 
 	result = _mm_hadd_ps(result, result);
 	result = _mm_hadd_ps(result, result);

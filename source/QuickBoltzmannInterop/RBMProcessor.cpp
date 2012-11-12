@@ -204,9 +204,9 @@ namespace QuickBoltzmann
 				else if(m->Type == "SetTrainingData")
 				{
 					IDX* data = (IDX*)(LONG_PTR)m["idx"];
-					bool recalc = (bool)m["recalculate"];
+					bool calc = (bool)m["calculate"];
 
-					m["result"] = rbmtrainer->SetTrainingData(data, recalc);
+					m["result"] = rbmtrainer->SetTrainingData(data, calc);
 					m["done"] = true;
 				}
 			}
@@ -307,7 +307,7 @@ namespace QuickBoltzmann
 		return 0.0f;
 	}
 
-	bool RBMProcessor::SetTrainingData(String^ in_filename, bool recalculate_stats)
+	bool RBMProcessor::SetTrainingData(String^ in_filename, bool calc_stats)
 	{
 		IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(in_filename);
 		char* filename = static_cast<char*>(p.ToPointer());
@@ -325,7 +325,7 @@ namespace QuickBoltzmann
 
 		Message^ m = gcnew Message("SetTrainingData");
 		m["idx"] = (LONG_PTR)idx;
-		m["recalculate"] = recalculate_stats;
+		m["calculate"] = calc_stats;
 		m["done"] = false;
 		_message_queue->Enqueue(m);
 
