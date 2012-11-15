@@ -1,4 +1,3 @@
-#labels Featured
 || http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot01.png ||
 || http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot02.png ||
 || http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot03.png ||
