@@ -50,7 +50,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../QuickBoltzmannNative/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../QuickBoltzmannNative/;$(SolutionDir)\..\..\helpers</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -67,7 +67,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>../QuickBoltzmannNative/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../QuickBoltzmannNative/;$(SolutionDir)\..\..\helpers</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
