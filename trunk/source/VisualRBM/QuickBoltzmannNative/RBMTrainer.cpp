@@ -2,8 +2,8 @@
 #include "Common.h"
 #include "OpenGLCommon.h"
 
-#include "IDX.h"
-#include "RBM.h"
+#include "IDX.hpp"
+#include "RBM.hpp"
 
 #include <malloc.h>
 #include <limits>
@@ -294,7 +294,7 @@ bool RBMTrainer::SetTrainingData(IDX* in_data, bool calculate_stats)
 	// additional replacement data is being loaded
 	if(IsInitialized)
 	{
-		if(VisibleCount != TrainingData->RowLength())
+		if(VisibleCount != TrainingData->GetRowLength())
 		{
 			PreviousError = DataHasIncorrectNumberOfVisibleInputs;
 			return false;
@@ -345,7 +345,7 @@ bool RBMTrainer::SetTrainingData(IDX* in_data, bool calculate_stats)
 		TrainingData = in_data;
 
 		// set visible count
-		VisibleCount = TrainingData->RowLength();
+		VisibleCount = TrainingData->GetRowLength();
 
 		// calculate data statistics (mean/stddev)
 		if(calculate_stats)
@@ -389,7 +389,7 @@ bool RBMTrainer::SetValidationData(IDX* in_data)
 	}
 
 
-	if(in_data->RowLength() != VisibleCount)
+	if(in_data->GetRowLength() != VisibleCount)
 	{
 		PreviousError = DataHasIncorrectNumberOfVisibleInputs;
 		return false;
@@ -477,14 +477,14 @@ void RBMTrainer::SetModelParameters(UnitType in_VisibleType, uint32_t in_HiddenU
 
 bool RBMTrainer::ValidateData(IDX* in_data)
 {
-	float* temp_data_buffer = new float[in_data->RowLength()];
+	float* temp_data_buffer = new float[in_data->GetRowLength()];
 	assert(temp_data_buffer != 0);
 
 	PreviousError = NoError;
-	for(uint32_t k = 0; k < in_data->Rows(); k++)
+	for(uint32_t k = 0; k < in_data->GetRowCount(); k++)
 	{
 		in_data->ReadRow(k, temp_data_buffer);
-		for(uint32_t i = 0; i < in_data->RowLength(); i++)
+		for(uint32_t i = 0; i < in_data->GetRowLength(); i++)
 		{
 			float& f = temp_data_buffer[i];
 			if(f != f)
@@ -527,7 +527,7 @@ void RBMTrainer::CalcStatistics()
 	Row.Acquire(VisibleCount);
 
 	// sum up the data and the square data (temporarily stored in means and std dev respectively)
-	for(uint32_t k = 0; k < TrainingData->Rows(); k++)
+	for(uint32_t k = 0; k < TrainingData->GetRowCount(); k++)
 	{
 		TrainingData->ReadRow(k, (float*)Row);
 		float* data_head = Row;
@@ -551,7 +551,7 @@ void RBMTrainer::CalcStatistics()
 		}
 	}
 
-	__m128 divisor = _mm_set1_ps((float)TrainingData->Rows());
+	__m128 divisor = _mm_set1_ps((float)TrainingData->GetRowCount());
 	// now  using sum data and sum square data, calculate means and stddev
 	for(uint32_t i = 0; i < Row.BlockCount(); i++)
 	{
@@ -580,13 +580,13 @@ void RBMTrainer::TransferDataToGPU(IDX* Data, GLuint*& TextureHandles, int& Coun
 	}
 	
 	// want to shuffle the order in which we add data
-	uint32_t* index_buffer = new uint32_t[Data->Rows()];
-	for(uint32_t k = 0; k < Data->Rows(); k++)
+	uint32_t* index_buffer = new uint32_t[Data->GetRowCount()];
+	for(uint32_t k = 0; k < Data->GetRowCount(); k++)
 		index_buffer[k] = k;
-	shuffle(index_buffer, Data->Rows());
+	shuffle(index_buffer, Data->GetRowCount());
 
 	// number of minibatches for this data
-	Count = Data->Rows() / MinibatchSize;
+	Count = Data->GetRowCount() / MinibatchSize;
 	// array off texture handles
 	TextureHandles = new GLuint[Count];
 

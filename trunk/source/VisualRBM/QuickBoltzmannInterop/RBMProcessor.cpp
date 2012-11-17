@@ -1,7 +1,7 @@
 #include "RBMProcessor.h"
 
-#include "../QuickBoltzmannNative/IDX.h"
-#include "../QuickBoltzmannNative/RBM.h"
+#include "IDX.hpp"
+#include "RBM.hpp"
 #include "../QuickBoltzmannNative/RBMTrainer.h"
 
 
@@ -316,7 +316,7 @@ namespace QuickBoltzmann
 		System::Runtime::InteropServices::Marshal::FreeHGlobal(p);
 
 		// verify it's the right data type
-		if(idx->GetDataType() != DataFormat::Single)
+		if(idx->GetDataFormat() != DataFormat::Single)
 		{
 			ShowError("Error: IDX training data must have type 'Float' (0x0D)");
 			_has_training_data = false;
@@ -345,7 +345,7 @@ namespace QuickBoltzmann
 		switch(rbmtrainer->GetLastErrorCode())
 		{
 		case DataHasIncorrectNumberOfVisibleInputs:
-			ShowError(String::Format("RBM has {0} visible units while proposed Training data is length {1}", VisibleUnits, idx->RowLength()));
+			ShowError(String::Format("RBM has {0} visible units while proposed Training data is length {1}", VisibleUnits, idx->GetRowLength()));
 			break;
 		case BinaryDataOutsideZeroOne:
 			ShowError("Input data has values outside of [0,1] so 'Binary' Visible Type may not be used; instead use 'Gaussian'");
@@ -379,7 +379,7 @@ namespace QuickBoltzmann
 			IDX* idx = IDX::Load(filename);
 			System::Runtime::InteropServices::Marshal::FreeHGlobal(p);
 
-			if(idx->GetDataType() != DataFormat::Single)
+			if(idx->GetDataFormat() != DataFormat::Single)
 			{
 				ShowError("Error: IDX validation data must have type 'Float' (0x0D)");
 				_has_validation_data = false;
@@ -397,7 +397,7 @@ namespace QuickBoltzmann
 			switch(rbmtrainer->GetLastErrorCode())
 			{
 			case DataHasIncorrectNumberOfVisibleInputs:
-				ShowError(String::Format("Training data is length {0} while Validation data is length {1}", VisibleUnits, idx->RowLength()));
+				ShowError(String::Format("Training data is length {0} while Validation data is length {1}", VisibleUnits, idx->GetRowLength()));
 				break;
 			case BinaryDataOutsideZeroOne:
 				ShowError("Validation data has values outside of [0,1] so 'Binary' Visible Type may not be used; instead use 'Gaussian'");

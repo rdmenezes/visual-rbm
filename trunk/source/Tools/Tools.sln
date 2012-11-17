@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "clrbm", "clrbm\clrbm.vcxproj", "{CF47F9DB-47DB-4114-9580-CBF0B43E1B54}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "joinidx", "joinidx\joinidx.vcxproj", "{63E67B4F-F0DE-47FA-99A6-5FADC011FAD8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -13,6 +15,10 @@ Global
 		{CF47F9DB-47DB-4114-9580-CBF0B43E1B54}.Debug|Win32.Build.0 = Debug|Win32
 		{CF47F9DB-47DB-4114-9580-CBF0B43E1B54}.Release|Win32.ActiveCfg = Release|Win32
 		{CF47F9DB-47DB-4114-9580-CBF0B43E1B54}.Release|Win32.Build.0 = Release|Win32
+		{63E67B4F-F0DE-47FA-99A6-5FADC011FAD8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{63E67B4F-F0DE-47FA-99A6-5FADC011FAD8}.Debug|Win32.Build.0 = Debug|Win32
+		{63E67B4F-F0DE-47FA-99A6-5FADC011FAD8}.Release|Win32.ActiveCfg = Release|Win32
+		{63E67B4F-F0DE-47FA-99A6-5FADC011FAD8}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

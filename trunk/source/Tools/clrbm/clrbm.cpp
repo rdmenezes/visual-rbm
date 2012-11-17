@@ -1,6 +1,6 @@
-#include "../QuickBoltzmannNative/RBMTrainer.h"
-#include "../QuickBoltzmannNative/IDX.h"
-#include "../QuickBoltzmannNative/RBM.h"
+#include "RBMTrainer.h"
+#include "IDX.hpp"
+#include "RBM.hpp"
 
 
 #include <stdint.h>

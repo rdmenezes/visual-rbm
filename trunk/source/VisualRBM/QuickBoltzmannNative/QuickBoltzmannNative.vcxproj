@@ -48,7 +48,7 @@
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\GLEW\include;$(ProjectDir)\..\FreeGLUT\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\GLEW\include;$(ProjectDir)\..\FreeGLUT\include;$(SolutionDir)\..\..\helpers</AdditionalIncludeDirectories>
       <TreatWarningAsError>false</TreatWarningAsError>
       <OpenMPSupport>false</OpenMPSupport>
       <IntrinsicFunctions>false</IntrinsicFunctions>
@@ -84,7 +84,7 @@
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\GLEW\include;$(ProjectDir)\..\FreeGLUT\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\GLEW\include;$(ProjectDir)\..\FreeGLUT\include;$(SolutionDir)\..\..\helpers</AdditionalIncludeDirectories>
       <TreatWarningAsError>false</TreatWarningAsError>
       <OpenMPSupport>true</OpenMPSupport>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -115,16 +115,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
-    <ClInclude Include="IDX.h" />
     <ClInclude Include="OpenGLCommon.h" />
-    <ClInclude Include="RBM.h" />
     <ClInclude Include="RBMTrainer.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Common.cpp" />
-    <ClCompile Include="IDX.cpp" />
     <ClCompile Include="OpenGLCommon.cpp" />
-    <ClCompile Include="RBM.cpp" />
     <ClCompile Include="RBMTrainer.cpp" />
   </ItemGroup>
   <ItemGroup>
