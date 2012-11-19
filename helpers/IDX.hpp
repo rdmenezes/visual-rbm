@@ -219,9 +219,34 @@ public:
 		// start reading from file
 		idx._idx_file = file;	
 		idx._idx_endianness = (Endianness)idx.read<uint16_t>();
+		//switch(idx._idx_endianness)
+		//{
+		//case BigEndian:
+		//case LittleEndian:
+		//	break;
+		//default:
+		//	// parse error
+		//	delete result;
+		//	return NULL;
+		//}
+
 
 		// figure out our data format
 		idx._data_format = (DataFormat)idx.read<uint8_t>();
+		//switch(idx._data_format)
+		//{
+		//case UInt8:
+		//case SInt8:
+		//case SInt16:
+		//case SInt32:
+		//case Single:
+		//case Double:
+		//	break;
+		//default:
+		//	// parse error
+		//	delete result;
+		//	return NULL;
+		//}
 		// read number of dimensions
 		idx._row_dimensions_count = idx.read<uint8_t>();
 		idx._row_dimensions = (uint32_t*)malloc(idx._row_dimensions_count * sizeof(uint32_t));
@@ -255,6 +280,14 @@ public:
 		case DataFormat::Double:
 			idx._row_length_bytes = idx._row_length * 8;
 			break;
+		}
+
+		fseek(idx._idx_file, 0, SEEK_END);
+		size_t sz = ftell(idx._idx_file);
+		if(sz != idx.HeaderSize() + idx.GetRowCount() * idx.GetRowLengthBytes())
+		{
+			delete result;
+			return NULL;
 		}
 
 		return result;	
@@ -520,4 +553,5 @@ public:
 	{
 		memcpy(in_row_dimensions, _row_dimensions, _row_dimensions_count * sizeof(uint32_t));
 	}	
+	inline Endianness GetEndianness() const {return _idx_endianness;}
 };

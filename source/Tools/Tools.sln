@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "joinidx", "joinidx\joinidx.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "catidx", "catidx\catidx.vcxproj", "{9D118F02-93FD-47A5-A715-8499D98E1F2F}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "idxinfo", "idxinfo\idxinfo.vcxproj", "{AD15C18A-1D57-4041-B6ED-F5008C081C6B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -25,6 +27,10 @@ Global
 		{9D118F02-93FD-47A5-A715-8499D98E1F2F}.Debug|Win32.Build.0 = Debug|Win32
 		{9D118F02-93FD-47A5-A715-8499D98E1F2F}.Release|Win32.ActiveCfg = Release|Win32
 		{9D118F02-93FD-47A5-A715-8499D98E1F2F}.Release|Win32.Build.0 = Release|Win32
+		{AD15C18A-1D57-4041-B6ED-F5008C081C6B}.Debug|Win32.ActiveCfg = Debug|Win32
+		{AD15C18A-1D57-4041-B6ED-F5008C081C6B}.Debug|Win32.Build.0 = Debug|Win32
+		{AD15C18A-1D57-4041-B6ED-F5008C081C6B}.Release|Win32.ActiveCfg = Release|Win32
+		{AD15C18A-1D57-4041-B6ED-F5008C081C6B}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
