@@ -6,6 +6,6 @@ del VisualRBM.zip
 del Tools.zip
 
 %ZIP% a VisualRBM.zip %BIN%\VisualRBM.exe %BIN%\QuickBoltzmannInterop.dll %BIN%\NativeShaders\
-%ZIP% a Tools.zip %BIN%\clrbm.exe
+%ZIP% a Tools.zip %BIN%\clrbm.exe %BIN%\catidx.exe %BIN%\joinidx.exe
 
 pause
