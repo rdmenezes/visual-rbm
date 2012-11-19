@@ -262,12 +262,11 @@ public:
 
 	static IDX* Create(const char* in_filename, Endianness in_endianness, DataFormat in_format, uint32_t row_length)
 	{
-		uint32_t row_dimensions[1] = {row_length};
-		return Create(in_filename, in_endianness, in_format, row_dimensions);
+		return Create(in_filename, in_endianness, in_format, &row_length, 1);
+
 	}
 
-	template<uint32_t N>
-	static IDX* Create(const char* in_filename, Endianness in_endianness, DataFormat in_format, uint32_t (&row_dimensions)[N])
+	static IDX* Create(const char* in_filename, Endianness in_endianness, DataFormat in_format, uint32_t* row_dimensions, uint32_t row_dimensions_count)
 	{
 		FILE* file = fopen(in_filename, "wb");
 		if(file == NULL)
@@ -288,7 +287,7 @@ public:
 		idx._data_format = in_format;
 
 		// read number of dimensions
-		idx._row_dimensions_count = N+1;
+		idx._row_dimensions_count = row_dimensions_count+1;  // +1 for row count
 		idx._row_dimensions = (uint32_t*)malloc(idx._row_dimensions_count * sizeof(uint32_t));
 
 		idx._row_dimensions[0] = 0;	// empty initially
@@ -299,7 +298,7 @@ public:
 		}
 
 		idx._row_length = 1;
-		for(int32_t i = 0; i < N; i++)
+		for(int32_t i = 0; i < row_dimensions_count; i++)
 		{
 			idx._row_length *= row_dimensions[i];
 		}
@@ -513,6 +512,12 @@ public:
 	}
 
 	inline uint32_t GetRowLength() const {return _row_length;}
+	inline uint32_t GetRowLengthBytes() const {return _row_length_bytes;}
 	inline DataFormat GetDataFormat() const {return _data_format;}
 	inline uint32_t GetRowCount() const {return _row_dimensions[0];}
+	inline uint32_t GetRowDimensionsCount() const {return _row_dimensions_count;}
+	inline void GetRowDimensions(uint32_t* in_row_dimensions)
+	{
+		memcpy(in_row_dimensions, _row_dimensions, _row_dimensions_count * sizeof(uint32_t));
+	}	
 };
