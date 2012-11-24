@@ -7,6 +7,7 @@
 			alert('HELLO 1!');
 		</script>-->
 	<head>
+		<!--
 		<style>
 		/* http://meyerweb.com/eric/tools/css/reset/ 
 		   v2.0 | 20110126
@@ -57,7 +58,7 @@
 			border-spacing: 0;
 		}
 		</style>
-
+		-->
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/core.css">
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/ph_detail.css">
 	</head>
