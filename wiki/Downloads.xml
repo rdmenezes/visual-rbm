@@ -3,38 +3,41 @@
 <ModulePrefs title="hello world example" /> 
 <Content type="html">
 	<![CDATA[
-		<script type="text/javascript" language="javascript"> 
+		<!--<script type="text/javascript" language="javascript"> 
 			alert('HELLO 1!');
-		</script>
+		</script>-->
+	<head>
+		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/ph_detail.css">
+	</head>
 	<table class="wikitable">
-        <tbody>
-            <tr>
-                <td style="border: 1px solid #ccc; padding: 5px;">
-                <strong>File</strong></td>
+		<tbody>
+			<tr>
+				<td style="border: 1px solid #ccc; padding: 5px;">
+				<strong>File</strong></td>
 
-                <td style="border: 1px solid #ccc; padding: 5px;">
-                <strong>Description</strong></td>
-            </tr>
+				<td style="border: 1px solid #ccc; padding: 5px;">
+				<strong>Description</strong></td>
+			</tr>
 
-            <tr>
-                <td style="border: 1px solid #ccc; padding: 5px;"><a href=
-                "http://visual-rbm.googlecode.com/svn/trunk/release/VisualRBM.zip"
-                rel="nofollow">VisualRBM.zip</a></td>
+			<tr>
+				<td style="border: 1px solid #ccc; padding: 5px;"><a href=
+				"http://visual-rbm.googlecode.com/svn/trunk/release/VisualRBM.zip"
+				rel="nofollow">VisualRBM.zip</a></td>
 
-                <td style="border: 1px solid #ccc; padding: 5px;">The latest
-                VisualRBM client</td>
-            </tr>
+				<td style="border: 1px solid #ccc; padding: 5px;">The latest
+				VisualRBM client</td>
+			</tr>
 
-            <tr>
-                <td style="border: 1px solid #ccc; padding: 5px;"><a href=
-                "http://visual-rbm.googlecode.com/svn/trunk/release/Tools.zip"
-                rel="nofollow">Tools.zip</a></td>
+			<tr>
+				<td style="border: 1px solid #ccc; padding: 5px;"><a href=
+				"http://visual-rbm.googlecode.com/svn/trunk/release/Tools.zip"
+				rel="nofollow">Tools.zip</a></td>
 
-                <td style="border: 1px solid #ccc; padding: 5px;">A set of
-                tools for manipulating IDX data files and training RBMs from
-                the command-line</td>
-            </tr>
-        </tbody>
+				<td style="border: 1px solid #ccc; padding: 5px;">A set of
+				tools for manipulating IDX data files and training RBMs from
+				the command-line</td>
+			</tr>
+		</tbody>
     </table>
 	]]>
 </Content> 
