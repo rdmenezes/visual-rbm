@@ -7,6 +7,10 @@
 			alert('HELLO 1!');
 		</script>-->
 	<head>
+		<style>
+		table, caption, tbody, tfoot, thead, tr, th, td
+		</style>
+	
 		<!--
 		<style>
 		/* http://meyerweb.com/eric/tools/css/reset/ 
