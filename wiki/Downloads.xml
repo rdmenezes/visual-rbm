@@ -9,6 +9,12 @@
 	<head>
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/core.css">
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/ph_detail.css">
+		<style>
+		body
+		{
+			font-size : 13px;
+		}
+		</style>
 	</head>
 	<table class="wikitable">
 		<tbody>
