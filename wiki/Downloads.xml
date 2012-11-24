@@ -2,11 +2,13 @@
 <Module>
 <ModulePrefs title="hello world example" /> 
 <Content type="html">
-	<![CDATA[ 
-	Hello, world!
+	<![CDATA[
 		<script type="text/javascript" language="javascript"> 
-		alert('HELLO!');
+		alert('HELLO 1!');
 		</script>
+		<body>
+			Hello, world!		
+		</body>
 	]]>
 </Content> 
 </Module>
