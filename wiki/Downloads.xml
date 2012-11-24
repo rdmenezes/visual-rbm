@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?> 
 <Module>
-  <ModulePrefs title="hello world example" /> 
-  <Content type="html">
-     <![CDATA[ 
-       Hello, world!
-	   <script>
-	   alert("hello js!");
-	   </script>
-     ]]>
-  </Content> 
+<ModulePrefs title="hello world example" /> 
+<Content type="html">
+	<![CDATA[ 
+	Hello, world!
+		<script type="text/javascript" language="javascript"> 
+		alert('HELLO!');
+		</script>
+	]]>
+</Content> 
 </Module>
