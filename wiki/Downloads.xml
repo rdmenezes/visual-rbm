@@ -82,7 +82,7 @@
 			file_td = document.createElement("td");
 			file_td_a = document.createElement("a");
 			file_td_a.setAttribute("href", "http://visual-rbm.googlecode.com/svn/trunk/release/" + FileName);
-			file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Download','PDF',this.href]);setTimeout(function(){location.href=that.href;},200);return false;");
+			file_td_a.setAttribute("onclick", "_gaq.push(['_trackEvent','Releases', 'Download', FileName + "-" + Version])");
 			file_td_a.innerHTML = FileName;
 
 			file_td.appendChild(file_td_a);
