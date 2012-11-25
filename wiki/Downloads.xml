@@ -63,7 +63,7 @@
 			tr = document.createElement("tr");
 			
 			file_td = document.createElement("td");
-			file_td.innerHtml = "<a href=\"http://visual-rbm.googlecode.com/svn/trunk/release/" + FileName + "\">" + FileName + "</a>";
+			file_td.innerHTML = "<a href=\"http://visual-rbm.googlecode.com/svn/trunk/release/" + FileName + "\">" + FileName + "</a>";
 			
 			tr.appendChild(file_td);
 			
