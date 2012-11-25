@@ -35,7 +35,7 @@
 					<strong>Latest Version</strong>
 				</td>
 				<td>
-					<strong>History></strong>
+					<strong>History</strong>
 				</td>
 			</tr>
 			<!--
@@ -72,7 +72,7 @@
 		})();
 	</script>
 	<script type="text/javascript" language="javascript"> 
-		function AddReleaseEntry(Table, FileName, Description, Version)
+		function AddReleaseEntry(FileName, Description, Version)
 		{
 			table = document.getElementById("releases");
 			tbody = table.children[0];
@@ -89,13 +89,13 @@
 			
 			// description
 			desc_td = document.createElement("td");
-			desc_td.innerHtml = Description;
+			desc_td.innerHTML = Description;
 
 			tr.appendChild(desc_td);
 
 			// version
 			vers_td = document.createElement("td");
-			vers_td.innerHtml = Version;
+			vers_td.innerHTML = Version;
 			
 			tr.appendChild(vers_td);
 			
