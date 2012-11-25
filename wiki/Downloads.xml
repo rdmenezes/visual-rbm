@@ -3,9 +3,6 @@
 <ModulePrefs title="hello world example" /> 
 <Content type="html">
 	<![CDATA[
-		<!--<script type="text/javascript" language="javascript"> 
-			alert('HELLO 1!');
-		</script>-->
 	<head>
 		<style>
 		table, tbody, tfoot, thead, tr, th, td
@@ -17,14 +14,6 @@
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/core.css">
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/ph_detail.css">
 	</head>
-	<script type="text/javascript" language="javascript"> 
-		function AddReleaseEntry()
-		{
-			var table = document.getElementById("releases");
-		}
-		
-		AddReleaseEntry();
-	</script>
 	<table class="wikitable" id="releases">
 		<tbody >
 			<tr>
@@ -61,6 +50,14 @@
 			</tr>
 		</tbody>
     </table>
+	<script type="text/javascript" language="javascript"> 
+		function AddReleaseEntry()
+		{
+			var table = document.getElementById("releases");
+		}
+		
+		AddReleaseEntry();
+	</script>
 	]]>
 </Content> 
 </Module>
