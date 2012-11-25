@@ -90,8 +90,8 @@
 			tbody.appendChild(tr);
 		}
 		
-		AddReleaseEntry("What.bmp");
-		AddReleaseEntry("Goodbye.png");
+		AddReleaseEntry("Tools.zip", "some tools");
+		//AddReleaseEntry("Goodbye.png");
 	</script>
 	]]>
 </Content> 
