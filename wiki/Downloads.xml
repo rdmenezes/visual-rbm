@@ -13,17 +13,31 @@
 			font-size: 100%;
 		}
 		</style>
+		<!-- I'm not sure, but I think this is the right way to get hese css files-->
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/core.css">
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/ph_detail.css">
 	</head>
-	<table class="wikitable">
-		<tbody>
+	<script type="text/javascript" language="javascript"> 
+		function AddReleaseEntry()
+		{
+			var table = document.getElementById("releases");
+			
+		}
+	</script>
+	<table class="wikitable" id="releases">
+		<tbody >
 			<tr>
 				<td style="border: 1px solid #ccc; padding: 5px;">
 				<strong>File</strong></td>
 
 				<td style="border: 1px solid #ccc; padding: 5px;">
 				<strong>Description</strong></td>
+				
+				<td style="border: 1px solid #ccc; padding: 5px;">
+				<strong>Latest Version</strong></td>
+				
+				<td style="border: 1px solid #ccc; padding: 5px;">
+				<strong>Date</strong></td>
 			</tr>
 
 			<tr>
