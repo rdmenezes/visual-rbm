@@ -83,6 +83,7 @@
 			file_td_a = document.createElement("a");
 			file_td_a.setAttribute("href", "http://visual-rbm.googlecode.com/svn/trunk/release/" + FileName);
 			file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Download','PDF',this.href]);setTimeout(function(){location.href=that.href;},200);return false;");
+			file_td_a.innerHTML = FileName;
 
 			file_td.appendChild(file_td_a);
 			tr.appendChild(file_td);
@@ -103,6 +104,7 @@
 			hist_td = document.createElement("td");
 			hist_td_a = document.createElement("a");
 			hist_td_a.setAttribute("href", "http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/" + FileName);
+			hist_td_a.innerHTML = "&hellip;";
 			
 			hist_td.appendChild(hist_td_a);
 			tr.appendChild(hist_td);
