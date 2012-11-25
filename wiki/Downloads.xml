@@ -21,8 +21,9 @@
 		function AddReleaseEntry()
 		{
 			var table = document.getElementById("releases");
-			
 		}
+		
+		AddReleaseEntry();
 	</script>
 	<table class="wikitable" id="releases">
 		<tbody >
