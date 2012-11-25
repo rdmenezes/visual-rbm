@@ -18,6 +18,7 @@
 		<!-- I'm not sure, but I think this is the right way to get hese css files-->
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/core.css">
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/ph_detail.css">
+		<base target="_parent" />
 	</head>
 	
 	<h1>Releases</h1>
@@ -107,7 +108,6 @@
 			hist_td_a = document.createElement("a");
 			hist_td_a.setAttribute("href", "http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/" + FileName);
 			hist_td_a.innerHTML = "&hellip;";
-			hist_td_a.setAttribute("target", "_parent");
 			
 			hist_td.appendChild(hist_td_a);
 			tr.appendChild(hist_td);
