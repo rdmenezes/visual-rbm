@@ -58,18 +58,34 @@
 	<!-- jquery! -->
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
 	<script type="text/javascript" language="javascript"> 
-		function AddReleaseEntry(FileName)
+		function AddReleaseEntry(FileName, Description)
 		{
 			table = document.getElementById("releases");
 			tbody = table.children[0];
 			tr = document.createElement("tr");
 			
+			// file link
 			file_td = document.createElement("td");
 			file_td.innerHTML = "<a href=\"http://visual-rbm.googlecode.com/svn/trunk/release/" + FileName + "\">" + FileName + "</a>";
 			
 			tr.appendChild(file_td);
 			
+			// description
+			desc_td = document.createElement("td");
+			desc_td.innerHtml = Description;
+			
+			tr.appendChild(desc_td);
+			
+			// latest version
+			version_td = document.createElement("td");
+			
+			
 			changelog_url = "http://code.google.com/p/visual-rbm/source/browse/trunk/release/" + FileName;
+			
+			$.get(changelog_url, function(data)
+			{
+				alert("URL Loaded: " + changelog_url);
+			});
 			
 			tbody.appendChild(tr);
 		}
