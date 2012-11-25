@@ -19,6 +19,9 @@
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/core.css">
 		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/ph_detail.css">
 	</head>
+	
+	<h1>Releases</h1>
+	
 	<table class="wikitable" id="releases">
 		<tbody >
 			<tr>
@@ -32,13 +35,14 @@
 					<strong>Latest Version</strong>
 				</td>
 				<td>
-					<strong>Date</strong>
+					<strong>History></strong>
 				</td>
 			</tr>
-
+			<!--
 			<tr>
 				<td>
-					<a href="http://visual-rbm.googlecode.com/svn/trunk/release/VisualRBM.zip" rel="nofollow">VisualRBM.zip</a>
+					<a href="http://visual-rbm.googlecode.com/svn/trunk/release/VisualRBM.zip" 
+					onclick=>VisualRBM.zip</a>
 				</td>
 				<td style="border: 1px solid #ccc; padding: 5px;">The latest
 				VisualRBM client</td>
@@ -53,12 +57,22 @@
 				tools for manipulating IDX data files and training RBMs from
 				the command-line</td>
 			</tr>
+			-->
 		</tbody>
     </table>
-	<!-- jquery! -->
-	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+	<script type="text/javascript">
+		var _gaq = _gaq || [];
+		_gaq.push(['_setAccount', 'UA-34133374-1']);
+		_gaq.push(['_trackPageview']);
+
+		(function() {
+		var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+		ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+		var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		})();
+	</script>
 	<script type="text/javascript" language="javascript"> 
-		function AddReleaseEntry(FileName, Description)
+		function AddReleaseEntry(Table, FileName, Description, Version)
 		{
 			table = document.getElementById("releases");
 			tbody = table.children[0];
@@ -66,32 +80,39 @@
 			
 			// file link
 			file_td = document.createElement("td");
-			file_td.innerHTML = "<a href=\"http://visual-rbm.googlecode.com/svn/trunk/release/" + FileName + "\">" + FileName + "</a>";
-			
+			file_td_a = document.createElement("a");
+			file_td_a.setAttribute("href", "http://visual-rbm.googlecode.com/svn/trunk/release/" + FileName);
+			file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Download','PDF',this.href]);setTimeout(function(){location.href=that.href;},200);return false;");
+
+			file_td.appendChild(file_td_a);
 			tr.appendChild(file_td);
 			
 			// description
 			desc_td = document.createElement("td");
 			desc_td.innerHtml = Description;
-			
+
 			tr.appendChild(desc_td);
+
+			// version
+			vers_td = document.createElement("td");
+			vers_td.innerHtml = Version;
 			
-			// latest version
-			version_td = document.createElement("td");
+			tr.appendChild(vers_td);
 			
+			// History
+			hist_td = document.createElement("td");
+			hist_td_a = document.createElement("a");
+			hist_td_a.setAttribute("href", "http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/" + FileName);
 			
-			changelog_url = "http://code.google.com/p/visual-rbm/source/browse/trunk/release/" + FileName;
-			
-			$.get(changelog_url, function(data)
-			{
-				alert("URL Loaded: " + changelog_url);
-			});
+			hist_td.appendChild(hist_td_a);
+			tr.appendChild(hist_td);
 			
 			tbody.appendChild(tr);
 		}
 		
-		AddReleaseEntry("Tools.zip", "some tools");
-		//AddReleaseEntry("Goodbye.png");
+		AddReleaseEntry("VisualRBM.zip", "The latest VisualRBM client", "r58");
+		AddReleaseEntry("Tools.zip", "A set of tools for manipulating IDX data files and training RBMs from the command-line", "r58");
+		
 	</script>
 	]]>
 </Content> 
