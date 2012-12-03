@@ -1,6 +1,6 @@
 = Tools =
 
-This page contains an overview of the different command line tools available in the Tools.zip download found on the [Downloads] page.
+This page contains an overview of the different command line tools available in the Tools.zip download found on the [http://code.google.com/p/visual-rbm/wiki/Downloads?tm=2 Downloads] page.
 
  * [Tools#RBM_Tools RBM Tools]
   * [Tools#clrbm clrbm]
@@ -15,10 +15,26 @@ This page contains an overview of the different command line tools available in 
 
 === clrbm ===
 
+
+
 ====
 
 === calchidden ===
 
+Used to calculate the hidden probabilities or activations of an RBM over an entire IDX dataset.  The output IDX can be used as training data for another RBM.
+
+==== Usage ====
+
+{{{
+calchidden [MODE] [INPUT] [OUTPUT] [RBM] [DROPOUT]
+}}}
+
+ * *MODE* - Determines what to calculate for each hidden.  Passing the argument "A" (sans quotes) will save off the activations for each hidden unit.  An argument of "P" (again, sans quotes) will save off the probabilities for each hidden unit.
+ * *INPUT* - The input IDX dataset.
+ * *OUTPUT* - Destination to save the calculated hidden units.
+ * *RBM* - The RBM model to use.
+ * *DROPOUT* - The value of the hidden dropout probability (that is, the probability of a unit not being active) used training the given RBM.
+ 
 == IDX Tools ==
 
 === idxinfo ===
@@ -31,7 +47,7 @@ Used to print an IDX file's header info (as described on the [FileFormats] wiki 
 idxinfo [INPUTS]
 }}}
 
- * INPUTS - A list of IDX files whose header info you want to see.
+ * *INPUTS* - A list of IDX files whose header info you want to see.
 
 ====
  
@@ -45,8 +61,8 @@ Used to concatanate together multiple datasets (with the same row dimensions and
 catidx [INPUTS] [OUTPUT]
 }}}
 
- * INPUTS - A list of IDX files to concatanate together.  All the given IDX files must have the same data format and row dimensions.
- * OUTPUT - Destination to save the concatanated inputs.
+ * *INPUTS* - A list of IDX files to concatanate together.  All the given IDX files must have the same data format and row dimensions.
+ * *OUTPUT* - Destination to save the concatanated inputs.
 
 ====
  
@@ -59,8 +75,8 @@ Used to join together multiple IDX datasets (with the same number of rows and da
 joinidx [INPUTS] [OUTPUT]
 }}}
 
- * INPUTS - A list of IDX files to join together.  All the given IDX files must have the same data format and the same number of rows.
- * OUTPUT - Destination to save the joined inputs.
+ * *INPUTS* - A list of IDX files to join together.  All the given IDX files must have the same data format and the same number of rows.
+ * *OUTPUT* - Destination to save the joined inputs.
 
 ====
  
@@ -73,7 +89,7 @@ Used to take a subset of an IDX file and split it off into a separate, smaller I
 splitidx [INPUT] [OUTPUT] [FROM] [COUNT]
 }}}
 
- * INPUT - The input IDX file we are generating a subset dataset from.
- * OUTPUT - The output IDX file to save.
- * FROM - The starting index in INPUT to start pulling rows from.
- * COUNT - Optional.  The number of rows to write to the OUTPUT file.  If no COUNT is given, then all the rows after the given FROM index will be written to OUTPUT.
+ * *INPUT* - The input IDX file we are generating a subset dataset from.
+ * *OUTPUT* - The output IDX file to save.
+ * *FROM* - The starting index in INPUT to start pulling rows from.
+ * *COUNT* - Optional.  The number of rows to write to the OUTPUT file.  If no COUNT is given, then all the rows after the given FROM index will be written to OUTPUT.
