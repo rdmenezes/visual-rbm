@@ -1,0 +1,40 @@
+= Tools =
+
+This page contains an overview of the different command line tools available in the download.
+
+* [Tools#RBM_Tools RBM Tools]
+ * [Tools#clrbm clrbm]
+ * [Tools#calchidden calchidden]
+* [Tools#IDX_Tools IDX Tools]
+ * [Tools#idxinfo idxinfo]
+ * [Tools#catidx catidx]
+ * [Tools#joinidx joinidx]
+ * [Tools#splitidx splitidx]
+ 
+== RBM Tools ==
+
+=== clrbm ===
+
+=== calchidden ===
+
+== IDX Tools ==
+
+=== idxinfo ===
+
+=== catidx ===
+
+=== joinidx ===
+
+=== splitidx ===
+
+Used to take a subset of an IDX file and split it off into a separate, smaller IDX file.  For instance, *splitidx* could be used to divide an entire dataset into a training set and a testing set.
+
+==== Usage ====
+{{{ 
+splitidx [INPUT] [OUTPUT] [FROM] [COUNT]
+}}}
+
+ * INPUT - The input IDX file we are generating a subset dataset from
+ * OUTPUT - The output IDX file to save
+ * FROM - The starting index in INPUT to start pulling rows from
+ * COUNT - Optional.  The number of rows to write to the OUTPUT file.  If no COUNT is given, then all the rows after the given FROM index will be written to OUTPUT.
