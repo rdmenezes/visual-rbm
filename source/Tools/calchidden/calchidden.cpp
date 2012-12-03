@@ -111,11 +111,13 @@ int main(int argc, char** argv)
 		// calculate each state
 		for(uint32_t j = 0; j < rbm->_hidden_count; j++)
 		{
-			hidden_buffer[j] = rbm->_hidden_biases[j];
+			hidden_buffer[j] = 0.0f;
 			for(uint32_t i = 0; i < rbm->_visible_count; i++)
 			{
 				hidden_buffer[j] += weights[j][i] * visible_buffer[i];
 			}
+			hidden_buffer[j] *= (1.0f - dropout);
+			hidden_buffer[j] += rbm->_hidden_biases[j];
 		}
 
 		if(mode == Probabilities)
