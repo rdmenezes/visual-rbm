@@ -11,6 +11,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "idxinfo", "idxinfo\idxinfo.
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "splitidx", "splitidx\splitidx.vcxproj", "{484BEB03-393E-4499-BD28-72C9D7A5BF11}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "calchidden", "calchidden\calchidden.vcxproj", "{300E939F-29D9-448C-A993-9525A16A7DC3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -37,6 +39,10 @@ Global
 		{484BEB03-393E-4499-BD28-72C9D7A5BF11}.Debug|Win32.Build.0 = Debug|Win32
 		{484BEB03-393E-4499-BD28-72C9D7A5BF11}.Release|Win32.ActiveCfg = Release|Win32
 		{484BEB03-393E-4499-BD28-72C9D7A5BF11}.Release|Win32.Build.0 = Release|Win32
+		{300E939F-29D9-448C-A993-9525A16A7DC3}.Debug|Win32.ActiveCfg = Debug|Win32
+		{300E939F-29D9-448C-A993-9525A16A7DC3}.Debug|Win32.Build.0 = Debug|Win32
+		{300E939F-29D9-448C-A993-9525A16A7DC3}.Release|Win32.ActiveCfg = Release|Win32
+		{300E939F-29D9-448C-A993-9525A16A7DC3}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
