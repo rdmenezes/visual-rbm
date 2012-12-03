@@ -42,7 +42,7 @@
 				</tr>
 		</tbody>
 		</table>
-
+		<hr>
 		<h1>Data Sets</h1>
 		
 		<table class="wikitable" id="datasets">
@@ -148,8 +148,6 @@
 			AddDataEntry("mnist-train-images.idx", "MNIST Training Images");
 			AddDataEntry("mnist-test-images.idx", "MNIST Test Images");
 			
-			// autosize?
-			parent.document.getElementById('gadget0').style.height =document.body.scrollHeight;
 		</script>
 	</body>
 	]]>
