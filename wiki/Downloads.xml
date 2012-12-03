@@ -39,28 +39,24 @@
 					<strong>History</strong>
 				</td>
 			</tr>
-			<!--
+	</tbody>
+    </table>
+
+	<h1>Data Sets</h1>
+	
+	<table class="wikitable" id="datasets">
+		<tbody >
 			<tr>
 				<td>
-					<a href="http://visual-rbm.googlecode.com/svn/trunk/release/VisualRBM.zip" 
-					onclick=>VisualRBM.zip</a>
+					<strong>File</strong>
 				</td>
-				<td style="border: 1px solid #ccc; padding: 5px;">The latest
-				VisualRBM client</td>
+				<td>
+					<strong>Description</strong>
+				</td>
 			</tr>
-
-			<tr>
-				<td style="border: 1px solid #ccc; padding: 5px;"><a href=
-				"http://visual-rbm.googlecode.com/svn/trunk/release/Tools.zip"
-				rel="nofollow">Tools.zip</a></td>
-
-				<td style="border: 1px solid #ccc; padding: 5px;">A set of
-				tools for manipulating IDX data files and training RBMs from
-				the command-line</td>
-			</tr>
-			-->
 		</tbody>
     </table>
+	
 	<script type="text/javascript">
 		var _gaq = _gaq || [];
 		_gaq.push(['_setAccount', 'UA-34133374-1']);
@@ -115,9 +111,40 @@
 			tbody.appendChild(tr);
 		}
 		
+		function AddDataEntry(FileName, Description)
+		{
+			table = document.getElementById("datasets");
+			tbody = table.children[0];
+			tr = document.createElement("tr");
+
+			// file link
+			file_td = document.createElement("td");
+			file_td_a = document.createElement("a");
+			
+			file_td_a.setAttribute("href", "http://code.google.com/p/visual-rbm/downloads/detail?name=" + FileName + "&can=2&q=");
+			file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Datasets', 'Download', '" + FileName + "']);setTimeout(function(){location.href=that.href;},200);return false;");
+			
+			file_td_a.innerHTML = FileName;
+			
+			file_td.appendChild(file_td_a);
+			tr.appendChild(file_td);
+			
+			// description
+			desc_td = document.createElement("td");
+			desc_td.innerHTML = Description;
+
+			tr.appendChild(desc_td);
+			
+			tbody.appendChild(tr);
+		}
+		
 		AddReleaseEntry("VisualRBM.zip", "The latest VisualRBM Windows client", "r58");
 		AddReleaseEntry("Tools.zip", "A set of tools for manipulating IDX data files and training RBMs from the command-line", "r58");
 		
+		AddDataEntry("mnist-train-labels.idx", "MNIST Training Labels");
+		AddDataEntry("mnist-test-labels.idx", "MNIST Test Labels");
+		AddDataEntry("mnist-train-images.idx", "MNIST Training Images");
+		AddDataEntry("mnist-test-images.idx", "MNIST Test Images");
 	</script>
 	]]>
 </Content> 
