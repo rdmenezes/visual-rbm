@@ -28,14 +28,17 @@ int main(int argc, char** argv)
 	const char* output_string = argv[2];
 	const char* from_string = argv[3];
 
-	IDX* input = IDX::Load(input_string, false);
+	IDX* input = NULL;
+	IDX* output = NULL;
+	
+	input = IDX::Load(input_string, false);
 	if(input == NULL)
 	{
 		printf("Unable to open input IDX file \"%s\" for reading\n", input_string);
 		goto CLEANUP;
 	}
 	
-	IDX* output = IDX::Create(output_string, input->GetEndianness(), input->GetDataFormat(), input->GetRowLength());
+	output = IDX::Create(output_string, input->GetEndianness(), input->GetDataFormat(), input->GetRowLength());
 	if(output == NULL)
 	{
 		printf("Unable to create output IDX file \"%s\"\n", output_string);
