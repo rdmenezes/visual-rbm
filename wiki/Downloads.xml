@@ -21,7 +21,7 @@
 		<base target="_parent" />
 	</head>
 	
-	<body onload="parent.document.getElementById('gadget0').style.height=" + document.body.scrollHeight +";">
+	<body>
 		<h1>Releases</h1>
 		
 		<table class="wikitable" id="releases">
@@ -148,6 +148,9 @@
 			AddDataEntry("mnist-test-labels.idx", "MNIST Test Labels");
 			AddDataEntry("mnist-train-images.idx", "MNIST Training Images");
 			AddDataEntry("mnist-test-images.idx", "MNIST Test Images");
+			
+			// autosize?
+			parent.document.getElementById('gadget0').style.height=" + document.body.scrollHeight;
 		</script>
 	</body>
 	]]>
