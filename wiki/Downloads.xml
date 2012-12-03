@@ -82,8 +82,7 @@
 				file_td = document.createElement("td");
 				file_td_a = document.createElement("a");
 				file_td_a.setAttribute("href", "http://visual-rbm.googlecode.com/svn/trunk/release/" + FileName);
-				file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Releases', 'Download', '" + FileName + "-" + Version + "']);setTimeout(function(){location.href=that.href;},200);return false;");
-				
+				file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Releases', 'Download', '" + FileName + "-" + Version + "']);setTimeout(function(){window.parent.location.href=that.href;},200);return false;");
 				
 				file_td_a.innerHTML = FileName;
 
@@ -125,7 +124,7 @@
 				file_td_a = document.createElement("a");
 				
 				file_td_a.setAttribute("href", "http://code.google.com/p/visual-rbm/downloads/detail?name=" + FileName + "&can=2&q=");
-				file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Datasets', 'Download', '" + FileName + "']);setTimeout(function(){location.href=that.href;},200);return false;");
+				file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Datasets', 'Download', '" + FileName + "']);setTimeout(function(){window.parent.location.href=that.href;},200);return false;");
 				
 				file_td_a.innerHTML = FileName;
 				
@@ -150,7 +149,7 @@
 			AddDataEntry("mnist-test-images.idx", "MNIST Test Images");
 			
 			// autosize?
-			parent.document.getElementById('gadget0').style.height=" + document.body.scrollHeight;
+			parent.document.getElementById('gadget0').style.height =document.body.scrollHeight;
 		</script>
 	</body>
 	]]>
