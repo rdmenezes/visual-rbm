@@ -11,6 +11,8 @@ This page contains an overview of the different command line tools available in 
   * [Tools#joinidx joinidx]
   * [Tools#splitidx splitidx]
  
+----
+ 
 == RBM Tools ==
 
 === clrbm ===
@@ -24,12 +26,12 @@ clrbm [ARGS]
 }}}
 
  * Required Arguments
-  * -train=IDX - Specifies the input IDX dataset to use during training
-  * -params=PARAMS - Specifies the training parameters file (in the format specified on the [FileFormats] wiki page) to use during training.
-  * -export=OUT - Specifies where to save the final RBM once training completes.
+  * -train=*IDX* - Specifies the input IDX dataset to use during training
+  * -params=*PARAMS* - Specifies the training parameters file (in the format specified on the [FileFormats] wiki page) to use during training.
+  * -export=*OUT* - Specifies where to save the final RBM once training completes.
  * Optional Arguments
-  * -valid=IDX - Specifies an optiona validation IDX dataset
-  * -import=RBM - Specifies an initial set of weights to start from (rather than randomly initialization the weights).
+  * -valid=*IDX* - Specifies an optiona validation IDX dataset
+  * -import=*RBM* - Specifies an initial set of weights to start from (rather than randomly initialization the weights).
   * - quiet - Suppresses all stdout output and omits any reconstruction error calculations.
   * - defaults - Rather than training an RBM, clrbm will instead output a configuration file with the default settings to "default.vrbmparameters"
 
