@@ -2,14 +2,14 @@
 
 This page contains an overview of the different command line tools available in the download.
 
-* [Tools#RBM_Tools RBM Tools]
- * [Tools#clrbm clrbm]
- * [Tools#calchidden calchidden]
-* [Tools#IDX_Tools IDX Tools]
- * [Tools#idxinfo idxinfo]
- * [Tools#catidx catidx]
- * [Tools#joinidx joinidx]
- * [Tools#splitidx splitidx]
+ * [Tools#RBM_Tools RBM Tools]
+  * [Tools#clrbm clrbm]
+  * [Tools#calchidden calchidden]
+ * [Tools#IDX_Tools IDX Tools]
+  * [Tools#idxinfo idxinfo]
+  * [Tools#catidx catidx]
+  * [Tools#joinidx joinidx]
+  * [Tools#splitidx splitidx]
  
 == RBM Tools ==
 
@@ -21,9 +21,40 @@ This page contains an overview of the different command line tools available in 
 
 === idxinfo ===
 
+Used to print an IDX file's header info (as described on the [FileFormats] wiki page).
+
+==== Usage ====
+
+{{{
+idxinfo [INPUTS]
+}}}
+
+ * INPUTS - A list of IDX files whose header info you want to see.
+
 === catidx ===
 
+Used to concatanate together multiple datasets (with the same row dimensions and dataformat) into a single IDX dataset.  For instance, the MNIST training and test images could be concatanted into a single dataset with 70,000 length 784 rows; 60,000 rows from the training images and 10,000 rows from the test images.
+
+==== Usage ====
+
+{{{
+catidx [INPUTS] [OUTPUT]
+}}}
+
+ * INPUTS - A list of IDX files to concatanate together.  All the given IDX files must have the same data format and row dimensions.
+ * OUTPUT - Destination to save the concatanated inputs.
+
 === joinidx ===
+
+Used to join together multiple IDX datasets (with the same number of rows and dataformat) into a single IDX dataset.  For instance, the MNIST training images and training labels could be joined into a single dataset with 60,000 length 794 rows; 784 brightness values and 10 label values.
+
+==== Usage ====
+{{{
+joinidx [INPUTS] [OUTPUT]
+}}}
+
+ * INPUTS - A list of IDX files to join together.  All the given IDX files must have the same data format and the same number of rows.
+ * OUTPUT - Destination to save the joined inputs.
 
 === splitidx ===
 
@@ -34,7 +65,7 @@ Used to take a subset of an IDX file and split it off into a separate, smaller I
 splitidx [INPUT] [OUTPUT] [FROM] [COUNT]
 }}}
 
- * INPUT - The input IDX file we are generating a subset dataset from
- * OUTPUT - The output IDX file to save
- * FROM - The starting index in INPUT to start pulling rows from
+ * INPUT - The input IDX file we are generating a subset dataset from.
+ * OUTPUT - The output IDX file to save.
+ * FROM - The starting index in INPUT to start pulling rows from.
  * COUNT - Optional.  The number of rows to write to the OUTPUT file.  If no COUNT is given, then all the rows after the given FROM index will be written to OUTPUT.
