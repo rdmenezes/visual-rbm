@@ -41,7 +41,7 @@ RBM* rbm = trainer.GetRBM();
 trainer.Reset();
 }}}
 
-The only caveat is that (since we're using an OpenGL context underneath the hood), an RBMTrainer object must be accessed from the same thread it is created on.  See RBMTrainer.h for full method listing.
+The only caveat is that (since we're using an OpenGL context underneath the hood), an RBMTrainer object must be accessed from the same thread it is created on.  See [http://code.google.com/p/visual-rbm/source/browse/trunk/source/VisualRBM/QuickBoltzmannNative/RBMTrainer.h RBMTrainer.h] for full method listing.
 
 == !QuickBoltzmannInterop ==
 
