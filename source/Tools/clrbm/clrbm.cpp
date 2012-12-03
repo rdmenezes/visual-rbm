@@ -40,7 +40,7 @@ void print_help()
 {
 	printf("\nUsage: clrbm [ARGS]\n");
 	printf("Train an RBM using OpenGL\n\n");
-	printf("Required Arguments:\n");
+	printf(" Required Arguments:\n");
 	printf("  -train=IDX        Specifies the input idx training data file.\n");
 	printf("  -params=PARAMS    Load training parameters to use during training.\n");
 	printf("  -export=OUT       Specifies filename to save trained RBM as.\n\n");

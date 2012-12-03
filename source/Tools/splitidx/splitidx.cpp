@@ -4,7 +4,7 @@
 
 
 const char* Usage = 
-	"Split an IDX data file into multiple smaller IDX files.\n"
+	"Split a subset of an IDX data file into a smaller IDX file.\n"
 	"\n"
 	"Usage: splitidx [INPUT] [OUTPUT] [FROM] [COUNT]\n"
 	"  INPUT      An input IDX data file\n"
@@ -78,6 +78,8 @@ int main(int argc, char** argv)
 
 	float* buffer = new float[input->GetRowLength()];
 
+	printf("Writing %s to disk ... \n", output_string);
+
 	for(uint32_t i = 0; i < count; i++)
 	{
 		input->ReadRow(from + i, buffer);
@@ -88,6 +90,8 @@ int main(int argc, char** argv)
 	input->Close();
 	output->Close();
 	
+	printf("Done!\n");
+
 	result = 0;
 CLEANUP:
 
