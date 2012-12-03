@@ -15,9 +15,25 @@ This page contains an overview of the different command line tools available in 
 
 === clrbm ===
 
+Used to train an RBM from the command line.  Should be a bit faster than using the frontend, as there should be fewer GPU->CPU transfers (since there is no visualization to be done).
 
+==== Usage ====
 
-====
+{{{
+clrbm [ARGS]
+}}}
+
+ * Required Arguments
+  * -train=IDX - Specifies the input IDX dataset to use during training
+  * -params=PARAMS - Specifies the training parameters file (in the format specified on the [FileFormats] wiki page) to use during training.
+  * -export=OUT - Specifies where to save the final RBM once training completes.
+ * Optional Arguments
+  * -valid=IDX - Specifies an optiona validation IDX dataset
+  * -import=RBM - Specifies an initial set of weights to start from (rather than randomly initialization the weights).
+  * - quiet - Suppresses all stdout output and omits any reconstruction error calculations.
+  * - defaults - Rather than training an RBM, clrbm will instead output a configuration file with the default settings to "default.vrbmparameters"
+
+----
 
 === calchidden ===
 
@@ -49,7 +65,7 @@ idxinfo [INPUTS]
 
  * *INPUTS* - A list of IDX files whose header info you want to see.
 
-====
+----
  
 === catidx ===
 
@@ -64,7 +80,7 @@ catidx [INPUTS] [OUTPUT]
  * *INPUTS* - A list of IDX files to concatanate together.  All the given IDX files must have the same data format and row dimensions.
  * *OUTPUT* - Destination to save the concatanated inputs.
 
-====
+----
  
 === joinidx ===
 
@@ -78,7 +94,7 @@ joinidx [INPUTS] [OUTPUT]
  * *INPUTS* - A list of IDX files to join together.  All the given IDX files must have the same data format and the same number of rows.
  * *OUTPUT* - Destination to save the joined inputs.
 
-====
+----
  
 === splitidx ===
 
