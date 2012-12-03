@@ -1,6 +1,6 @@
 = Tools =
 
-This page contains an overview of the different command line tools available in the download.
+This page contains an overview of the different command line tools available in the Tools.zip download found on the [Downloads] page.
 
  * [Tools#RBM_Tools RBM Tools]
   * [Tools#clrbm clrbm]
