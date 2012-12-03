@@ -32,8 +32,8 @@ clrbm [ARGS]
  * Optional Arguments
   * -valid=*IDX* - Specifies an optiona validation IDX dataset
   * -import=*RBM* - Specifies an initial set of weights to start from (rather than randomly initialization the weights).
-  * - quiet - Suppresses all stdout output and omits any reconstruction error calculations.
-  * - defaults - Rather than training an RBM, clrbm will instead output a configuration file with the default settings to "default.vrbmparameters"
+  * -quiet - Suppresses all stdout output and omits any reconstruction error calculations.
+  * -defaults - Rather than training an RBM, clrbm will instead output a configuration file with the default settings to "default.vrbmparameters"
 
 ----
 
