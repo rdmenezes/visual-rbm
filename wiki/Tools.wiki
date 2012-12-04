@@ -51,7 +51,7 @@ calchidden [MODE] [INPUT] [OUTPUT] [RBM] [DROPOUT]
  * *INPUT* - The input IDX dataset.
  * *OUTPUT* - Destination to save the calculated hidden units.
  * *RBM* - The RBM model to use.
- * *DROPOUT* - The value of the hidden dropout probability (that is, the probability of a unit not being active) used training the given RBM.
+ * *DROPOUT* - The value of the visible dropout probability (that is, the probability of a visible unit not being active) used training the given RBM.
  
 == IDX Tools ==
 
