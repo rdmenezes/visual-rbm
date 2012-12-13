@@ -229,6 +229,12 @@ namespace VisualRBM
 
 			RBMProcessor.GetCurrentVisible(ref visible, ref visible_prime);
 
+			// rbm trainer shutdown before this draw call made it in
+			if (visible == null && visible_prime == null)
+			{
+				return;
+			}
+
 			// if the data is linear, we need to get it back to [0,1]
 			if (RBMProcessor.VisibleType == UnitType.Gaussian)
 			{
