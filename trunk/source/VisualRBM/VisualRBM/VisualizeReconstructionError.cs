@@ -33,6 +33,8 @@ namespace VisualRBM
 
 		const uint BUFFER_LENGTH = 250;
 
+		bool stopped = true;
+
 		public VisualizeReconstructionError()
 		{
 			training_buffer = new float[BUFFER_LENGTH];
@@ -49,6 +51,11 @@ namespace VisualRBM
 
 		void RBMProcessor_ItereationCompleted(uint iteration, float training_error, float validation_error)
 		{
+			if (stopped == true)
+			{
+				return;
+			}
+
 			// we don't know how many minibatches the trainer will have until it has been initialized
 			if(epoch_training_buffer == null && epoch_validation_buffer == null)
 			{
@@ -105,7 +112,10 @@ namespace VisualRBM
 				(this.ParentForm as Main).trainingLog.AddLog("Epoch {0}; Training Error={1}", epoch, last_epoch_training_error);
 		}
 
-
+		public void Start()
+		{
+			stopped = false;
+		}
 
 		public void Stop()
 		{
@@ -129,7 +139,11 @@ namespace VisualRBM
 
 				epoch_training_buffer = null;
 				epoch_validation_buffer = null;
+
+				stopped = true;
 			}));
+
+
 		}
 	}
 }
