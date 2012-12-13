@@ -106,6 +106,11 @@ namespace QuickBoltzmann
 			}
 		}
 
+		static property unsigned int MinibatchCount
+		{
+			unsigned int get() { return rbmtrainer->GetMinibatches();};
+		}
+
 		static property ModelType Model
 		{
 			ModelType get() {return 
