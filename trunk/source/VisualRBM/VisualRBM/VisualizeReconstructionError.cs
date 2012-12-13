@@ -21,8 +21,15 @@ namespace VisualRBM
 		float[] validation_buffer;
 		float validation_sum = 0.0f;
 
+		float[] epoch_training_buffer = null;
+		float epoch_training_sum = 0.0f;
+		float[] epoch_validation_buffer = null;
+		float epoch_validation_sum = 0.0f;
+
 		float last_training_error = 0.0f;
 		float last_validation_error = 0.0f;
+		float last_epoch_training_error = 0.0f;
+		float last_epoch_validation_error = 0.0f;
 
 		const uint BUFFER_LENGTH = 250;
 
@@ -42,6 +49,16 @@ namespace VisualRBM
 
 		void RBMProcessor_ItereationCompleted(uint iteration, float training_error, float validation_error)
 		{
+			// we don't know how many minibatches the trainer will have until it has been initialized
+			if(epoch_training_buffer == null && epoch_validation_buffer == null)
+			{
+				epoch_training_buffer = new float[RBMProcessor.MinibatchCount];
+				epoch_training_sum = 0.0f;
+				epoch_validation_buffer = new float[RBMProcessor.MinibatchCount];
+				epoch_validation_sum = 0.0f;
+			}
+
+			// graph errors
 			uint index = iteration % BUFFER_LENGTH;
 			training_sum += training_error / (float)BUFFER_LENGTH - training_buffer[index];
 			training_buffer[index] = training_error / (float)BUFFER_LENGTH;
@@ -52,6 +69,18 @@ namespace VisualRBM
 			last_training_error = training_sum;
 			last_validation_error = validation_sum;
 
+			// epoch errors
+			uint epoch_index = iteration % RBMProcessor.MinibatchCount;
+			epoch_training_sum += training_error / (float)RBMProcessor.MinibatchCount - epoch_training_buffer[epoch_index];
+			epoch_training_buffer[epoch_index] = training_error / (float)RBMProcessor.MinibatchCount;
+
+			epoch_validation_sum += validation_error / (float)RBMProcessor.MinibatchCount - epoch_validation_buffer[epoch_index];
+			epoch_validation_buffer[epoch_index] = validation_error / (float)RBMProcessor.MinibatchCount;
+
+			last_epoch_training_error = epoch_training_sum;
+			last_epoch_validation_error = epoch_validation_sum;
+
+			// add data point ever BUFFER_LENGTH iterations
 			if (iteration % BUFFER_LENGTH == 0)
 			{
 				this.Invoke(new Action(() =>
@@ -71,10 +100,12 @@ namespace VisualRBM
 		void RBMProcessor_EpochCompleted(uint epoch)
 		{
 			if(last_validation_error > 0.0)
-				(this.ParentForm as Main).trainingLog.AddLog("Epoch {0}; Training Error={1}; Validation Error={2}", epoch, last_training_error, last_validation_error);
+				(this.ParentForm as Main).trainingLog.AddLog("Epoch {0}; Training Error={1}; Validation Error={2}", epoch, last_epoch_training_error, last_epoch_validation_error);
 			else
-				(this.ParentForm as Main).trainingLog.AddLog("Epoch {0}; Training Error={1}", epoch, last_training_error);
+				(this.ParentForm as Main).trainingLog.AddLog("Epoch {0}; Training Error={1}", epoch, last_epoch_training_error);
 		}
+
+
 
 		public void Stop()
 		{
@@ -83,7 +114,7 @@ namespace VisualRBM
 				this.chart1.Series[0].Points.Clear();
 				this.chart1.Series[1].Points.Clear();
 
-				for (int k = 0; k < training_buffer.Length; k++)
+				for (int k = 0; k < BUFFER_LENGTH; k++)
 				{
 					training_buffer[k] = 0.0f;
 					validation_buffer[k] = 0.0f;
@@ -92,8 +123,12 @@ namespace VisualRBM
 				last_training_error = 0.0f;
 				last_validation_error = 0.0f;
 
+
 				training_sum = 0.0f;
 				validation_sum = 0.0f;
+
+				epoch_training_buffer = null;
+				epoch_validation_buffer = null;
 			}));
 		}
 	}
