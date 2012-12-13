@@ -42,6 +42,11 @@ public:
 		delete[] _weights;
 	}
 	
+	inline float GetWeight(uint32_t i, uint32_t j) const
+	{
+		return _weights[i * _hidden_count + j];
+	}
+
 	/** RBM Binary Fomrat:
 	 * Header:
 	 *  4 bytes: ".RBM"
