@@ -16,7 +16,7 @@ const char* Usage =
 	"  INPUT     The input IDX dataset used as input\n"
 	"  OUTPUT    Destination IDX to save hidden values\n"
 	"  RBM       A trained RBM file\n"
-	"  DROPOUT   The 'hidden dropout' probability used when training the\n"
+	"  DROPOUT   The 'visible dropout' probability used when training the\n"
 	"            input RBM model\n";
 
 int main(int argc, char** argv)
