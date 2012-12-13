@@ -63,7 +63,9 @@ namespace QuickBoltzmann
 					_currentState = RBMProcessorState::Ready;
 					_epochs = 100;
 					_total_iterations = 0;
+					_iterations = 0;
 					rbmtrainer->Reset();
+
 				}
 				else if(m->Type == "GetVisible")
 				{
