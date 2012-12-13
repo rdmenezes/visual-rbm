@@ -839,6 +839,7 @@ namespace VisualRBM
 			if (RBMProcessor.HasTrainingData)
 			{
 				// start visualization
+				_main_form.visualizeReconstructionError.Start();
 				_main_form.visualizeVisible.Start();
 				_main_form.visualizeHidden.Start();
 				_main_form.visualizeWeights.Start();
