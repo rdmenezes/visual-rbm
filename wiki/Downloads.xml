@@ -141,7 +141,7 @@
 			}
 			
 			AddReleaseEntry("VisualRBM.zip", "The latest VisualRBM Windows client", "r128");
-			AddReleaseEntry("Tools.zip", "A set of tools for manipulating IDX data files and training RBMs from the command-line", "r128");
+			AddReleaseEntry("Tools.zip", "A set of tools for manipulating IDX data files and training RBMs from the command-line", "r131");
 			
 			AddDataEntry("mnist-train-labels.idx", "MNIST Training Labels");
 			AddDataEntry("mnist-test-labels.idx", "MNIST Test Labels");
