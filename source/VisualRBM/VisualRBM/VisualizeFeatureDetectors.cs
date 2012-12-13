@@ -36,6 +36,13 @@ namespace VisualRBM
 		{
 			float[] weights = null;
 			RBMProcessor.GetCurrentWeights(ref weights);
+
+			// trainer shutdown before thsi draw call made it in
+			if (weights == null)
+			{
+				return;
+			}
+
 			PixelFormat pf = _main_form.settingsBar.Format;
 
 

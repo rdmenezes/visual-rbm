@@ -69,88 +69,116 @@ namespace QuickBoltzmann
 				}
 				else if(m->Type == "GetVisible")
 				{
-					float* image_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetVisibleCount()];
-					float* recon_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetVisibleCount()];
-
-					if(rbmtrainer->DumpVisible(image_buff, recon_buff))
+					if(rbmtrainer->GetIsInitialized() == false)
 					{
-						List<array<float>^>^ images = gcnew List<array<float>^>();
-						List<array<float>^>^ recons = gcnew List<array<float>^>();
-
-						// hacky lambda function
-						struct 
-						{
-							void operator() (uint32_t MiniBatches, uint32_t VisibleCount, float* RawBuff, List<array<float>^>^ ImageList)
-							{
-								for(uint32_t k = 0; k < MiniBatches; k++)
-								{
-									array<float>^ image = gcnew array<float>(VisibleCount);
-									ImageList->Add(image);
-
-									System::Runtime::InteropServices::Marshal::Copy(IntPtr(RawBuff), image, 0, VisibleCount);
-
-									RawBuff += VisibleCount;
-								}
-							}
-						} interop_copy;
-
-						interop_copy(rbmtrainer->GetMinibatchSize(), rbmtrainer->GetVisibleCount(), image_buff, images);
-						interop_copy(rbmtrainer->GetMinibatchSize(), rbmtrainer->GetVisibleCount(), recon_buff, recons);
-
-
-						m["image"] = images;
-						m["reconstruction"] = recons;
+						// this message needs to be gracefully discarded
+						m["image"] = nullptr;
+						m["reconstruction"] = nullptr;
 						m["done"] = true;
 					}
 					else
 					{
-						_message_queue->Enqueue(m);
-					}
+						float* image_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetVisibleCount()];
+						float* recon_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetVisibleCount()];
 
-					delete[] image_buff;
-					delete[] recon_buff;
+						if(rbmtrainer->DumpVisible(image_buff, recon_buff))
+						{
+							List<array<float>^>^ images = gcnew List<array<float>^>();
+							List<array<float>^>^ recons = gcnew List<array<float>^>();
+
+							// hacky lambda function
+							struct 
+							{
+								void operator() (uint32_t MiniBatches, uint32_t VisibleCount, float* RawBuff, List<array<float>^>^ ImageList)
+								{
+									for(uint32_t k = 0; k < MiniBatches; k++)
+									{
+										array<float>^ image = gcnew array<float>(VisibleCount);
+										ImageList->Add(image);
+
+										System::Runtime::InteropServices::Marshal::Copy(IntPtr(RawBuff), image, 0, VisibleCount);
+
+										RawBuff += VisibleCount;
+									}
+								}
+							} interop_copy;
+
+							interop_copy(rbmtrainer->GetMinibatchSize(), rbmtrainer->GetVisibleCount(), image_buff, images);
+							interop_copy(rbmtrainer->GetMinibatchSize(), rbmtrainer->GetVisibleCount(), recon_buff, recons);
+
+
+							m["image"] = images;
+							m["reconstruction"] = recons;
+							m["done"] = true;
+						}
+						else
+						{
+							_message_queue->Enqueue(m);
+						}
+
+						delete[] image_buff;
+						delete[] recon_buff;
+					}
 
 				}
 				else if(m->Type == "GetHidden")
 				{
-					float* hidden_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetHiddenCount()];
-
-					if(rbmtrainer->DumpHidden(hidden_buff))
+					if(rbmtrainer->GetIsInitialized() == false)
 					{
-						List<array<float>^>^ probs = gcnew List<array<float>^>();
-						float* h_vec = hidden_buff;
-						for(uint32_t k = 0; k < rbmtrainer->GetMinibatchSize(); k++)
-						{
-							array<float>^ activations = gcnew array<float>(rbmtrainer->GetHiddenCount());
-							probs->Add(activations);
-
-							System::Runtime::InteropServices::Marshal::Copy(IntPtr(h_vec), activations, 0, rbmtrainer->GetHiddenCount());
-						
-							h_vec += rbmtrainer->GetHiddenCount();
-						}
-					
-						m["probabilities"] = probs;
+						// this message needs to be gracefully discarded
+						m["probabilities"] = nullptr;
 						m["done"] = true;
 					}
 					else
 					{
-						_message_queue->Enqueue(m);
-					}
+						float* hidden_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetHiddenCount()];
 
-					delete[] hidden_buff;				
+						if(rbmtrainer->DumpHidden(hidden_buff))
+						{
+							List<array<float>^>^ probs = gcnew List<array<float>^>();
+							float* h_vec = hidden_buff;
+							for(uint32_t k = 0; k < rbmtrainer->GetMinibatchSize(); k++)
+							{
+								array<float>^ activations = gcnew array<float>(rbmtrainer->GetHiddenCount());
+								probs->Add(activations);
+
+								System::Runtime::InteropServices::Marshal::Copy(IntPtr(h_vec), activations, 0, rbmtrainer->GetHiddenCount());
+
+								h_vec += rbmtrainer->GetHiddenCount();
+							}
+
+							m["probabilities"] = probs;
+							m["done"] = true;
+						}
+						else
+						{
+							_message_queue->Enqueue(m);
+						}
+
+						delete[] hidden_buff;
+					}
 				}
 				else if(m->Type == "GetWeights")
 				{
-					array<float>^ weights = gcnew array<float>((rbmtrainer->GetVisibleCount() + 1) * (rbmtrainer->GetHiddenCount() + 1));
-					pin_ptr<float> ptr = &weights[0];
-					if(rbmtrainer->DumpWeights(ptr))
+					if(rbmtrainer->GetIsInitialized() == false)
 					{
-						m["weights"] = weights;
+						// this message needs to be gracefully discarded
+						m["weights"] = nullptr;
 						m["done"] = true;
 					}
 					else
 					{
-						_message_queue->Enqueue(m);
+						array<float>^ weights = gcnew array<float>((rbmtrainer->GetVisibleCount() + 1) * (rbmtrainer->GetHiddenCount() + 1));
+						pin_ptr<float> ptr = &weights[0];
+						if(rbmtrainer->DumpWeights(ptr))
+						{
+							m["weights"] = weights;
+							m["done"] = true;
+						}
+						else
+						{
+							_message_queue->Enqueue(m);
+						}
 					}
 				}
 				else if(m->Type == "Export")

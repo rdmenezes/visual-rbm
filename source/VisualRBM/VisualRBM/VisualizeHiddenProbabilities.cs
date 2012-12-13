@@ -49,6 +49,12 @@ namespace VisualRBM
 
 			RBMProcessor.GetCurrentHidden(ref hidden);
 
+			// rbm trainer was shutdown before thsi draw call made it in
+			if (hidden == null)
+			{
+				return;
+			}
+
 			for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
 			{
 				UpdateImageControlContents(k, PixelFormat.Lightness, hidden[k]);
