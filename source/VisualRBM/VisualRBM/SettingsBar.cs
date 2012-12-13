@@ -121,9 +121,9 @@ namespace VisualRBM
 							minibatchSizeTextBox.Enabled = false;							
 							epochsTextBox.Enabled = true;
 
-							loadParametersButton.Enabled = false;
-							saveParametersButton.Enabled = false;
-							resetParametersButton.Enabled = false;
+							loadParametersButton.Enabled = true;
+							saveParametersButton.Enabled = true;
+							resetParametersButton.Enabled = true;
 
 							importButton.Enabled = false;
 							startButton.Enabled = true;
@@ -950,12 +950,13 @@ namespace VisualRBM
 					uint line = 0;
 					using (StreamReader sr = new StreamReader(new FileStream(ofd.FileName, FileMode.Open, FileAccess.Read)))
 					{
-						line++;
+						
 
 						String[] valid_keys = { "model", "visible_type", "hidden_units", "learning_rate", "momentum", "l1_regularization", "l2_regularization", "visible_dropout", "hidden_dropout", "minibatch_size", "epochs", "print_interval"};
 
 						for(String text = sr.ReadLine(); text != null; text = sr.ReadLine())
 						{
+							line++;
 							text = text.Trim();
 							if (text != "")
 							{
@@ -967,8 +968,8 @@ namespace VisualRBM
 									return;
 								}
 
-								String key = tokens[0];
-								String val = tokens[1];
+								String key = tokens[0].Trim();
+								String val = tokens[1].Trim();
 
 								if(valid_keys.Contains(key) == false)
 								{
