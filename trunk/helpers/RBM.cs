@@ -248,14 +248,20 @@ unsafe public class RBM
     }
 
 	public static RBM Load(Stream in_stream)
-	{
+{	
 		RBM result = new RBM();
 		result._rbm_stream = in_stream;
 
-		Debug.Assert(result.ReadUInt8() == '.');
-		Debug.Assert(result.ReadUInt8() == 'R');
-		Debug.Assert(result.ReadUInt8() == 'B');
-		Debug.Assert(result.ReadUInt8() == 'M');
+		byte[] dot_rbm = new byte[4];
+		dot_rbm[0] = result.ReadUInt8();
+		dot_rbm[1] = result.ReadUInt8();
+		dot_rbm[2] = result.ReadUInt8();
+		dot_rbm[3] = result.ReadUInt8();
+
+		if (System.Text.Encoding.ASCII.GetString(dot_rbm) != ".RBM")
+		{
+			return null;
+		}
 
 		// get the visible type
 		result._visible_type = (UnitType)result.ReadUInt8();
@@ -400,24 +406,83 @@ unsafe public class RBM
 
 		fixed (float* v = in_visible)
 		{
-			for (int i = 0; i < _visible; i++)
+			if (_visible_type == UnitType.Sigmoid)
 			{
-				F_v -= _visible_biases[i] * v[i];
-			}
-
-			for (int j = 0; j < _hidden; j++)
-			{
-				float x_j = _hidden_biases[j];
+				// http://www.cs.toronto.edu/~hinton/absps/guideTR.pdf equation 25
 				for (int i = 0; i < _visible; i++)
 				{
-					x_j += _visible_features[j][i] * v[i];
+					F_v -= _visible_biases[i] * v[i];
 				}
-				
-				// lookup table similar to Sigmoid
-				F_v -= LnOnePlusExp.Calc(x_j);
+
+				for (int j = 0; j < _hidden; j++)
+				{
+					float x_j = _hidden_biases[j];
+					for (int i = 0; i < _visible; i++)
+					{
+						x_j += _visible_features[j][i] * v[i];
+					}
+
+					// lookup table similar to Sigmoid
+					F_v -= LnOnePlusExp.Calc(x_j);
+				}
 			}
+			else if (_visible_type == UnitType.Linear)
+			{
+				// http://www.cs.toronto.edu/~hinton/absps/fmrinips.pdf equation 4
+				for (int i = 0; i < _visible; i++)
+				{
+					float diff =  _visible_biases[i] * v[i];
+					F_v += diff * diff;
+				}
+				F_v *= 0.5f;
+
+				for (int j = 0; j < _hidden; j++)
+				{
+					float x_j = _hidden_biases[j];
+					for (int i = 0; i < _visible; i++)
+					{
+						x_j += _visible_features[j][i] * v[i];
+					}
+
+					// lookup table similar to Sigmoid
+					x_j = LnOnePlusExp.Calc(x_j);
+					F_v -= x_j;
+				}
+			}
+
 		}
 		return F_v;
     }
+
+	public void NormalizeVisibleVector(float[] in_out_visible)
+	{
+		fixed (float* v = in_out_visible)
+		{
+			for(int i = 0; i < _visible; i++)
+			{
+				v[i] = (v[i] - _visible_means[i]) / _visible_stddevs[i];
+			}
+		}
+	}
+
+	public float GetVisibleMean(int i)
+	{
+		return _visible_means[i];
+	}
+
+	public float GetVisibleStddev(int i)
+	{
+		return _visible_stddevs[i];
+	}
+
+	public uint GetVisibleCount()
+	{
+		return _visible;
+	}
+
+	public uint GetHiddenCount()
+	{
+		return _hidden;
+	}
 }
 
