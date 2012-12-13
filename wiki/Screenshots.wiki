@@ -1,5 +1,27 @@
-|| http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot01.png ||
-|| http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot02.png ||
-|| http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot03.png ||
-|| http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot04.png ||
-|| http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot05.png ||
+<font size="2">*Reconstruction Error Graph*</font> - Displays the training and (optionally) validation data's reconstruction error over time.
+
+http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot01.png
+
+----
+
+<font size="2">*Visible Training Examples*</font> - This tab displays a recent training example presented to the RBM, along with the RBM's reconstruction and their difference.  With visible dropout enabled, these images will have black (when using binary visible units) or grey (when using linear units) speckles.  These units were disabled for this particular training example.
+
+http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot02.png
+
+----
+
+<font size="2">*Hidden Unit Activation Probabilities*</font> - This tab displays the the hidden activation probabilities for a recent training example.  If you are using hidden dropout, then there will be black speckles in these images (though it should really only be obvious at the beginning of training).
+
+http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot03.png
+
+----
+
+<font size="2">*Weight Matrix Visualization*</font> - This tab provides a visualization of a recent snapshot of the weights.  The first image in the top left will always be the learned biases for each of the visible inputs.
+
+http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot04.png
+
+----
+
+<font size="2">*The Training Log*</font> - All actions performed via the user interface and the input reconstruction error after epoch are printed here.
+
+http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot05.png
