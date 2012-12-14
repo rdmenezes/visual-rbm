@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "OpenGLCommon.h"
+#include "Shaders.h"
 
 // everyone uses the same shader
 GLint vertex_shader_handle = -1;
@@ -89,50 +90,13 @@ void ShutdownOpenGL()
 	}
 }
 
-struct SourceBuffer
+GLint BuildVertexShader(const char* source)
 {
-	GLchar* Data;
-	GLint Length;
-
-	SourceBuffer() : Data(0), Length(0) { }
-
-	~SourceBuffer()
-	{
-		if(Data)
-		{
-			delete[] Data;
-			Data = 0;
-			Length = 0;
-		}
-	}
-};
-
-void LoadFile(const char* filename, SourceBuffer& db)
-{
-	// open file fro reading
-	FILE* file = fopen(filename, "rb");
-	// verify it was opened
-	assert(file != 0);
-	// get the length of the file
-	fseek(file, 0, SEEK_END);
-	db.Length = ftell(file);
-	rewind(file);
-
-	// read file into buffer
-	db.Data = new GLchar[db.Length];
-	fread(db.Data, 1, db.Length, file);
-	fflush(file);
-	fclose(file);
-}
-
-GLint BuildVertexShader(const char* filename)
-{
-	SourceBuffer vertex_source;
-	LoadFile(filename, vertex_source);
+	int source_length = strlen(source);
 
 	// load the vertex shader
 	int shader_handle = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(shader_handle, 1, (const GLchar**)&vertex_source.Data, &vertex_source.Length);
+	glShaderSource(shader_handle, 1, (const GLchar**)&source, &source_length);
 	glCompileShader(shader_handle);
 	
 	GLint compile_status = -1;
@@ -142,14 +106,13 @@ GLint BuildVertexShader(const char* filename)
 	return shader_handle;
 }
 
-GLint BuildFragmentProgram(const char* filename, GLint& size_handle, GLint& depth_handle)
+GLint BuildFragmentProgram(const char* source, GLint& size_handle, GLint& depth_handle)
 {
-	SourceBuffer fragment_source;
-	LoadFile(filename, fragment_source);
+	int source_length = strlen(source);
 	
 	// create shader from source
 	GLint shader_handle = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(shader_handle, 1, (const GLchar**)&fragment_source.Data, &fragment_source.Length);
+	glShaderSource(shader_handle, 1, (const GLchar**)&source, &source_length);
 	glCompileShader(shader_handle);
 	
 	// verify that it compiled ok
@@ -163,7 +126,7 @@ GLint BuildFragmentProgram(const char* filename, GLint& size_handle, GLint& dept
 	// attach the fragment shader to the program
 	glAttachShader(program_handle, shader_handle);
 	if(vertex_shader_handle == -1)
-		vertex_shader_handle = BuildVertexShader("NativeShaders/calc_texture_coordinates.vert");
+		vertex_shader_handle = BuildVertexShader(calc_texture_coordinates);
 	// also attach the vertex shader
 	glAttachShader(program_handle, vertex_shader_handle);
 
