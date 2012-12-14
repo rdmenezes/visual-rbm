@@ -97,7 +97,7 @@ int main(int argc, char** argv)
 		weights[j] = new float[rbm->_visible_count];
 		for(uint32_t i = 0; i < rbm->_visible_count; i++)
 		{
-			weights[j][i] = rbm->_weights[i * rbm->_hidden_count + j];
+			weights[j][i] = rbm->GetWeight(i,j);
 		}
 	}
 

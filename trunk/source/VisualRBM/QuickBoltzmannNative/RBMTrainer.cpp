@@ -1,6 +1,7 @@
 #include "RBMTrainer.h"
 #include "Common.h"
 #include "OpenGLCommon.h"
+#include "Shaders.h"
 
 #include "IDX.hpp"
 #include "RBM.hpp"
@@ -182,19 +183,19 @@ RBMTrainer::RBMTrainer()
 	Textures = new GLuint[Tex::Count];
 
 	/**  Build our Shaders **/
-	program_calc_randoms.Build("NativeShaders/calc_random.frag", "next_int");
+	program_calc_randoms.Build(calc_random, "next_int");
 		program_calc_randoms.RegisterParameter(CalcRandomParams::Seeds, "seeds", Texture);
 
-	program_calc_enabled_units.Build("NativeShaders/calc_enabled_unit.frag", "state");
+	program_calc_enabled_units.Build(calc_enabled_unit, "state");
 		program_calc_enabled_units.RegisterParameter(CalcEnabledUnitParams::Random, "random", Texture);
 		program_calc_enabled_units.RegisterParameter(CalcEnabledUnitParams::Probability, "probability", Float);
 
-	program_calc_clear_depth.Build("NativeShaders/calc_clear_depth.frag", "value");
+	program_calc_clear_depth.Build(calc_clear_depth, "value");
 
-	program_calc_copy_texture.Build("NativeShaders/calc_copy_texture.frag", "value");
+	program_calc_copy_texture.Build(calc_copy_texture, "value");
 		program_calc_copy_texture.RegisterParameter(CalcCopyTextureParams::Source, "source", Texture);
 
-	program_calc_depth_map.Build("NativeShaders/calc_depthmap.frag", "value");
+	program_calc_depth_map.Build(calc_depthmap, "value");
 		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::EnabledRows, "enabled_rows", Texture);
 		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::EnabledColumns, "enabled_columns", Texture);
 		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::PreviousValues, "prev_vals", Texture);
@@ -203,22 +204,22 @@ RBMTrainer::RBMTrainer()
 		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::UsePreviousValues, "use_prev_vals", Int);
 		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::Offset, "offset", Vec2);
 
-	program_calc_hidden_probs.Build("NativeShaders/calc_hidden_probabilities.frag", "probability");
+	program_calc_hidden_probs.Build(calc_hidden_probabilities, "probability");
 		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::VisibleUnits, "visible_units", Int);	
 		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::VisibleStates, "visible_states", Texture);
 		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::Weights, "rbm_weights", Texture);
 
-	program_calc_hidden_states.Build("NativeShaders/calc_binary_states.frag", "state");
+	program_calc_hidden_states.Build(calc_binary_states, "state");
 		program_calc_hidden_states.RegisterParameter(CalcHiddenStateParams::Random, "random", Texture);
 		program_calc_hidden_states.RegisterParameter(CalcHiddenStateParams::Probs, "probabilities", Texture);
 
-	program_calc_visible.Build("NativeShaders/calc_visible_reconstructions.frag", "reconstruction");
+	program_calc_visible.Build(calc_visible_reconstructions, "reconstruction");
 		program_calc_visible.RegisterParameter(CalcVisibleParams::HiddenUnits, "hidden_units", Int);
 		program_calc_visible.RegisterParameter(CalcVisibleParams::HiddenStates, "hidden_states", Texture);
 		program_calc_visible.RegisterParameter(CalcVisibleParams::Weights, "rbm_weights", Texture);
 		program_calc_visible.RegisterParameter(CalcVisibleParams::Sigmoid, "sigmoid", Int);
 		
-	program_calc_weight_deltas.Build("NativeShaders/calc_weight_deltas.frag", "delta");
+	program_calc_weight_deltas.Build(calc_weight_deltas, "delta");
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::Visible, "visible", Texture);
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::Hidden, "hidden", Texture);
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::VisiblePrime, "visible_prime", Texture);
@@ -228,7 +229,7 @@ RBMTrainer::RBMTrainer()
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::MinibatchSize, "minibatch_size", Int);
 		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::Momentum, "momentum", Float);
 
-	program_calc_weights.Build("NativeShaders/calc_new_weights.frag", "new_weight");
+	program_calc_weights.Build(calc_new_weights, "new_weight");
 		program_calc_weights.RegisterParameter(CalcWeightParams::DeltaWeights, "delta_weights", Texture);
 		program_calc_weights.RegisterParameter(CalcWeightParams::PrevWeights, "prev_weights", Texture);
 		program_calc_weights.RegisterParameter(CalcWeightParams::WeightFactor, "weight_factor", Float);
@@ -238,7 +239,7 @@ RBMTrainer::RBMTrainer()
 		program_calc_weights.RegisterParameter(CalcWeightParams::L1Regularization, "l1_regularization", Float);
 		program_calc_weights.RegisterParameter(CalcWeightParams::L2Regularization, "l2_regularization", Float);
 
-	program_calc_error.Build("NativeShaders/calc_error_vector.frag", "mean_square_error");
+	program_calc_error.Build(calc_error_vector, "mean_square_error");
 		program_calc_error.RegisterParameter(CalcErrorParams::Visible, "visible", Texture);
 		program_calc_error.RegisterParameter(CalcErrorParams::VisiblePrime, "visible_reconstruction", Texture);
 		program_calc_error.RegisterParameter(CalcErrorParams::Minibatchsize, "minibatch_size", Int);

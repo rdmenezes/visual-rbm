@@ -5,11 +5,10 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
-
 extern bool StartupOpenGL();
 extern void ShutdownOpenGL();
 // returns handle to the compiled fragment program
-extern GLint BuildFragmentProgram(const char* filename, GLint& size_handle, GLint& depth_handle);
+extern GLint BuildFragmentProgram(const char* source, GLint& size_handle, GLint& depth_handle);
 // framebuffer handle
 extern GLuint FrameBuffer;
 extern GLuint VertexArrayObject;
