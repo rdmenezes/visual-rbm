@@ -431,10 +431,10 @@ unsafe public class RBM
 				// http://www.cs.toronto.edu/~hinton/absps/fmrinips.pdf equation 4
 				for (int i = 0; i < _visible; i++)
 				{
-					float diff =  _visible_biases[i] * v[i];
+					float diff =  _visible_biases[i] - v[i];
 					F_v += diff * diff;
 				}
-				F_v *= 0.5f;
+				F_v /= 2.0f;
 
 				for (int j = 0; j < _hidden; j++)
 				{
@@ -445,8 +445,7 @@ unsafe public class RBM
 					}
 
 					// lookup table similar to Sigmoid
-					x_j = LnOnePlusExp.Calc(x_j);
-					F_v -= x_j;
+					F_v -= LnOnePlusExp.Calc(x_j);
 				}
 			}
 
