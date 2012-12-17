@@ -1279,8 +1279,6 @@ namespace VisualRBM
 		{
 			if (MessageBox.Show("Reset training parameters to defaults?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
 			{
-				RBMProcessor.VisibleType = UnitType.Binary;
-				RBMProcessor.HiddenUnits = 100;
 				RBMProcessor.LearningRate = 0.001f;
 				RBMProcessor.Momentum = 0.5f;
 				RBMProcessor.L1Regularization = 0.0f;
@@ -1290,8 +1288,6 @@ namespace VisualRBM
 				RBMProcessor.MinibatchSize = 10;
 				RBMProcessor.Epochs = 100;
 
-				visibleTypeComboBox.SelectedItem = UnitType.Binary.ToString();
-				hiddenUnitsTextBox.Text = RBMProcessor.HiddenUnits.ToString();
 				learningRateTextBox.Text = RBMProcessor.LearningRate.ToString();
 				momentumTextBox.Text = RBMProcessor.Momentum.ToString();
 				l1TextBox.Text = RBMProcessor.L1Regularization.ToString();
