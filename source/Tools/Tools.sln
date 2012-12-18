@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "splitidx", "splitidx\spliti
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "calchidden", "calchidden\calchidden.vcxproj", "{300E939F-29D9-448C-A993-9525A16A7DC3}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "idx2csv", "idx2csv\idx2csv.vcxproj", "{D3A8CECD-DA4B-4954-9598-B72DCD047D08}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -43,6 +45,10 @@ Global
 		{300E939F-29D9-448C-A993-9525A16A7DC3}.Debug|Win32.Build.0 = Debug|Win32
 		{300E939F-29D9-448C-A993-9525A16A7DC3}.Release|Win32.ActiveCfg = Release|Win32
 		{300E939F-29D9-448C-A993-9525A16A7DC3}.Release|Win32.Build.0 = Release|Win32
+		{D3A8CECD-DA4B-4954-9598-B72DCD047D08}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D3A8CECD-DA4B-4954-9598-B72DCD047D08}.Debug|Win32.Build.0 = Debug|Win32
+		{D3A8CECD-DA4B-4954-9598-B72DCD047D08}.Release|Win32.ActiveCfg = Release|Win32
+		{D3A8CECD-DA4B-4954-9598-B72DCD047D08}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
