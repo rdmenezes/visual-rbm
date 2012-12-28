@@ -13,10 +13,13 @@ const char* Usage =
 
 int main(int argc, char** argv)
 {
+	int result = 0;
+
 	if(argc != 3 && argc != 2)
 	{
 		printf(Usage);
-		return -1;
+		result = -1;
+		goto CLEANUP;
 	}
 
 	const char* idx_filename = argv[1];
@@ -34,6 +37,7 @@ int main(int argc, char** argv)
 	if(idx == NULL)
 	{
 		printf("Could not load file \"%s\"\n", idx_filename);
+		result = -1;
 		goto CLEANUP;
 	}
 
@@ -44,6 +48,7 @@ int main(int argc, char** argv)
 		if(dest == NULL)
 		{
 			printf("Could not open destination file \"%s\"\n", csv_filename);
+			result = -1;
 			goto CLEANUP;
 		}
 		write_dest = File;
@@ -107,4 +112,6 @@ CLEANUP:
 		fclose(dest);
 		dest = NULL;
 	}
+
+	return result;
 }
