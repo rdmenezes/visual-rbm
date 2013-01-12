@@ -5,6 +5,6 @@ del VisualRBM.zip
 del Tools.zip
 
 %ZIP% a VisualRBM.zip %BIN%\VisualRBM.exe %BIN%\QuickBoltzmannInterop.dll
-%ZIP% a Tools.zip %BIN%\clrbm.exe %BIN%\catidx.exe %BIN%\joinidx.exe %BIN%\idxinfo.exe %BIN%\splitidx.exe %BIN%\calchidden.exe
+%ZIP% a Tools.zip %BIN%\clrbm.exe %BIN%\catidx.exe %BIN%\joinidx.exe %BIN%\idxinfo.exe %BIN%\splitidx.exe %BIN%\calchidden.exe %BIN%\idx2csv.exe %BIN%\csv2idx.exe
 
 pause
