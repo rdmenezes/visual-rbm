@@ -10,6 +10,8 @@ This page contains an overview of the different command line tools available in 
   * [Tools#catidx catidx]
   * [Tools#joinidx joinidx]
   * [Tools#splitidx splitidx]
+  * [Tools#csv2idx csv2idx]
+  * [Tools#idx2csv idx2csv]
  
 ----
  
@@ -111,3 +113,31 @@ splitidx [INPUT] [OUTPUT] [FROM] [COUNT]
  * *OUTPUT* - The output IDX file to save.
  * *FROM* - The starting index in INPUT to start pulling rows from.
  * *COUNT* - Optional.  The number of rows to write to the OUTPUT file.  If no COUNT is given, then all the rows after the given FROM index will be written to OUTPUT.
+
+----
+
+=== csv2idx ===
+
+Used to convert a comma delimited text file to a single precision IDX data file for use with VisualRBM.  The input CSV is expected to not have a header.
+
+==== Usage ====
+{{{
+csv2idx [INPUT] [OUTPUT]
+}}}
+
+ * *INPUT* - The CSV file to convert.
+ * *OUTPUT* - The output IDX file to save.
+
+----
+
+=== idx2csv ===
+
+Prints an IDX data file to CSV.  CSV is either printed to file or to *stdout*.
+
+==== Usage ====
+{{{
+idx2csv [INPUT] [OUTPUT]
+}}}
+
+ * *INPUT* - IDX file to convert.
+ * *OUTPUT* - The output CSV file to save (optional).
