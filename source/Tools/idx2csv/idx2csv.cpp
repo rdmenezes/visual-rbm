@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#include "IDX.hpp"
+#include <IDX.hpp>
 
 const char* Usage = 
 	"Prints the given IDX data file to a CSV file.\n"
@@ -14,6 +14,9 @@ const char* Usage =
 int main(int argc, char** argv)
 {
 	int result = 0;
+
+	IDX* idx = NULL;
+	FILE* dest = NULL;
 
 	if(argc != 3 && argc != 2)
 	{
@@ -32,7 +35,7 @@ int main(int argc, char** argv)
 		File
 	} write_dest;
 
-	IDX* idx = NULL;
+	
 	idx = IDX::Load(argv[1]);
 	if(idx == NULL)
 	{
@@ -41,7 +44,6 @@ int main(int argc, char** argv)
 		goto CLEANUP;
 	}
 
-	FILE* dest = NULL;
 	if(csv_filename != NULL)
 	{
 		dest = fopen(csv_filename, "wb");
