@@ -47,7 +47,7 @@ private:
 	// info about the file
 	Endianness _idx_endianness;
 	DataFormat _data_format;
-	uint32_t _row_dimensions_count;
+	uint8_t _row_dimensions_count;
 	uint32_t* _row_dimensions;
 
 
@@ -55,7 +55,7 @@ private:
 	FILE* _idx_file;
 	bool _writing;
 	uint32_t _row_length;	// number of elements
-	uint32_t _row_length_bytes;	// rnumber of bytes of each row
+	int64_t _row_length_bytes;	// number of bytes of each row
 	void* _empty_row;
 
 	uint32_t HeaderSize() const
@@ -65,7 +65,7 @@ private:
 
 	void WriteHeader()
 	{
-		fseek(_idx_file, 0, SEEK_SET);
+		rewind(_idx_file);
 
 		// write out the header
 		write<uint16_t>((uint16_t)_idx_endianness);
@@ -181,7 +181,7 @@ public:
 		if(_idx_file)
 		{
 			fclose(_idx_file);
-			_idx_file = nullptr;
+			_idx_file = NULL;
 		}
 
 		if(_empty_row)
@@ -209,44 +209,43 @@ public:
 		IDX* result = new IDX();
 		IDX& idx = *result;
 
-		idx._writing = in_writing;
-		if(idx._writing)
-		{
-			idx._empty_row = malloc(idx._row_length_bytes);
-			memset(idx._empty_row, 0x00, idx._row_length_bytes);
-		}
 
-		// start reading from file
+		// set the file ptr
 		idx._idx_file = file;	
+
+		// Parse IDX header
+
 		idx._idx_endianness = (Endianness)idx.read<uint16_t>();
-		//switch(idx._idx_endianness)
-		//{
-		//case BigEndian:
-		//case LittleEndian:
-		//	break;
-		//default:
-		//	// parse error
-		//	delete result;
-		//	return NULL;
-		//}
+		// verify we got a valid Endianness val
+		switch(idx._idx_endianness)
+		{
+		case BigEndian:
+		case LittleEndian:
+			break;
+		default:
+			// parse error
+			delete result;
+			return NULL;
+		}
 
 
 		// figure out our data format
 		idx._data_format = (DataFormat)idx.read<uint8_t>();
-		//switch(idx._data_format)
-		//{
-		//case UInt8:
-		//case SInt8:
-		//case SInt16:
-		//case SInt32:
-		//case Single:
-		//case Double:
-		//	break;
-		//default:
-		//	// parse error
-		//	delete result;
-		//	return NULL;
-		//}
+		// verify we got a valid data format
+		switch(idx._data_format)
+		{
+		case DataFormat::UInt8:
+		case DataFormat::SInt8:
+		case DataFormat::SInt16:
+		case DataFormat::SInt32:
+		case DataFormat::Single:
+		case DataFormat::Double:
+			break;
+		default:
+			// parse error
+			delete result;
+			return NULL;
+		}
 		// read number of dimensions
 		idx._row_dimensions_count = idx.read<uint8_t>();
 		idx._row_dimensions = (uint32_t*)malloc(idx._row_dimensions_count * sizeof(uint32_t));
@@ -257,37 +256,48 @@ public:
 			idx._row_dimensions[k] = idx.read<uint32_t>();
 		}
 
-		// first number is always the number of rows
 		idx._row_length = 1;
+		// first number is always the number of rows so go straight to second number
 		for(int k = 1; k < idx._row_dimensions_count; k++)
 		{
 			idx._row_length *= idx._row_dimensions[k];
 		}
 
+
+		idx._row_length_bytes = int64_t(idx._row_length);
 		switch(idx._data_format)
 		{
 		case DataFormat::UInt8:
 		case DataFormat::SInt8:
-			idx._row_length_bytes = idx._row_length;
+			idx._row_length_bytes *= 1;
 			break;
 		case DataFormat::SInt16:
-			idx._row_length_bytes = idx._row_length * 2;
+			idx._row_length_bytes *= 2;
 			break;
 		case DataFormat::SInt32:
 		case DataFormat::Single:
-			idx._row_length_bytes = idx._row_length * 4;
+			idx._row_length_bytes *= 4;
 			break;
 		case DataFormat::Double:
-			idx._row_length_bytes = idx._row_length * 8;
+			idx._row_length_bytes *= 8;
 			break;
 		}
 
-		fseek(idx._idx_file, 0, SEEK_END);
-		size_t sz = ftell(idx._idx_file);
-		if(sz != idx.HeaderSize() + idx.GetRowCount() * idx.GetRowLengthBytes())
+		// figure out the size of the file, make sure it's as big as the header says it should be
+		_fseeki64(idx._idx_file, 0, SEEK_END);
+		int64_t sz = _ftelli64(idx._idx_file);
+		if(sz != int64_t(idx.GetRowCount()) * idx.GetRowLengthBytes() + int64_t(idx.HeaderSize()))
 		{
 			delete result;
 			return NULL;
+		}
+
+		// allocate a temp buffer for writing empty row
+		idx._writing = in_writing;
+		if(idx._writing)
+		{
+			idx._empty_row = malloc(idx._row_length_bytes);
+			memset(idx._empty_row, 0x00, idx._row_length_bytes);
 		}
 
 		return result;	
@@ -296,12 +306,13 @@ public:
 	static IDX* Create(const char* in_filename, Endianness in_endianness, DataFormat in_format, uint32_t row_length)
 	{
 		return Create(in_filename, in_endianness, in_format, &row_length, 1);
-
 	}
 
 	static IDX* Create(const char* in_filename, Endianness in_endianness, DataFormat in_format, uint32_t* row_dimensions, uint32_t row_dimensions_count)
 	{
 		FILE* file = fopen(in_filename, "wb");
+		
+		// make sure we coudl open the file
 		if(file == NULL)
 		{
 			return NULL;
@@ -310,20 +321,43 @@ public:
 		IDX* result = new IDX();
 		IDX& idx = *result;
 
-		idx._writing = true;
-		idx._empty_row = malloc(idx._row_length_bytes);
-		memset(idx._empty_row, 0x00, idx._row_length_bytes);
-
 		idx._idx_file = file;		
 		idx._idx_endianness = in_endianness;
+		// verify we got a valid Endianness val
+		switch(idx._idx_endianness)
+		{
+		case BigEndian:
+		case LittleEndian:
+			break;
+		default:
+			// parse error
+			delete result;
+			return NULL;
+		}
 
+		// set the data format
 		idx._data_format = in_format;
+		// verify we got a valid data format
+		switch(idx._data_format)
+		{
+		case DataFormat::UInt8:
+		case DataFormat::SInt8:
+		case DataFormat::SInt16:
+		case DataFormat::SInt32:
+		case DataFormat::Single:
+		case DataFormat::Double:
+			break;
+		default:
+			// parse error
+			delete result;
+			return NULL;
+		}
 
 		// read number of dimensions
 		idx._row_dimensions_count = row_dimensions_count+1;  // +1 for row count
 		idx._row_dimensions = (uint32_t*)malloc(idx._row_dimensions_count * sizeof(uint32_t));
 
-		idx._row_dimensions[0] = 0;	// empty initially
+		idx._row_dimensions[0] = 0;	// no rows initially
 		// get the dimensions list
 		for(uint32_t k = 1; k < idx._row_dimensions_count; k++)
 		{
@@ -331,32 +365,37 @@ public:
 		}
 
 		idx._row_length = 1;
-		for(int32_t i = 0; i < row_dimensions_count; i++)
+		for(uint32_t i = 0; i < row_dimensions_count; i++)
 		{
 			idx._row_length *= row_dimensions[i];
 		}
-
+		
+		idx._row_length_bytes = int64_t(idx._row_length);
 		switch(idx._data_format)
 		{
 		case DataFormat::UInt8:
 		case DataFormat::SInt8:
-			idx._row_length_bytes = idx._row_length;
+			idx._row_length_bytes *= 1;
 			break;
 		case DataFormat::SInt16:
-			idx._row_length_bytes = idx._row_length * 2;
+			idx._row_length_bytes *= 2;
 			break;
 		case DataFormat::SInt32:
 		case DataFormat::Single:
-			idx._row_length_bytes = idx._row_length * 4;
+			idx._row_length_bytes *= 4;
 			break;
 		case DataFormat::Double:
-			idx._row_length_bytes = idx._row_length * 8;
+			idx._row_length_bytes *= 8;
 			break;
 		}
 
 		// write the header
 		idx.WriteHeader();
 
+		// finally allocate temp buffer for writing empty rows
+		idx._writing = true;
+		idx._empty_row = malloc(idx._row_length_bytes);
+		memset(idx._empty_row, 0x00, idx._row_length_bytes);
 
 		return result;
 	}
@@ -380,7 +419,7 @@ public:
 		}
 
 		// move to end of file
-		if(fseek(_idx_file, 0, SEEK_END) != 0)
+		if(_fseeki64(_idx_file, 0, SEEK_END) != 0)
 		{
 			return false;
 		}
@@ -391,7 +430,7 @@ public:
 			fwrite(_empty_row, _row_length_bytes, 1, _idx_file);
 		}
 
-		// flush data
+		// flush stream
 		fflush(_idx_file);
 		// increment number of rows
 		_row_dimensions[0] += count;
@@ -413,7 +452,7 @@ public:
 		}
 
 		// move to end of file
-		if(fseek(_idx_file, 0, SEEK_END) != 0)
+		if(_fseeki64(_idx_file, 0, SEEK_END) != 0)
 		{
 			// could not seek
 			return false;
@@ -461,7 +500,7 @@ public:
 		}
 
 
-		if(fseek(_idx_file, HeaderSize() + row * _row_length_bytes, SEEK_SET) != 0)
+		if(_fseeki64(_idx_file, int64_t(HeaderSize()) + int64_t(row) * _row_length_bytes, SEEK_SET) != 0)
 		{
 			// failed to seek to proper position
 			return false;
@@ -500,7 +539,11 @@ public:
 			return false;
 		}
 
-		fseek(_idx_file, HeaderSize() + row * _row_length_bytes, SEEK_SET);
+		if(_fseeki64(_idx_file, int64_t(HeaderSize()) + int64_t(row) * _row_length_bytes, SEEK_SET) != 0)
+		{
+			// this really shouldn't happen if row is a valid row...
+			return false;
+		}
 
 		switch(_data_format)
 		{
@@ -545,7 +588,7 @@ public:
 	}
 
 	inline uint32_t GetRowLength() const {return _row_length;}
-	inline uint32_t GetRowLengthBytes() const {return _row_length_bytes;}
+	inline int64_t GetRowLengthBytes() const {return _row_length_bytes;}
 	inline DataFormat GetDataFormat() const {return _data_format;}
 	inline uint32_t GetRowCount() const {return _row_dimensions[0];}
 	inline uint32_t GetRowDimensionsCount() const {return _row_dimensions_count;}
