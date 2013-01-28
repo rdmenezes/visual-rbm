@@ -591,26 +591,16 @@ int main(int argc, char** argv)
 				trainer->SetMinibatchSize(parameters.minibatch_size);
 			
 			// load the training data
-			if(!trainer->SetTrainingData(training_data))
+			trainer->SetTrainingData(training_data);
+
+			if(validation_data && validation_data->GetRowLength() != training_data->GetRowLength())
 			{
-				printf("Training Data contains invalid values");
+				printf("Validation data has different number of visible inputs as training data");
 				goto ERROR;
 			}
-
 
 			// load the validation data
-			if(!trainer->SetValidationData(validation_data))
-			{
-				if(trainer->GetLastErrorCode() == DataHasIncorrectNumberOfVisibleInputs)
-				{
-					printf("Validation data has different number of visible inputs as training data");
-				}
-				else
-				{
-					printf("Validation Data contains invalid values");
-				}
-				goto ERROR;
-			}
+			trainer->SetValidationData(validation_data);
 
 			// load rbm
 			if(imported != NULL)
@@ -625,6 +615,20 @@ int main(int argc, char** argv)
 
 			uint64_t total_iterations = 0;
 		
+
+			if(!trainer->Initialize())
+			{
+				if(trainer->GetLastErrorCode() == BinaryDataOutsideZeroOne)
+				{
+					printf("Training data has average values outside the range [0,1] when visible units are set to binary\n");
+				}
+				else
+				{
+					printf("Other initialization error\n");
+				}
+				goto ERROR;
+			}
+
 			if (!quiet)
 			{
 				if(validation_data)
@@ -637,7 +641,6 @@ int main(int argc, char** argv)
 				}
 			}
 
-			trainer->Initialize();
 
 			while(parameters.epochs)
 			{

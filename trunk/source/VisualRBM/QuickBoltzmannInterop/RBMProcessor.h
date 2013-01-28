@@ -57,6 +57,14 @@ namespace QuickBoltzmann
 			RBMProcessorState get() {return _currentState;};
 		}
 
+		static property bool IsInitialized
+		{
+			bool get()
+			{
+				return rbmtrainer->GetIsInitialized();
+			}
+		};
+
 		static property bool HasTrainingData
 		{
 			bool get()
@@ -186,7 +194,7 @@ namespace QuickBoltzmann
 			return float(1.0 / (1.0 + Math::Exp(-x)));
 		}
 
-		static bool SetTrainingData(String^ filename, bool calculate_stats);
+		static bool SetTrainingData(String^ filename);
 		static bool SetValidationData(String^ filename);
 		static void SaveRBM(String^ filename);
 		static void LoadRBM(String^ filename, uint32_t% hidden_units, bool% linear_units);
