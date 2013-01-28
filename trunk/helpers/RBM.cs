@@ -6,12 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
-public enum UnitType : byte
-{
-	Sigmoid = 0x00,
-	Linear = 0xFF
-}
-
 unsafe class Memory
 {
     public static void* malloc(Int32 size)
@@ -140,11 +134,6 @@ unsafe public class RBM
 	ushort _visible;
 	ushort _hidden;
 
-	UnitType _visible_type;
-
-    float* _visible_means;
-    float* _visible_stddevs;
-
     float* _visible_biases;
     float* _hidden_biases;
 
@@ -223,12 +212,6 @@ unsafe public class RBM
 
     ~RBM()
     {
-        if (_visible_type == UnitType.Linear)
-        {
-            Memory.free(_visible_means);
-            Memory.free(_visible_stddevs);
-        }
-
         Memory.free(_visible_biases);
         Memory.free(_hidden_biases);
 
@@ -263,19 +246,10 @@ unsafe public class RBM
 			return null;
 		}
 
-		// get the visible type
-		result._visible_type = (UnitType)result.ReadUInt8();
 		// read counts
 		result._visible = result.ReadUInt16();
 		result._hidden = result.ReadUInt16();
-		// read stats
-		if (result._visible_type == UnitType.Linear)
-		{
-            result._visible_means = (float*)Memory.malloc(sizeof(float) * result._visible);
-			result.ReadSingle(result._visible_means, result._visible);
-            result._visible_stddevs = (float*)Memory.malloc(sizeof(float) * result._visible);
-			result.ReadSingle(result._visible_stddevs, result._visible);
-		}
+
 		// read biases
         result._visible_biases = (float*)Memory.malloc(sizeof(float) * result._visible);
 		result.ReadSingle(result._visible_biases, result._visible);
@@ -375,7 +349,7 @@ unsafe public class RBM
 		}
 	}
 
-    public void CalcVisible(float[] in_hidden, float[] out_visible)
+    public void CalcVisibleActivations(float[] in_hidden, float[] out_visible)
     {
 		fixed (float* h = in_hidden, v = out_visible)
 		{
@@ -387,26 +361,16 @@ unsafe public class RBM
 					v[i] += _hidden_features[i][j] * h[j];
 				}
 			}
-
-			if (_visible_type == UnitType.Sigmoid)
-			{
-				for (int i = 0; i < _visible; i++)
-				{
-					v[i] = Sigmoid.Calc(v[i]);
-				}
-			}
 		}
     }
 
-    public float CalcFreeEnergy(float[] in_visible)
+    public float CalcFreeEnergy(float[] in_visible, bool binary_visible)
     {
-        // equation 25 in Practical Guide
-
 		float F_v = 0.0f;
 
 		fixed (float* v = in_visible)
 		{
-			if (_visible_type == UnitType.Sigmoid)
+			if (_binary_visible)
 			{
 				// http://www.cs.toronto.edu/~hinton/absps/guideTR.pdf equation 25
 				for (int i = 0; i < _visible; i++)
@@ -426,7 +390,8 @@ unsafe public class RBM
 					F_v -= LnOnePlusExp.Calc(x_j);
 				}
 			}
-			else if (_visible_type == UnitType.Linear)
+			// linear units
+			else
 			{
 				// http://www.cs.toronto.edu/~hinton/absps/fmrinips.pdf equation 4
 				for (int i = 0; i < _visible; i++)
@@ -452,27 +417,6 @@ unsafe public class RBM
 		}
 		return F_v;
     }
-
-	public void NormalizeVisibleVector(float[] in_out_visible)
-	{
-		fixed (float* v = in_out_visible)
-		{
-			for(int i = 0; i < _visible; i++)
-			{
-				v[i] = (v[i] - _visible_means[i]) / _visible_stddevs[i];
-			}
-		}
-	}
-
-	public float GetVisibleMean(int i)
-	{
-		return _visible_means[i];
-	}
-
-	public float GetVisibleStddev(int i)
-	{
-		return _visible_stddevs[i];
-	}
 
 	public uint GetVisibleCount()
 	{
