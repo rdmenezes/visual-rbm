@@ -42,16 +42,32 @@ namespace QuickBoltzmann
 				{
 					if(_epochs > 0)
 					{
-						_currentState = RBMProcessorState::Training;
 						if(rbmtrainer->GetIsInitialized() == false)
 						{
-							rbmtrainer->Initialize();
+							if(rbmtrainer->Initialize() == false)
+							{
+								switch(rbmtrainer->GetLastErrorCode())
+								{
+								case DataHasIncorrectNumberOfVisibleInputs:
+									ShowError("Validation data and Training data have a different number of elements in each row");
+									break;
+								case BinaryDataOutsideZeroOne:
+									ShowError("Data has data outside the range of [0,1] while trying to train a model with binary visible units");
+									break;
+								}
+							}
 							Action^ callback = dynamic_cast<Action^>(m["callback"]);
 							if(callback != nullptr)
 							{
 								callback();
 							}
 						}
+						
+						if(rbmtrainer->GetIsInitialized() == true)
+						{
+							_currentState = RBMProcessorState::Training;
+						}
+
 					}
 				}
 				else if(m->Type == "Pause")
@@ -231,14 +247,6 @@ namespace QuickBoltzmann
 					delete rbmtrainer;
 					m["done"] = true;
 				}
-				else if(m->Type == "SetTrainingData")
-				{
-					IDX* data = (IDX*)(LONG_PTR)m["idx"];
-					bool calc = (bool)m["calculate"];
-
-					m["result"] = rbmtrainer->SetTrainingData(data, calc);
-					m["done"] = true;
-				}
 			}
 
 			switch(_currentState)
@@ -337,7 +345,7 @@ namespace QuickBoltzmann
 		return 0.0f;
 	}
 
-	bool RBMProcessor::SetTrainingData(String^ in_filename, bool calc_stats)
+	bool RBMProcessor::SetTrainingData(String^ in_filename)
 	{
 		IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(in_filename);
 		char* filename = static_cast<char*>(p.ToPointer());
@@ -353,41 +361,9 @@ namespace QuickBoltzmann
 			return false;
 		}
 
-		Message^ m = gcnew Message("SetTrainingData");
-		m["idx"] = (LONG_PTR)idx;
-		m["calculate"] = calc_stats;
-		m["done"] = false;
-		_message_queue->Enqueue(m);
-
-		while((bool)m["done"] == false)
-		{
-			Thread::Sleep(16);
-		}
-
-		if((bool)m["result"])
-		{
-			_has_training_data = true;
-			return true;		
-		}
-
-		// there was a problem, print a useful error code
-		_has_training_data = false;
-		switch(rbmtrainer->GetLastErrorCode())
-		{
-		case DataHasIncorrectNumberOfVisibleInputs:
-			ShowError(String::Format("RBM has {0} visible units while proposed Training data is length {1}", VisibleUnits, idx->GetRowLength()));
-			break;
-		case BinaryDataOutsideZeroOne:
-			ShowError("Input data has values outside of [0,1] so 'Binary' Visible Type may not be used; instead use 'Gaussian'");
-			break;
-		case DataContainsInfinite:
-			ShowError("Input data contains values that are +/-Infinity");
-			break;
-		case DataContainsNaN:
-			ShowError("Input data contains values that are NaN");
-			break;
-		}
-		return false;
+		rbmtrainer->SetTrainingData(idx);
+		_has_training_data = true;
+		return true;		
 	}
 
 	bool RBMProcessor::SetValidationData(String^ in_filename)
@@ -416,30 +392,9 @@ namespace QuickBoltzmann
 				return false;
 			}
 
-			if(rbmtrainer->SetValidationData(idx))
-			{
-				_has_validation_data = true;
-				return true;
-			}
-
-			// there was a problem loading up data, so throw up an error box
-			_has_validation_data = false;
-			switch(rbmtrainer->GetLastErrorCode())
-			{
-			case DataHasIncorrectNumberOfVisibleInputs:
-				ShowError(String::Format("Training data is length {0} while Validation data is length {1}", VisibleUnits, idx->GetRowLength()));
-				break;
-			case BinaryDataOutsideZeroOne:
-				ShowError("Validation data has values outside of [0,1] so 'Binary' Visible Type may not be used; instead use 'Gaussian'");
-				break;
-			case DataContainsInfinite:
-				ShowError("Validation data contains values that are +/-Infinity");
-				break;
-			case DataContainsNaN:
-				ShowError("Validation data contains values that are NaN");
-				break;
-			}
-			return false;
+			rbmtrainer->SetValidationData(idx);
+			_has_validation_data = true;
+			return true;
 		}
 	}
 

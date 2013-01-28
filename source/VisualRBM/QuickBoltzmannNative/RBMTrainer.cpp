@@ -11,6 +11,21 @@
 #include <intrin.h>
 #include <math.h>
 #include <iostream>
+#include <stdint.h>
+
+// largest 32 bit prime
+const uint64_t Prime = 4294967291;
+
+// From 'A Friendly Introduction to Number Theory'
+// Claim 10.2:
+// if gcd(a, m) = 1 then the  numbers:
+// b_1 * a, b_2 * a, b_3 * a, ..., b_m-1 * a (mod m)
+// are teh same as the numbers
+// b1, b2, b3, b_m-1 (mod m)
+// although they may be in a different order
+// 
+// I'll be taking advantage of this fact to do stochastic gradient descent without
+// having to explicitly shuffle the minibatches
 
 #pragma region Shader Enums
 
@@ -151,9 +166,8 @@ Shader<CalcErrorParams> program_calc_error;
 
 RBMTrainer::RBMTrainer() 
 : Textures(NULL)
-, VisibleTextures(NULL)
+, VisibleTrainingTextures(NULL)
 , VisibleValidationTextures(NULL)
-, EnabledHiddenUnitBuffer(NULL)
 , IsInitialized(false)
 , LoadedRBM(NULL)
 , TrainingData(NULL)
@@ -163,15 +177,24 @@ RBMTrainer::RBMTrainer()
 , VisibleCount(0)
 , HiddenCount(100)
 , MinibatchSize(10)
-, Minibatches(0)
-, ValidationMinibatches(0)
+, LoadedTrainingMinibatches(0)
+, LoadedValidationMinibatches(0)
 , LearningRate(0.001f)
 , Momentum(0.5f)
 , L1Regularization(0.0f)
 , L2Regularization(0.0f)
 , HiddenDropout(0.5f)
 , VisibleDropout(0.0f)
-, TrainingIndex(0)
+// 1 gigabyte
+, MaxDataMemory(1 * 1024 * 1024 * 1024)
+, SwappingTrainingData(false)
+, SwappingValidationData(false)
+, CurrentTrainingMinibatchIndex(0)
+, CurrentValidationMinibatchIndex(0)
+, CurrentTrainingRowIndex(0)
+, CurrentValidationRowIndex(0)
+, TotalTrainingMinibatches(0)
+, TotalValidationMinibatches(0)
 {
 	// startup opengl
 	if(!StartupOpenGL())
@@ -179,8 +202,6 @@ RBMTrainer::RBMTrainer()
 		PreviousError = RequiredOpenGLVersionUnsupported;
 		return;
 	}
-
-	Textures = new GLuint[Tex::Count];
 
 	/**  Build our Shaders **/
 	program_calc_randoms.Build(calc_random, "next_int");
@@ -248,185 +269,40 @@ RBMTrainer::RBMTrainer()
 RBMTrainer::~RBMTrainer()
 {
 	delete[] Textures;
-	delete[] EnabledHiddenUnitBuffer;
 
 	ShutdownOpenGL();
 }
 
-void RBMTrainer::Reset()
+void RBMTrainer::SetTrainingData(IDX* in_data)
 {
-	assert(IsInitialized == true);
-
-	IsInitialized = false;
-	assert(LoadedRBM == NULL);
-
-	// clear allocated space
-	LocalWeightBuffer.Release();
-	LocalHBiasBuffer.Release();
-	LocalVBiasBuffer.Release();
-	LocalErrorBuffer.Release();
-
-	delete[] EnabledHiddenUnitBuffer;
-	EnabledHiddenUnitBuffer = 0;
-
-	// deallocate training textures
-	ReleaseTextures(Textures, Tex::Count);
-	
-	// deallocate training data textures
-	ReleaseTextures(VisibleTextures, Minibatches);
-	delete[] VisibleTextures;
-	VisibleTextures = NULL;
-	Minibatches = 0;
-
-	// deallocate validation data textures
-	if(ValidationData)
+	if(TrainingData)
 	{
-		ReleaseTextures(VisibleValidationTextures, ValidationMinibatches);
-		delete[] VisibleValidationTextures;
-		VisibleValidationTextures = NULL;
-		ValidationMinibatches = 0;
+		delete TrainingData;
 	}
 
-	TrainingIndex = 0;
+	TrainingData = in_data;
+	VisibleCount = TrainingData->GetRowLength();
 }
 
-bool RBMTrainer::SetTrainingData(IDX* in_data, bool calculate_stats)
+void RBMTrainer::SetValidationData(IDX* in_data)
 {
-	// additional replacement data is being loaded
-	if(IsInitialized)
-	{
-		if(VisibleCount != TrainingData->GetRowLength())
-		{
-			PreviousError = DataHasIncorrectNumberOfVisibleInputs;
-			return false;
-		}
-
-		// makes sure the data doesn't contain nans or infinities
-		if(!ValidateData(in_data))
-		{
-			return false;
-		}
-
-		// clean up
-		if(TrainingData)
-		{
-			delete TrainingData;
-		}
-
-		// data is good, so keep it around
-		TrainingData = in_data;
-
-		// calculate data statistics (mean/stddev)
-		if(calculate_stats)
-		{
-			CalcStatistics();
-		}
-
-		// transfer to GPU
-		TransferDataToGPU(TrainingData, VisibleTextures, Minibatches);
-	}
-	// loading initial dataset
-	else
-	{
-		// makes sure the data doesn't contain nans or infinities
-		if(!ValidateData(in_data))
-		{
-			return false;
-		}
-
-		// clean up
-		if(TrainingData)
-		{
-			delete TrainingData;
-			delete ValidationData;
-			ValidationData = NULL;
-		}
-
-		// data is good, so keep it around
-		TrainingData = in_data;
-
-		// set visible count
-		VisibleCount = TrainingData->GetRowLength();
-
-		// calculate data statistics (mean/stddev)
-		if(calculate_stats)
-		{
-			CalcStatistics();
-		}
-		else
-		{
-			// assume 0 mean 1 stddev
-			DataMeans.Acquire(VisibleCount);
-			DataStdDev.Acquire(VisibleCount);
-
-			float* m_ptr = DataMeans;
-			float* s_ptr = DataStdDev;
-
-			for(int i = 0; i < VisibleCount; i++)
-			{
-				m_ptr[i] = 0.0f;
-				s_ptr[i] = 1.0f;
-			}
-		}
-	}
-
-	return true;
-}
-
-bool RBMTrainer::SetValidationData(IDX* in_data)
-{
-	// make sure we have training data
-	assert(TrainingData != NULL);
-
-	if(in_data == NULL)
-	{
-		if(ValidationData)
-		{
-			delete ValidationData;
-			ValidationData = NULL;
-		}
-
-		return true;
-	}
-
-
-	if(in_data->GetRowLength() != VisibleCount)
-	{
-		PreviousError = DataHasIncorrectNumberOfVisibleInputs;
-		return false;
-	}
-
-	// make sure data is valid
-	if(!ValidateData(in_data))
-	{
-		return false;
-	}
-
-	// clean up
 	if(ValidationData)
 	{
 		delete ValidationData;
 	}
+
 	ValidationData = in_data;
-	return true;
 }
 
 RBM* RBMTrainer::GetRBM()
 {
-	assert(IsInitialized == true);
+	ASSERT(IsInitialized == true);
 
-	RBM* result = new RBM(VisibleCount, HiddenCount, VisibleType == Gaussian);
-
-	if(VisibleType == Gaussian)
-	{
-		memcpy( result->_visible_means, DataMeans, sizeof(float) * VisibleCount);
-		memcpy( result->_visible_stddev, DataStdDev, sizeof(float) * VisibleCount);
-	}
+	RBM* result = new RBM(VisibleCount, HiddenCount);
 
 	float* weights = new float[(VisibleCount + 1) * (HiddenCount + 1)];
 
 	DumpWeights(weights);
-
 
 	// copy over the hidden biases
 	memcpy(result->_hidden_biases, weights + 1, sizeof(float) * HiddenCount);
@@ -447,8 +323,8 @@ RBM* RBMTrainer::GetRBM()
 
 void RBMTrainer::SetRBM(RBM* in_RBM)
 {
-	assert(IsInitialized == false);
-	assert(TrainingData != NULL);
+	ASSERT(IsInitialized == false);
+	ASSERT(TrainingData != NULL);
 
 	if(in_RBM->_visible_count != VisibleCount)
 	{
@@ -459,14 +335,6 @@ void RBMTrainer::SetRBM(RBM* in_RBM)
 	// set the data
 	LoadedRBM = in_RBM;
 	HiddenCount = LoadedRBM->_hidden_count;
-	VisibleType = LoadedRBM->_visible_units_linear == true ? Gaussian : Binary;
-	
-	// copy in loaded rbms stats
-	if(LoadedRBM->_visible_units_linear)
-	{
-		memcpy(DataMeans, LoadedRBM->_visible_means, sizeof(float) * VisibleCount);
-		memcpy(DataStdDev, LoadedRBM->_visible_stddev, sizeof(float) * VisibleCount);
-	}
 }
 
 void RBMTrainer::SetModelParameters(UnitType in_VisibleType, uint32_t in_HiddenUnits, uint32_t in_MinibatchSize)
@@ -476,54 +344,16 @@ void RBMTrainer::SetModelParameters(UnitType in_VisibleType, uint32_t in_HiddenU
 	MinibatchSize = in_MinibatchSize;
 }
 
-bool RBMTrainer::ValidateData(IDX* in_data)
+#pragma region Helper Methods
+
+void RBMTrainer::CalcMeans(AlignedMemoryBlock<float>& out_means)
 {
-	float* temp_data_buffer = new float[in_data->GetRowLength()];
-	assert(temp_data_buffer != 0);
+	out_means.Acquire(VisibleCount);
 
-	PreviousError = NoError;
-	for(uint32_t k = 0; k < in_data->GetRowCount(); k++)
-	{
-		in_data->ReadRow(k, temp_data_buffer);
-		for(uint32_t i = 0; i < in_data->GetRowLength(); i++)
-		{
-			float& f = temp_data_buffer[i];
-			if(f != f)
-			{
-				PreviousError = DataContainsNaN;
-				goto Finished;
-			}
-			else if(f == std::numeric_limits <float>::infinity() || f == -std::numeric_limits <float>::infinity())
-			{
-				PreviousError = DataContainsInfinite;
-				goto Finished;
-			}
-			else if(VisibleType == Binary &&
-				(f < 0.0f || f > 1.0))
-			{
-				PreviousError = BinaryDataOutsideZeroOne;
-				goto Finished;
-			}
-		}
-	}
+	float* mean_head = (float*)out_means;
 
-Finished:
-	delete[] temp_data_buffer;
-
-	return PreviousError == NoError;
-}
-
-void RBMTrainer::CalcStatistics()
-{
-	DataMeans.Acquire(VisibleCount);
-	DataStdDev.Acquire(VisibleCount);
-
-	float* mean_head = DataMeans;
-	float* stddev_head = DataStdDev;
-
-	memset(mean_head, 0, DataMeans.Size());
-	memset(stddev_head, 0, DataMeans.Size());
-
+	memset(mean_head, 0, out_means.Size());
+	
 	AlignedMemoryBlock<float> Row;
 	Row.Acquire(VisibleCount);
 
@@ -542,13 +372,6 @@ void RBMTrainer::CalcStatistics()
 			// update data sum
 			mean = _mm_add_ps(mean, vals);
 			_mm_store_ps(mean_head + offset, mean);
-
-			// update square data sum
-			vals = _mm_mul_ps(vals, vals);
-			__m128 stddev = _mm_load_ps(stddev_head + offset);
-			stddev = _mm_add_ps(stddev, vals);
-			_mm_store_ps(stddev_head + offset, stddev);
-
 		}
 	}
 
@@ -559,73 +382,96 @@ void RBMTrainer::CalcStatistics()
 		uint32_t offset = i * 4;
 		__m128 mean = _mm_load_ps(mean_head + offset);
 		mean = _mm_div_ps(mean, divisor);
-	
-		__m128 stddev = _mm_load_ps(stddev_head + offset);
-		stddev = _mm_div_ps(stddev, divisor);
-
-		stddev = _mm_sub_ps(stddev, _mm_mul_ps(mean, mean));
-		stddev = _mm_sqrt_ps(stddev);
 
 		_mm_store_ps(mean_head + offset, mean);
-		_mm_store_ps(stddev_head + offset, stddev);
 	}
 }
 
-void RBMTrainer::TransferDataToGPU(IDX* Data, GLuint*& TextureHandles, int& Count)
+GLuint* RBMTrainer::AllocateEmptyMinibatchTextures(uint32_t in_Count)
 {
-	if(TextureHandles != NULL)
-	{
-		ReleaseTextures(TextureHandles, Count);
-		delete[] TextureHandles;
-		TextureHandles = NULL;
-	}
-	
-	// want to shuffle the order in which we add data
-	uint32_t* index_buffer = new uint32_t[Data->GetRowCount()];
-	for(uint32_t k = 0; k < Data->GetRowCount(); k++)
-		index_buffer[k] = k;
-	shuffle(index_buffer, Data->GetRowCount());
+	float* zero_bufffer = new float[MinibatchSize * VisibleCount];
+	memset(zero_bufffer, 0x00, sizeof(float) * MinibatchSize * VisibleCount);
+	GLuint* textures = new GLuint[in_Count];
 
-	// number of minibatches for this data
-	Count = Data->GetRowCount() / MinibatchSize;
-	// array off texture handles
-	TextureHandles = new GLuint[Count];
+	for(uint32_t i = 0; i < in_Count; i++)
+	{
+		textures[i] = AllocateFloatTexture(MinibatchSize, VisibleCount, zero_bufffer);
+	}
+
+	// don't forget to cleanup!
+	delete[] zero_bufffer;
+
+	return textures;
+}
+
+GLuint* RBMTrainer::AllocatePopulatedMinibatchTextures(uint32_t in_Count, IDX* in_Data)
+{
+	// just make sure we're not getting a weird Count value
+	ASSERT(in_Data->GetRowCount() / MinibatchSize >= in_Count);
 
 	float* minibatch_buffer = new float[MinibatchSize * VisibleCount];
-	uint32_t index = 0;
-	for(uint32_t b = 0; b < Count; b++)
+
+	uint32_t row = 0;
+	GLuint* Textures = new GLuint[in_Count];
+	for(uint32_t i = 0; i < in_Count; i++)
 	{
-		float* buff = minibatch_buffer;
-		for(uint32_t k = 0; k < MinibatchSize; k++)
+		float* row_buffer = minibatch_buffer;
+		// fill up this minibatch
+		for(uint32_t j = 0; j < MinibatchSize; j++)
 		{
-			Data->ReadRow(index_buffer[index++], buff);
+			in_Data->ReadRow(row, row_buffer);
 
-			// normalize the data if we're dealing with Gaussian units
-			if(VisibleType == Gaussian)
-			{
-				for(uint32_t i = 0; i < VisibleCount; i++)
-				{
-					buff[i] -= DataMeans[i];
-					if(DataStdDev[i] != 0.0f)
-						buff[i] /= DataStdDev[i];
-				}
-			}
-
-			buff += VisibleCount;
+			row += 1;
+			row_buffer += VisibleCount;
 		}
 
-		TextureHandles[b] = AllocateFloatTexture(MinibatchSize, VisibleCount, minibatch_buffer);
+		// transfer to GPU
+		Textures[i] = AllocateFloatTexture(MinibatchSize, VisibleCount, minibatch_buffer);
 	}
 
-	delete[] index_buffer;
+	// don't forget to cleanup
+	delete[] minibatch_buffer;
+
+	return Textures;
+}
+
+void RBMTrainer::SwapInNewMinibatchTextures(uint32_t in_StartIndex, uint32_t in_Count, IDX* in_Data, GLuint* in_Handles)
+{
+	float* minibatch_buffer = new float[MinibatchSize * VisibleCount];
+
+	uint32_t row = in_StartIndex;
+	for(uint32_t i = 0; i < in_Count; i++)
+	{
+		float* row_buffer = minibatch_buffer;
+		for(uint32_t j = 0; j < MinibatchSize; j++)
+		{
+			in_Data->ReadRow(row, row_buffer);
+
+			row += 1;
+			row_buffer += VisibleCount;
+		}
+
+		// copy this new data into texture memory
+		glBindTexture(GL_TEXTURE_RECTANGLE, in_Handles[i]);
+		glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, VisibleCount, MinibatchSize, GL_RED, GL_FLOAT, minibatch_buffer);
+	}
+
 	delete[] minibatch_buffer;
 }
 
-void RBMTrainer::Initialize()
+#pragma endregion
+
+bool RBMTrainer::Initialize()
 {
-	assert(IsInitialized == false);
-	
-	IsInitialized = true;
+	ASSERT(IsInitialized == false);
+	ASSERT(TrainingData != NULL);
+
+	// make sure the validation data and training data have the same number of values per row
+	if(ValidationData && ValidationData->GetRowLength() != VisibleCount)
+	{
+		PreviousError = DataHasIncorrectNumberOfVisibleInputs;
+		goto ErrorOcurred;
+	}
 
 	// seed the random number generator
 	srand(1);
@@ -636,28 +482,43 @@ void RBMTrainer::Initialize()
 	LocalVBiasBuffer.Acquire(VisibleCount);
 	LocalErrorBuffer.Acquire(VisibleCount);
 
-	// allocate space for enabled hidden units
-	EnabledHiddenUnitBuffer = new uint8_t[HiddenCount];
-
 	// setup initial random values
 	uint32_t* initial_random_seeds = new uint32_t[MinibatchSize * HiddenCount];
 	for(uint32_t k = 0; k < MinibatchSize * HiddenCount; k++)
+	{
 		initial_random_seeds[k] = rand();
+	}
 
 	uint32_t* initial_visible_seeds = new uint32_t[VisibleCount];
 	for(uint32_t k = 0; k < VisibleCount; k++)
+	{
 		initial_visible_seeds[k] = rand();
+	}
 
 	uint32_t* initial_hidden_seeds = new uint32_t[HiddenCount];
 	for(uint32_t k = 0; k < HiddenCount; k++)
+	{
 		initial_hidden_seeds[k] = rand();
+	}
 
 	float* initial_rbm_weights = new float[(VisibleCount + 1) * (HiddenCount + 1)];
 	if(LoadedRBM == NULL)
 	{
+		AlignedMemoryBlock<float> data_means;
+		if(VisibleType == Binary)
+		{
+			// calculate the means so we can init visible biases properly
+			CalcMeans(data_means);
+			for(int i = 0; i < VisibleCount; i++)
+			{
+				if(data_means[i] < 0.0f || data_means[i] > 1.0f)
+				{
+					PreviousError = BinaryDataOutsideZeroOne;
+					goto ErrorOcurred;
+				}
+			}
+		}
 		// randomly initialize weights
-
-		// setup initial weights
 		for(uint32_t i = 0; i <= VisibleCount; i++)
 		{
 			for(uint32_t j = 0; j <= HiddenCount; j++)
@@ -665,28 +526,29 @@ void RBMTrainer::Initialize()
 				float val = 0.0f;
 				// hidden bias 
 				if(i == 0)
+				{
 					val = -4.0f;
+				}
 				// visible bias
 				else if(j == 0)
 				{
 					// basically we want the visible unit to give the mean
 					// when input from the hidden states is 0
-
 					switch(VisibleType)
 					{
 					case Binary:
 						// logit
-						val = (float)log(DataMeans[i-1] / (1 - DataMeans[i-1]));
-						if(val < -15.0f)
-							val = -15.0f;
-						else if(val > 15.0f)
-							val = 15.0f;
+						{
+							float& m = data_means[i - 1];
+							m = clamp(m, 0.0001f, 0.999f);
+							val = (float)log(m / (1.0f - m)); // range is about -7 to 7 given the above clamp
+						}
 						break;
 					case Gaussian:
-						val = 0.0f;	// data is normalized, so the mean visible image is all 0
+						val = 0.0f;	// assume data is normalized, so the mean visible image is all 0
 						break;
 					default:
-						assert(false);
+						ASSERT(false);
 					}
 				}
 				// a regular weight
@@ -702,9 +564,9 @@ void RBMTrainer::Initialize()
 	}
 	else
 	{
-		assert(LoadedRBM->_hidden_count == HiddenCount && LoadedRBM->_visible_count == VisibleCount);
+		ASSERT(LoadedRBM->_hidden_count == HiddenCount && LoadedRBM->_visible_count == VisibleCount);
 
-		// copy loaded rbm to initial_rbm_weights so it can get copied in and ahve factors calculated easily
+		// copy loaded rbm to initial_rbm_weights so it can get copied in and have factors calculated easily
 
 		for(uint32_t i = 0; i < VisibleCount; i++)
 		{
@@ -720,12 +582,10 @@ void RBMTrainer::Initialize()
 			for(uint32_t j = 0; j < HiddenCount; j++)
 				initial_rbm_weights[(HiddenCount + 1) * (i + 1) + (j + 1)] = LoadedRBM->_weights[i * HiddenCount + j];
 
-
 		// get rid of this cpu copy
 		delete LoadedRBM;
 		LoadedRBM = NULL;
 	}
-
 
 	// calculate initial weight factors
 	
@@ -740,7 +600,6 @@ void RBMTrainer::Initialize()
 	for(uint32_t j = 0; j < HiddenCount; j++)
 		HFactor += abs(initial_rbm_weights[j + 1]);
 	HFactor /= HiddenCount;
-	
 
 	// weights
 	WFactor = 0.0f;
@@ -753,6 +612,11 @@ void RBMTrainer::Initialize()
 
 	/** Allocate Texture Memory for Trainer **/
 	
+	uint32_t TotalAllocated = 0;
+	RegisterAllocationCounter(&TotalAllocated);
+
+	Textures = new GLuint[Tex::Count];
+
 	Textures[Tex::Visible] = AllocateFloatTexture(MinibatchSize, VisibleCount);
 	// 2 buffers for RBM weights
 	Textures[Tex::Weights0] = AllocateFloatTexture(VisibleCount + 1, HiddenCount + 1, initial_rbm_weights);
@@ -794,30 +658,137 @@ void RBMTrainer::Initialize()
 	delete[] initial_visible_seeds;
 	delete[] initial_hidden_seeds;
 
-	/** Allocate Data's Texture Memory **/
+	/** Setup the Depth Buffer **/
+	BindDepthBuffer(std::max(VisibleCount + 1, MinibatchSize), std::max(HiddenCount + 1, VisibleCount));
 
-	// copy training and validation data to GPU
-	TransferDataToGPU(TrainingData, VisibleTextures, Minibatches);
+	/** Calculate how much texture space we have (given the MaxDataMemory parameter) **/
+
+	int64_t RemainingMemory = int64_t(MaxDataMemory) - int64_t(TotalAllocated);
+	int64_t MaxDataMinibatches = RemainingMemory / (TrainingData->GetRowLengthBytes() * MinibatchSize);
+	ASSERT(MaxDataMinibatches > 0);
+
+	// save off the number of minibatches of data we have in our file
+
+	TotalTrainingMinibatches = TrainingData->GetRowCount() / MinibatchSize;
+	// no validation data, only need to worry about fitting training data
+	if(ValidationData == NULL)
+	{
+		/** Allocate Data's Texture Memory **/
+
+		// Figure out if we need to swap data from disk
+		SwappingTrainingData = TotalTrainingMinibatches > MaxDataMinibatches ? true : false;
+
+		if(SwappingTrainingData == true)
+		{
+			LoadedTrainingMinibatches = MaxDataMinibatches;
+			VisibleTrainingTextures = AllocateEmptyMinibatchTextures(LoadedTrainingMinibatches);
+		}
+		else
+		{
+			LoadedTrainingMinibatches = TotalTrainingMinibatches;
+			VisibleTrainingTextures = AllocatePopulatedMinibatchTextures(LoadedTrainingMinibatches, TrainingData);
+		}
+	}
+	// we also have validation data to worry about
+	else
+	{
+		TotalValidationMinibatches = ValidationData->GetRowCount() / MinibatchSize;
+		// if we can fit both into memory, then do so!
+		if(TotalTrainingMinibatches + TotalValidationMinibatches < MaxDataMinibatches)
+		{
+			SwappingTrainingData = false;
+			SwappingValidationData = false;
+
+			LoadedTrainingMinibatches = TotalTrainingMinibatches;
+			LoadedValidationMinibatches = TotalValidationMinibatches;
+
+			VisibleTrainingTextures = AllocatePopulatedMinibatchTextures(LoadedTrainingMinibatches, TrainingData);
+			VisibleValidationTextures = AllocatePopulatedMinibatchTextures(LoadedValidationMinibatches, ValidationData);
+		}
+		// if validation set fits in less than half of the total minibatch budget, just load it all up and only swap training
+		else if(TotalValidationMinibatches < MaxDataMinibatches / 2)
+		{
+			SwappingTrainingData = true;
+			SwappingValidationData = false;
+
+			LoadedValidationMinibatches = TotalValidationMinibatches;	// all validation batches
+			LoadedTrainingMinibatches = MaxDataMinibatches - LoadedValidationMinibatches;	// remaining batches go to trianing
+
+			VisibleTrainingTextures = AllocateEmptyMinibatchTextures(LoadedTrainingMinibatches);
+			VisibleValidationTextures = AllocatePopulatedMinibatchTextures(LoadedValidationMinibatches, ValidationData);
+		}
+		// we have to swap in both training and validation data
+		else
+		{
+			SwappingTrainingData = true;
+			SwappingValidationData = true;
+
+			// allocate equal space for both
+			LoadedValidationMinibatches = LoadedTrainingMinibatches = MaxDataMinibatches / 2;
+
+			// empty textures
+			VisibleTrainingTextures = AllocateEmptyMinibatchTextures(LoadedTrainingMinibatches);
+			VisibleValidationTextures = AllocateEmptyMinibatchTextures(LoadedValidationMinibatches);
+		}
+	}
+	CurrentTrainingRowIndex = 0;
+	CurrentValidationRowIndex = 0;
+
+	IsInitialized = true;
+
+	return true;
+ErrorOcurred:
+	// cleanup
+	Reset();
+	return false;
+}
+
+void RBMTrainer::Reset()
+{
+	IsInitialized = false;
+	ASSERT(LoadedRBM == NULL);
+
+	// clear allocated space
+	LocalWeightBuffer.Release();
+	LocalHBiasBuffer.Release();
+	LocalVBiasBuffer.Release();
+	LocalErrorBuffer.Release();
+
+	// deallocate training textures
+	ReleaseTextures(Textures, Tex::Count);
+
+	// deallocate training data textures
+	ReleaseTextures(VisibleTrainingTextures, LoadedTrainingMinibatches);
+	LoadedTrainingMinibatches = 0;
+	SwappingTrainingData = false;
+	CurrentTrainingRowIndex = 0;
+	CurrentTrainingMinibatchIndex = 0;
+
+
 	if(ValidationData)
 	{
-		TransferDataToGPU(ValidationData, VisibleValidationTextures, ValidationMinibatches);
+		// deallocate validation data textures
+		ReleaseTextures(VisibleValidationTextures, LoadedValidationMinibatches);
+		LoadedValidationMinibatches = 0;
+		SwappingValidationData = false;
+		CurrentValidationRowIndex = 0;
+		CurrentValidationMinibatchIndex = 0;
 	}
-
-	BindDepthBuffer(std::max(VisibleCount + 1, MinibatchSize), std::max(HiddenCount + 1, VisibleCount));
 }
 
 void RBMTrainer::Train()
 {
-	assert(IsInitialized == true);
+	ASSERT(IsInitialized == true);
 
-	if(TrainingIndex % Minibatches == 0)
+	if(CurrentTrainingMinibatchIndex == 0)
 	{
-		// shuffle the minibatch order now
-		shuffle(VisibleTextures, Minibatches);
+		if(SwappingTrainingData == true)
+		{
+			SwapInNewMinibatchTextures(CurrentTrainingRowIndex, LoadedTrainingMinibatches, TrainingData, VisibleTrainingTextures);
+		}
 	}
 
-	// get next training minibatch
-	GLuint visible_data = VisibleTextures[TrainingIndex % Minibatches];
+	GLuint visible_data = VisibleTrainingTextures[(CurrentTrainingMinibatchIndex * Prime) % LoadedTrainingMinibatches];
 
 	CalcRandom();
 	CalcEnabledUnits();
@@ -841,7 +812,10 @@ void RBMTrainer::Train()
 	CalcWeightDepth(Textures[Tex::Weights0], Textures[Tex::Weights1]);
 	CalcWeights();
 	
-	TrainingIndex++;
+	// update the minibatch index
+	CurrentTrainingMinibatchIndex = (CurrentTrainingMinibatchIndex + 1) % LoadedTrainingMinibatches;
+	// and update our row index
+	CurrentTrainingRowIndex = (CurrentTrainingRowIndex + MinibatchSize) % TrainingData->GetRowCount();
 }
 
 float* GetTexture(int width, int height, GLuint texture)
@@ -1301,7 +1275,7 @@ void RBMTrainer::CalcWeightDeltas()
 	program_calc_weight_deltas.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::DeltaWeights1]);
 
 	// only update these factors every 250 training iterations
-	if(TrainingIndex % 250 == 0)
+	if(CurrentTrainingMinibatchIndex % 250 == 0)
 	{
 		// read back the deltas so we can get statistics about them
 		glReadBuffer(GL_COLOR_ATTACHMENT0);
@@ -1340,7 +1314,7 @@ void RBMTrainer::CalcWeights()
 	program_calc_weights.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::Weights1]);
 
 	// only update these factors every 250 training iterations
-	if(TrainingIndex % 250 == 0)
+	if(CurrentTrainingMinibatchIndex % 250 == 0)
 	{
 		//printf("WFactor: %f\n", WFactor);
 		//printf("DeltaWFactor: %f\n", DeltaWFactor);
@@ -1449,11 +1423,18 @@ float RBMTrainer::GetReconstructionError()
 
 float RBMTrainer::GetValidationReconstructionError()
 {
-	if(ValidationMinibatches > 0)
+	if(LoadedValidationMinibatches > 0)
 	{
+		if(CurrentValidationMinibatchIndex == 0)
+		{
+			if(SwappingValidationData == true)
+			{
+				SwapInNewMinibatchTextures(CurrentValidationRowIndex, LoadedValidationMinibatches, ValidationData, VisibleValidationTextures);
+			}
+		}
 
 		// get our validation batch
-		GLuint vis = VisibleValidationTextures[TrainingIndex % ValidationMinibatches];
+		GLuint vis = VisibleValidationTextures[(CurrentValidationMinibatchIndex * Prime) % LoadedValidationMinibatches];
 	
 		// calculate hidden states and reconstructions
 		CalcRandom();
@@ -1472,6 +1453,11 @@ float RBMTrainer::GetValidationReconstructionError()
 
 		float result = CalcError(Textures[Tex::ValidationVisible], Textures[Tex::ValidationVisiblePrime]);
 
+		// update the minibatch index
+		CurrentValidationMinibatchIndex = (CurrentValidationMinibatchIndex + 1) % LoadedValidationMinibatches;
+		// and update our row index
+		CurrentValidationRowIndex = (CurrentValidationRowIndex + MinibatchSize) % ValidationData->GetRowCount();
+		
 		return result;
 	}
 	return -1.0f;

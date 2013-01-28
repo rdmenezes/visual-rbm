@@ -4,6 +4,12 @@
 #include <stdlib.h>
 #include <memory>
 
+#ifdef DEBUG
+#define ASSERT(X) if(!(X)) {__debugbreak();}
+#else
+#define ASSERT(X) (void)0;
+#endif
+
 // get a gaussian distributed random variable
 extern double NextGaussian();
 extern float CalcMeanAbsValue(float* buffer, int count);
@@ -31,6 +37,12 @@ void shuffle(T* in_buffer, uint32_t in_count)
 
 		swap(in_buffer[k], in_buffer[index]);
 	}
+}
+
+template<typename T>
+T clamp(T in_val, T in_min, T in_max)
+{
+	return in_val < in_min ? in_min : (in_val > in_max ? in_max : in_val);
 }
 
 template <typename T, uint32_t Alignment=16>

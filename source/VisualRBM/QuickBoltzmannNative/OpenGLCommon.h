@@ -1,6 +1,5 @@
 #pragma once
 
-#include <assert.h>
 // opengl and friends
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -18,11 +17,16 @@ extern void BindDepthBuffer(uint32_t rows, uint32_t columns);
 extern void DeleteDepthBuffer();
 
 // allocate textures
+
+extern void RegisterAllocationCounter(uint32_t*);
+
 extern GLuint AllocateFloatTexture(uint32_t rows, uint32_t columns, float* initial_data=0);
 extern GLuint AllocateUInt8Texture(uint32_t rows, uint32_t columns, uint8_t* initial_data=0);
 extern GLuint AllocateUInt32Texture(uint32_t rows, uint32_t columns, uint32_t* initial_data=0);
 
-extern void ReleaseTextures(GLuint* tex_head, uint32_t count);
+
+
+extern void ReleaseTextures(GLuint*& tex_head, uint32_t count);
 extern void PrintError();
 
 enum ParamType
@@ -50,7 +54,7 @@ struct Shader
 	void RegisterParameter(decltype(T::Count) e, const char* in_name, ParamType in_type)
 	{
 		// increment number of inputs registered
-		assert(_inputs_registered < T::Count);
+		ASSERT(_inputs_registered < T::Count);
 		_inputs_registered++;
 
 		_input[e].Type = in_type;
@@ -58,7 +62,7 @@ struct Shader
 		if(_input[e].Type == Texture)
 		{
 			// assign this texture param a texture unit to use
-			assert(_texture_handle_counter < 32);
+			ASSERT(_texture_handle_counter < 32);
 			_input[e].TextureUnit = GL_TEXTURE0 + _texture_handle_counter++;
 		}
 		
@@ -77,25 +81,25 @@ struct Shader
 
 	void SetParam(decltype(T::Count) e, GLuint tex)
 	{
-		assert(_input[e].Type == Texture);
+		ASSERT(_input[e].Type == Texture);
 		_input[e].TextureHandle = tex;
 	}
 
 	void SetParam(decltype(T::Count) e, int32_t i)
 	{
-		assert(_input[e].Type == Int);
+		ASSERT(_input[e].Type == Int);
 		_input[e].Integer = i;
 	}
 
 	void SetParam(decltype(T::Count) e, float f)
 	{
-		assert(_input[e].Type == Float);
+		ASSERT(_input[e].Type == Float);
 		_input[e].FloatingPoint = f;
 	}
 
 	void SetParam(decltype(T::Count) e, float x, float y)
 	{
-		assert(_input[e].Type == Vec2);
+		ASSERT(_input[e].Type == Vec2);
 		_input[e].X = x;
 		_input[e].Y = y;
 	}

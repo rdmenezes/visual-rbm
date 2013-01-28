@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "Common.h"
 #include "OpenGLCommon.h"
 #include "Shaders.h"
 
@@ -15,6 +16,7 @@ GLuint VertexBufferObject;
 bool ContextCreated = false;
 int WindowId;
 
+uint32_t* AllocationCounter = NULL;
 
 bool StartupOpenGL()
 {
@@ -101,7 +103,7 @@ GLint BuildVertexShader(const char* source)
 	
 	GLint compile_status = -1;
 	glGetShaderiv(shader_handle, GL_COMPILE_STATUS, &compile_status);
-	assert(compile_status == GL_TRUE );
+	ASSERT(compile_status == GL_TRUE );
 	
 	return shader_handle;
 }
@@ -118,7 +120,7 @@ GLint BuildFragmentProgram(const char* source, GLint& size_handle, GLint& depth_
 	// verify that it compiled ok
 	GLint compile_status = -1;
 	glGetShaderiv(shader_handle, GL_COMPILE_STATUS, &compile_status);
-	assert(compile_status == GL_TRUE );
+	ASSERT(compile_status == GL_TRUE );
 	
 	GLint program_handle = glCreateProgram();
 
@@ -143,6 +145,10 @@ GLint BuildFragmentProgram(const char* source, GLint& size_handle, GLint& depth_
 	return program_handle;
 }
 
+void RegisterAllocationCounter(uint32_t* ptr)
+{
+	AllocationCounter = ptr;
+}
 
 GLuint AllocateFloatTexture(uint32_t rows, uint32_t columns, float* initial_data)
 {
@@ -174,6 +180,11 @@ GLuint AllocateFloatTexture(uint32_t rows, uint32_t columns, float* initial_data
 
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 	
+	if(AllocationCounter)
+	{
+		*AllocationCounter += rows * columns * sizeof(float);
+	}
+
 	return result;
 }
 
@@ -203,6 +214,11 @@ GLuint AllocateUInt32Texture(uint32_t rows, uint32_t columns, uint32_t* initial_
 	}
 
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
+
+	if(AllocationCounter)
+	{
+		*AllocationCounter += rows * columns * sizeof(uint32_t);
+	}
 
 	return result;
 }
@@ -234,12 +250,22 @@ GLuint AllocateUInt8Texture(uint32_t rows, uint32_t columns, uint8_t* initial_da
 
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
 
+	if(AllocationCounter)
+	{
+		*AllocationCounter += rows * columns * sizeof(uint8_t);
+	}
+
 	return result;
 }
 
-void ReleaseTextures(GLuint* tex_head, uint32_t count)
+void ReleaseTextures(GLuint*& tex_head, uint32_t count)
 {
-	glDeleteTextures(count, tex_head);
+	if(tex_head)
+	{
+		glDeleteTextures(count, tex_head);
+		delete[] tex_head;
+		tex_head = NULL;
+	}
 }
 
 void PrintError()

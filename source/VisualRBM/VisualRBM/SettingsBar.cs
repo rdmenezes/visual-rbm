@@ -102,7 +102,7 @@ namespace VisualRBM
 
 							break;
 						case ProgramState.TrainerPaused:
-							selectTrainingIdxButton.Enabled = true;
+							selectTrainingIdxButton.Enabled = false;
 							selectValidationIdxButton.Enabled = false;
 							clearValidationDataButton.Enabled = false;
 
@@ -337,29 +337,11 @@ namespace VisualRBM
 			if (ofd.ShowDialog() == DialogResult.OK)
 			{
 				_main_form.Cursor = Cursors.WaitCursor;
-				if (current_state == ProgramState.TrainerPaused)
+				// load IDX file
+				if (RBMProcessor.SetTrainingData(ofd.FileName) == false)
 				{
-					// load IDX file
-					if (RBMProcessor.SetTrainingData(ofd.FileName, false) == false)
-					{
-						_main_form.Cursor = Cursors.Default;
-						return;
-					}
-				}
-				else
-				{
-					bool calc_stats = true;
-					if (RBMProcessor.VisibleType == UnitType.Gaussian)
-					{
-						calc_stats = MessageBox.Show("Does the data need to be normalized?", "", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes;
-					}
-
-					// load IDX file
-					if (RBMProcessor.SetTrainingData(ofd.FileName, calc_stats) == false)
-					{
-						_main_form.Cursor = Cursors.Default;
-						return;
-					}
+					_main_form.Cursor = Cursors.Default;
+					return;
 				}
 				_main_form.Cursor = Cursors.Default;
 
@@ -858,7 +840,14 @@ namespace VisualRBM
 					RBMProcessor.Start(new Action(() =>
 					{
 						this.Invoke(new Action(() => _main_form.Cursor = Cursors.Default));
-						this.CurrentState = ProgramState.TrainerRunning;
+						if (RBMProcessor.IsInitialized == true)
+						{
+							this.CurrentState = ProgramState.TrainerRunning;
+						}
+						else
+						{
+							this.CurrentState = ProgramState.TrainerStopped;
+						}
 					}));
 				}
 				else if (CurrentState == ProgramState.TrainerPaused)
