@@ -58,11 +58,8 @@ VisualRBM will only accept IDX files whose data format is a single precision flo
 Trained networks can be imported to and exported from VisualRBM using a custom binary format.  All multi-byte data is Little Endian and floats are single precision (4 bytes).
 
 || 4 bytes || ASCII String ".RBM" ||
-|| uint8_t || 0xFF if visible units are linear, 0x00 if visible units are sigmoidal ||
 || uint16_t || Number of visible units, v ||
 || uint16_t || Number of hidden units, h ||
-|| float`[`v`]` || If visible units are linear, array of data means.  Nothing otherwise ||
-|| float`[`v`]` || If visible units are linear, array of data standard deviations.  Nothing otherwise ||
 || float`[`v`]` || Visible biases ||
 || float`[`h`]` || Hidden biases ||
 || float`[`v `*` h`]` || Weights stored in row major order, V rows containing H weights each ||
