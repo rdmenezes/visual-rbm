@@ -447,7 +447,8 @@ void RBMTrainer::SwapInNewMinibatchTextures(uint32_t in_StartIndex, uint32_t in_
 		{
 			in_Data->ReadRow(row, row_buffer);
 
-			row += 1;
+			// row index can overflow in here, in which case go back to beginning
+			row = (row + 1) % in_Data->GetRowCount();
 			row_buffer += VisibleCount;
 		}
 
