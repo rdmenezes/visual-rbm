@@ -64,10 +64,6 @@ bool StartupOpenGL()
 	glPolygonMode(GL_FRONT_AND_BACK , GL_FILL);
 
 	glEnable(GL_DEPTH_TEST);
-	// build our framebuffer
-	glGenFramebuffers(1, &FrameBuffer);
-	// set up render target framebuffer
-	glBindFramebuffer(GL_FRAMEBUFFER, FrameBuffer);
 
 	// construct our vertex arrays
 	glGenVertexArrays(1, &VertexArrayObject);
@@ -275,19 +271,61 @@ void PrintError()
 	printf("%s: %x\n", gluErrorString(error), error);
 }
 
-GLuint depth_buffer;
-void BindDepthBuffer(uint32_t rows, uint32_t columns)
+RenderTarget::RenderTarget()
+	: _rows(0)
+	, _columns(0)
+	, _frame_buffer(-1)
+	, _depth_buffer(-1)
 {
-	glGenRenderbuffers(1, &depth_buffer);
-	glBindRenderbuffer(GL_RENDERBUFFER, depth_buffer);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, columns, rows);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth_buffer);
-	
+
+}
+
+void RenderTarget::Reset()
+{
+	if(_depth_buffer != -1)
+	{
+		glDeleteRenderbuffers(1, &_depth_buffer);
+		_depth_buffer = -1;
+	}
+
+	if(_frame_buffer != -1)
+	{
+		glDeleteFramebuffers(1, &_frame_buffer);
+		_frame_buffer = -1;
+	}
+
+	_rows = 0;
+	_columns = 0;
+}
+
+void RenderTarget::Generate(uint32_t Rows, uint32_t Columns)
+{
+	ASSERT(_rows == 0 && _columns == 0 && _frame_buffer == -1 && _depth_buffer == -1);
+
+	_rows = Rows;
+	_columns = Columns;
+
+	// generate framebuffer
+	glGenFramebuffers(1, &_frame_buffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, _frame_buffer);
+
+	// generate depthbuffer for the render targets framebuffer
+	glGenRenderbuffers(1, &_depth_buffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, _depth_buffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, _columns, _rows);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, _depth_buffer);
+
 	glEnable(GL_DEPTH_TEST);
 	glDepthRange(0.0f, 1.0f);
 }
 
-void DeleteDepthBuffer()
+void RenderTarget::SetTarget(GLuint Target)
 {
-	glDeleteRenderbuffers(1, &depth_buffer);
+	_target_texture = Target;
+}
+
+void RenderTarget::BindTarget()
+{
+	glBindFramebuffer(GL_FRAMEBUFFER, _frame_buffer);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, _target_texture, 0);
 }
