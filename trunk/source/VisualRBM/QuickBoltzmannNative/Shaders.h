@@ -16,14 +16,6 @@ const char calc_binary_states[] =
 	"  state = 0.0;\n"
 	"}\n";
 
-const char calc_clear_depth[] = 
-	"#version 330\n"
-	"out float value;\n"
-	"void main()\n"
-	"{\n"
-	" value = -1.0;\n"
-	"}\n";
-
 const char calc_copy_texture[] = 
 	"#version 330\n"
 	"uniform sampler2DRect source;\n"
@@ -100,34 +92,6 @@ const char calc_error_vector[] =
 	"  mean_square_error += diff*diff;\n"
 	" }\n"
 	" mean_square_error /= float(minibatch_size);\n"
-	"}\n";
-
-const char calc_free_energy[] = 
-	"#version 330\n"
-	"uniform sampler2DRect visible;\n"
-	"uniform sampler2DRect rbm;\n"
-	"uniform sampler2DRect hidden_accumulation;\n"
-	"uniform int visible_units;\n"
-	"uniform int hidden_units;\n"
-	"smooth in vec2 tex_coordinate;\n"
-	"out float free_energy;\n"
-	"void main()\n"
-	"{\n"
-	" free_energy = 0.0;\n"
-	" // calc the first term\n"
-	" for(int i = 0; i < visible_units; i++)\n"
-	" {\n"
-	"  float vi = texture(visible, vec2(float(i) + 0.5, tex_coordinate.x)).x;\n"
-	"  float ai = texture(rbm, vec2(0.5, float(i) + 1.5)).x;\n"
-	"  free_energy -= vi * ai;\n"
-	" }\n"
-	" // calc the second term\n"
-	" for(int j = 0; j < hidden_units; j++)\n"
-	" {\n"
-	"  float xj = texture(hidden_accumulation, vec2(float(j) + 0.5, tex_coordinate.x)).x;\n"
-	"  float exp_xj = min(exp(xj), 1E38);\n"
-	"  free_energy -= log(1.0 + exp_xj);\n"
-	" }\n"
 	"}\n";
 
 const char calc_hidden_probabilities[] = 

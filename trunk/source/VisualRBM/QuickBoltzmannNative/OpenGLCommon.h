@@ -9,12 +9,8 @@ extern void ShutdownOpenGL();
 // returns handle to the compiled fragment program
 extern GLint BuildFragmentProgram(const char* source, GLint& size_handle, GLint& depth_handle);
 // framebuffer handle
-extern GLuint FrameBuffer;
 extern GLuint VertexArrayObject;
 extern GLuint VertexBufferObject;
-
-extern void BindDepthBuffer(uint32_t rows, uint32_t columns);
-extern void DeleteDepthBuffer();
 
 // allocate textures
 
@@ -25,9 +21,27 @@ extern GLuint AllocateUInt8Texture(uint32_t rows, uint32_t columns, uint8_t* ini
 extern GLuint AllocateUInt32Texture(uint32_t rows, uint32_t columns, uint32_t* initial_data=0);
 
 
-
 extern void ReleaseTextures(GLuint*& tex_head, uint32_t count);
 extern void PrintError();
+
+// render targets have a framebuffer with depth attached
+struct RenderTarget
+{
+	RenderTarget();
+	void Reset();
+	void Generate(uint32_t Rows, uint32_t Columns);
+	void SetTarget(GLuint Target);
+	void BindTarget();
+	uint32_t GetRows() {return _rows;}
+	uint32_t GetColumns() {return _columns;}
+private:
+	uint32_t _rows;
+	uint32_t _columns;
+
+	GLuint _frame_buffer;
+	GLuint _depth_buffer;
+	GLuint _target_texture;
+};
 
 enum ParamType
 {
@@ -41,7 +55,7 @@ enum ParamType
 template<typename T>
 struct Shader
 {
-	Shader() : _texture_handle_counter(0), _inputs_registered(0), _depth(0.5)
+	Shader() : _texture_handle_counter(0), _inputs_registered(0), _depth(0.5), _target(NULL)
 	{
 	}
 
@@ -73,10 +87,9 @@ struct Shader
 		_depth = Depth;
 	}
 
-	void SetRenderTargetSize(int32_t Width, int32_t Height)
+	void SetRenderTarget(RenderTarget& Target)
 	{
-		_rendertarget_width = Width;
-		_rendertarget_height = Height;
+		_target = &Target;
 	}
 
 	void SetParam(decltype(T::Count) e, GLuint tex)
@@ -114,12 +127,18 @@ struct Shader
 		// set to use program
 		glUseProgram(_program);
 
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, RenderDestination, 0);
+		//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_RECTANGLE, RenderDestination, 0);
+		_target->SetTarget(RenderDestination);
+		_target->BindTarget();
+
+		const uint32_t rendertarget_width = _target->GetColumns();
+		const uint32_t rendertarget_height = _target->GetRows();
+
 		// set up viewport
-		glViewport(0, 0, _rendertarget_width, _rendertarget_height);
+		glViewport(0, 0, rendertarget_width, rendertarget_height);
 
 		// set width/height parameters (same for all shaders)
-		glUniform2f(_size_location, (float)_rendertarget_width, (float)_rendertarget_height);
+		glUniform2f(_size_location, (float)rendertarget_width, (float)rendertarget_height);
 		glUniform1f(_depth_location, _depth);
 
 		// iterate over shader parameters and set them up
@@ -208,11 +227,10 @@ private:
 	GLint _size_location;
 	GLint _depth_location;
 
-	GLint _rendertarget_width;
-	GLint _rendertarget_height;
-
 	float _depth;
 
 	int32_t _texture_handle_counter;
 	int32_t _inputs_registered;
+
+	RenderTarget* _target;
 };

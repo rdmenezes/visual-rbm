@@ -679,7 +679,7 @@ namespace VisualRBM
 						return false;
 					}
 				}
-				else if (tb == hiddenUnitsTextBox)
+				else if (tb == hiddenDropoutTextBox)
 				{
 					if (db != RBMProcessor.HiddenDropout)
 					{
