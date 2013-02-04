@@ -62,7 +62,6 @@ bool StartupOpenGL()
 
 	// some bookkeeping
 	glPolygonMode(GL_FRONT_AND_BACK , GL_FILL);
-
 	glEnable(GL_DEPTH_TEST);
 
 	// construct our vertex arrays
@@ -70,11 +69,10 @@ bool StartupOpenGL()
 	glBindVertexArray(VertexArrayObject);
 	// generate the buffer
 	glGenBuffers(1, &VertexBufferObject);
-
+	
 	glBindBuffer(GL_ARRAY_BUFFER, VertexBufferObject);
 	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(float), NULL, GL_DYNAMIC_DRAW);
 	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
-
 
 	return true;
 }
@@ -157,8 +155,8 @@ GLuint AllocateFloatTexture(uint32_t rows, uint32_t columns, float* initial_data
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	// clamp uv coordinates
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 
 	if(initial_data == NULL)
 	{
@@ -172,10 +170,8 @@ GLuint AllocateFloatTexture(uint32_t rows, uint32_t columns, float* initial_data
 		glTexImage2D(GL_TEXTURE_RECTANGLE, 0, GL_R32F, columns, rows, 0, GL_RED, GL_FLOAT, initial_data);
 	}
 
-	
-
 	glBindTexture(GL_TEXTURE_RECTANGLE, 0);
-	
+
 	if(AllocationCounter)
 	{
 		*AllocationCounter += rows * columns * sizeof(float);
@@ -195,8 +191,8 @@ GLuint AllocateUInt32Texture(uint32_t rows, uint32_t columns, uint32_t* initial_
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	// clamp uv coordinates
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE );
+	glTexParameteri(GL_TEXTURE_RECTANGLE, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE );
 
 	if(initial_data == NULL)
 	{
@@ -267,7 +263,6 @@ void ReleaseTextures(GLuint*& tex_head, uint32_t count)
 void PrintError()
 {
 	GLenum error = glGetError();
-
 	printf("%s: %x\n", gluErrorString(error), error);
 }
 
