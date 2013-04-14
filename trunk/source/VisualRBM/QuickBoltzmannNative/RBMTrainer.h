@@ -1,7 +1,8 @@
 #pragma once
 
 #include <stdint.h>
-
+#include <SiCKL.h>
+using namespace SiCKL;
 #include "Common.h"
 
 enum Model
@@ -52,12 +53,12 @@ public:
 	void SetHiddenCount(uint32_t in_units) {ASSERT(IsInitialized == false); HiddenCount = in_units;};
 	void SetMinibatchSize(uint32_t in_size) {ASSERT(IsInitialized == false); MinibatchSize = in_size;};
 
-	void SetLearningRate(float in_learning_rate) { LearningRate = in_learning_rate;};
-	void SetMomentum(float in_momentum) { Momentum = in_momentum;};
-	void SetL1Regularization(float in_reg) {L1Regularization = in_reg;};
-	void SetL2Regularization(float in_reg) {L2Regularization = in_reg;};
-	void SetHiddenDropout(float in_dropout) {HiddenDropout = in_dropout;};
-	void SetVisibleDropout(float in_droput) {VisibleDropout = in_droput;};
+	void SetLearningRate(float in_learning_rate) { LearningRate = in_learning_rate; UpdateTrainingParameters = true;};
+	void SetMomentum(float in_momentum) { Momentum = in_momentum; UpdateTrainingParameters = true;};
+	void SetL1Regularization(float in_reg) {L1Regularization = in_reg; UpdateTrainingParameters = true;};
+	void SetL2Regularization(float in_reg) {L2Regularization = in_reg; UpdateTrainingParameters = true;};
+	void SetHiddenDropout(float in_dropout) {HiddenDropout = in_dropout; UpdateDropout = true;};
+	void SetVisibleDropout(float in_droput) {VisibleDropout = in_droput; UpdateDropout = true;};
 	// sets the maximum GPU allocation allowed before we swap in data from disk (in bytes)
 	void SetMaxGPUAllocation(uint32_t in_max_data_memory) {MaxDataMemory = in_max_data_memory;}
 
@@ -126,60 +127,48 @@ protected:
 	float HiddenDropout;
 	float VisibleDropout;
 
-	/** Weight Factors **/
-	float HFactor;
-	float VFactor;
-	float WFactor;
-
-	float DeltaHFactor;
-	float DeltaVFactor;
-	float DeltaWFactor;
-	
+	bool UpdateDropout;
+	bool UpdateTrainingParameters;
 
 	/** OpenGL Handles **/
-	// array of textures used in training
-	GLuint* Textures;
-	// array of the raw data used in training
-	GLuint* VisibleTrainingTextures;
-	GLuint* VisibleValidationTextures;
+
+	OpenGLCompiler Compiler;
+
+	OpenGLBuffer2D* Buffers;
+
+	OpenGLBuffer2D* VisibleTrainingBuffers;
+	OpenGLBuffer2D* VisibleValidationBuffers;
+
+	void ReleaseBuffers(OpenGLBuffer2D*&, uint32_t);
+
+	// kernel sources
+#	include "RBMKernels.h"
+	// recompile kernel programs as necessary
+	void BuildKernels();
+	void BuildEnabledKernels();
+	void BuildVisibleHiddenKernels();
+	void BuildWeightKernels();
+
+	void FreeKernels();
 
 	/** Training Methods **/
-
-	// calculate which visible/hidden units are enabled
-	void CalcEnabledUnits();	
-	// update the random number buffers
-	void CalcRandom();			
-	// calculate depth mask for visible units (given the enabled visible texture)
-	void CalcVisibleDepth(GLuint v);
-	// calculate depth mask for hidden units (given the enabled hidden textures)
-	void CalcHiddenDepth(GLuint h);
-	// calculate the depth mask for the weights (given the enabled visible and hidden textures)
-	void CalcWeightDepth(GLuint prev_w, GLuint w);
-	// copy visible data into new texture
-	void CalcVisibleCopy(GLuint in_v, GLuint out_v);
-	// calculate hidden probabilities
-	void CalcHiddenProbs(GLuint v, GLuint h);
-	// calculate the hidden states
-	void CalcHiddenStates(GLuint hprob, GLuint hstate);
-	// calculate the visible activation/probabilities
-	void CalcVisible(GLuint hstate, GLuint v);
-	// calculate the weight deltas
-	void CalcWeightDeltas();
-	// calculate the new weights
+	void CalcEnabledUnits();
+	void CalcVisibleCopy(OpenGLBuffer2D& source, OpenGLBuffer2D& destination);
+	void CalcHiddenProbs(OpenGLBuffer2D& visible, OpenGLBuffer2D& hidden_probs);
+	void CalcHiddenStates(OpenGLBuffer2D& probs, OpenGLBuffer2D& states);
+	void CalcVisiblePrime(OpenGLBuffer2D& hidden, OpenGLBuffer2D& visible);
 	void CalcWeights();
-	// calculates the differnece between the given visible/visible reconstruction
-	float CalcError(GLuint v, GLuint vp);
-
+	float CalcError(OpenGLBuffer2D& visible, OpenGLBuffer2D& reconstruction);
 	/** Some helper methods **/
 
 	// calculates means and stddev of each piece of data
 	void CalcMeans(AlignedMemoryBlock<float>& out_means);
 	// allocates empty textures for training/validation data
-	GLuint* AllocateEmptyMinibatchTextures(uint32_t Count);
+	OpenGLBuffer2D* AllocateEmptyMinibatchTextures(uint32_t Count);
 	// copies IDX data (in random order) into textures for training/validation data
-	GLuint* AllocatePopulatedMinibatchTextures(uint32_t Count, IDX* Data);
-	// transfer a new subset of the given IDX data (in random order) into already allocated textures
-	void SwapInNewMinibatchTextures(uint32_t StartIndex, uint32_t Count, IDX* Data, GLuint* Handles);
+	OpenGLBuffer2D* AllocatePopulatedMinibatchTextures(uint32_t Count, IDX* Data);
+	// transfer a new subset of the given IDX data (in random order) into already allocated buffers
+	void SwapInNewMinibatchData(uint32_t StartIndex, uint32_t Count, IDX* Data, OpenGLBuffer2D* Buffers);
 
 	// number bytes worth of training examples we can have on the GPU at any given time
 	uint32_t MaxDataMemory;

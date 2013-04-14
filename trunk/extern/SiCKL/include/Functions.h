@@ -1,0 +1,37 @@
+DEFINE_FUNC_0(Int2, Index)
+DEFINE_FUNC_0(Float2, NormalizedIndex)
+
+// trig functions
+DEFINE_FUNC_1(Float, Sin, Float)
+DEFINE_FUNC_1(Float, Cos, Float)
+DEFINE_FUNC_1(Float, Tan, Float)
+DEFINE_FUNC_1(Float, ASin, Float)
+DEFINE_FUNC_1(Float, ACos, Float)
+DEFINE_FUNC_1(Float, ATan, Float)
+DEFINE_FUNC_1(Float, SinH, Float)
+DEFINE_FUNC_1(Float, CosH, Float)
+DEFINE_FUNC_1(Float, TanH, Float)
+
+// exponential functions
+DEFINE_FUNC_1(Float, Pow, Float)
+DEFINE_FUNC_1(Float, Exp, Float)
+DEFINE_FUNC_1(Float, Log, Float)
+DEFINE_FUNC_1(Float, Exp2, Float)
+DEFINE_FUNC_1(Float, Log2, Float)
+DEFINE_FUNC_1(Float, Sqrt, Float)
+// common
+DEFINE_FUNC_1(Float, Abs, Float)
+DEFINE_FUNC_1(Int, Abs, Int)
+DEFINE_FUNC_1(Float, Sign, Float)
+DEFINE_FUNC_1(Int, Sign, Int)
+DEFINE_FUNC_1(Float, Floor, Float)
+DEFINE_FUNC_1(Float, Ceiling, Float)
+DEFINE_FUNC_2(Float, Min, Float, Float)
+DEFINE_FUNC_2(Float, Max, Float, Float)
+DEFINE_FUNC_3(Float, Clamp, Float, Float, Float)
+DEFINE_FUNC_1(Float, IsNan, Float)
+DEFINE_FUNC_1(Float, IsInf, Float)
+// vector math
+DEFINE_FUNC_1(Float, Length, Float2)
+DEFINE_FUNC_2(Float, Distance, Float2, Float2)
+DEFINE_FUNC_2(Float, Dot, Float2, Float2)

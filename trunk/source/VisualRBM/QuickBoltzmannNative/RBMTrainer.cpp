@@ -1,7 +1,5 @@
 #include "RBMTrainer.h"
 #include "Common.h"
-#include "OpenGLCommon.h"
-#include "Shaders.h"
 
 #include "IDX.hpp"
 #include "RBM.hpp"
@@ -14,6 +12,14 @@
 #include <stdint.h>
 
 #define ENABLE_DEBUG_CODE 0
+#if ENABLE_DEBUG_CODE
+#define debug_log(...) printf(__VA_ARGS__)
+#else
+#define debug_log(...) (void)0
+#endif
+
+
+#define SAFE_FREE(X) if(X != nullptr) delete X; X = nullptr;
 
 // largest 32 bit prime
 const uint64_t Prime = 4294967291;
@@ -27,12 +33,7 @@ const uint64_t Prime = 4294967291;
 // although they may be in a different order
 // 
 // I'll be taking advantage of this fact to do stochastic gradient descent without
-// having to explicitly shuffle the minibatches
-
-#pragma region Shader Enums
-
-#pragma warning ( push )
-#pragma warning (disable : 4480)
+// having to explicitly shuffle the minibatche buffers
 
 #define ENUM(A) struct A { enum  : uint32_t {
 #define ENDENUM };};
@@ -63,115 +64,10 @@ ENUM(Tex)
 	Count
 ENDENUM
 
-ENUM(CalcRandomParams)
-	Seeds = 0,
-	Count
-ENDENUM
-
-ENUM(CalcDepthMapParams)
-	EnabledRows = 0,
-	EnabledColumns,
-	PreviousValues,
-	CheckRows,
-	CheckColumns,
-	UsePreviousValues,
-	Offset,
-	Count
-ENDENUM
-
-ENUM(CalcEnabledUnitParams)
-	Random = 0,
-	Probability,
-	Count
-ENDENUM
-
-ENUM(CalcCopyTextureParams)
-	Source = 0,
-	Count
-ENDENUM
-
-ENUM(CalcHiddenProbParams)
-	VisibleUnits = 0,
-	VisibleStates,
-	Weights,
-	Count
-ENDENUM
-
-ENUM(CalcHiddenStateParams)
-	Random = 0,
-	Probs,
-	Count
-ENDENUM
-
-ENUM(CalcVisibleParams)
-	HiddenUnits = 0,
-	HiddenStates,
-	Weights,
-	Sigmoid,
-	Count
-ENDENUM
-
-ENUM(CalcWeightDeltaParams)
-	Visible = 0,
-	Hidden,
-	VisiblePrime,
-	HiddenPrime,
-	PrevWeightDeltas,
-	PrevWeights,
-	MinibatchSize,
-	Momentum,
-	Count
-ENDENUM
-
-ENUM(CalcWeightParams)
-	DeltaWeights = 0,
-	PrevWeights,
-	WeightFactor,
-	VisibleFactor,
-	HiddenFactor,
-	LearningRate,
-	L1Regularization,
-	L2Regularization,
-	Count
-ENDENUM
-
-ENUM(CalcErrorParams)
-	Visible = 0,
-	VisiblePrime,
-	Minibatchsize,
-	Count
-ENDENUM
-
-
-#pragma warning (pop)
-
-#pragma endregion
-
-/** Shaders **/
-Shader<CalcRandomParams> program_calc_randoms;
-Shader<CalcEnabledUnitParams> program_calc_enabled_units;
-Shader<CalcCopyTextureParams> program_calc_copy_texture;
-Shader<CalcDepthMapParams> program_calc_depth_map;
-Shader<CalcHiddenProbParams> program_calc_hidden_probs;
-Shader<CalcHiddenStateParams> program_calc_hidden_states;
-Shader<CalcVisibleParams> program_calc_visible;
-Shader<CalcWeightDeltaParams> program_calc_weight_deltas;
-Shader<CalcWeightParams> program_calc_weights;
-Shader<CalcErrorParams> program_calc_error;
-
-/** Render Targets **/
-RenderTarget target_hidden_rands;
-RenderTarget target_visible_units;
-RenderTarget target_hidden_units;
-RenderTarget target_visible_minibatch;
-RenderTarget target_hidden_minibatch;
-RenderTarget target_weights;
-RenderTarget target_error;
-
 RBMTrainer::RBMTrainer() 
-: Textures(NULL)
-, VisibleTrainingTextures(NULL)
-, VisibleValidationTextures(NULL)
+: Buffers(NULL)
+, VisibleTrainingBuffers(NULL)
+, VisibleValidationBuffers(NULL)
 , IsInitialized(false)
 , LoadedRBM(NULL)
 , TrainingData(NULL)
@@ -189,6 +85,8 @@ RBMTrainer::RBMTrainer()
 , L2Regularization(0.0f)
 , HiddenDropout(0.5f)
 , VisibleDropout(0.0f)
+, UpdateDropout(false)
+, UpdateTrainingParameters(false)
 // 1 gigabyte
 , MaxDataMemory(1 * 1024 * 1024 * 1024)
 , SwappingTrainingData(false)
@@ -199,80 +97,29 @@ RBMTrainer::RBMTrainer()
 , CurrentValidationRowIndex(0)
 , TotalTrainingMinibatches(0)
 , TotalValidationMinibatches(0)
+// kernel programs
+, CalcEnabledVisible(nullptr)
+, CalcEnabledHidden(nullptr)
+, CopyVisible(nullptr)
+, CalcHiddenProbability(nullptr)
+, CalcStates(nullptr)
+, CalcVisible(nullptr)
+, CalcWeightUpdates(nullptr)
+, CalcErrorVector(nullptr)
 {
 	// startup opengl
-	if(!StartupOpenGL())
+	if(OpenGLRuntime::Initialize() == false)
 	{
 		PreviousError = RequiredOpenGLVersionUnsupported;
 		return;
 	}
-
-	/**  Build our Shaders **/
-	program_calc_randoms.Build(calc_random, "next_int");
-		program_calc_randoms.RegisterParameter(CalcRandomParams::Seeds, "seeds", Texture);
-
-	program_calc_enabled_units.Build(calc_enabled_unit, "state");
-		program_calc_enabled_units.RegisterParameter(CalcEnabledUnitParams::Random, "random", Texture);
-		program_calc_enabled_units.RegisterParameter(CalcEnabledUnitParams::Probability, "probability", Float);
-
-	program_calc_copy_texture.Build(calc_copy_texture, "value");
-		program_calc_copy_texture.RegisterParameter(CalcCopyTextureParams::Source, "source", Texture);
-
-	program_calc_depth_map.Build(calc_depthmap, "value");
-		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::EnabledRows, "enabled_rows", Texture);
-		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::EnabledColumns, "enabled_columns", Texture);
-		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::PreviousValues, "prev_vals", Texture);
-		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::CheckRows, "check_rows", Int);
-		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::CheckColumns, "check_columns", Int);
-		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::UsePreviousValues, "use_prev_vals", Int);
-		program_calc_depth_map.RegisterParameter(CalcDepthMapParams::Offset, "offset", Vec2);
-
-	program_calc_hidden_probs.Build(calc_hidden_probabilities, "probability");
-		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::VisibleUnits, "visible_units", Int);	
-		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::VisibleStates, "visible_states", Texture);
-		program_calc_hidden_probs.RegisterParameter(CalcHiddenProbParams::Weights, "rbm_weights", Texture);
-
-	program_calc_hidden_states.Build(calc_binary_states, "state");
-		program_calc_hidden_states.RegisterParameter(CalcHiddenStateParams::Random, "random", Texture);
-		program_calc_hidden_states.RegisterParameter(CalcHiddenStateParams::Probs, "probabilities", Texture);
-
-	program_calc_visible.Build(calc_visible_reconstructions, "reconstruction");
-		program_calc_visible.RegisterParameter(CalcVisibleParams::HiddenUnits, "hidden_units", Int);
-		program_calc_visible.RegisterParameter(CalcVisibleParams::HiddenStates, "hidden_states", Texture);
-		program_calc_visible.RegisterParameter(CalcVisibleParams::Weights, "rbm_weights", Texture);
-		program_calc_visible.RegisterParameter(CalcVisibleParams::Sigmoid, "sigmoid", Int);
-		
-	program_calc_weight_deltas.Build(calc_weight_deltas, "delta");
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::Visible, "visible", Texture);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::Hidden, "hidden", Texture);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::VisiblePrime, "visible_prime", Texture);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::HiddenPrime, "hidden_prime", Texture);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::PrevWeightDeltas, "prev_weight_deltas", Texture);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::PrevWeights, "prev_weights", Texture);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::MinibatchSize, "minibatch_size", Int);
-		program_calc_weight_deltas.RegisterParameter(CalcWeightDeltaParams::Momentum, "momentum", Float);
-
-	program_calc_weights.Build(calc_new_weights, "new_weight");
-		program_calc_weights.RegisterParameter(CalcWeightParams::DeltaWeights, "delta_weights", Texture);
-		program_calc_weights.RegisterParameter(CalcWeightParams::PrevWeights, "prev_weights", Texture);
-		program_calc_weights.RegisterParameter(CalcWeightParams::WeightFactor, "weight_factor", Float);
-		program_calc_weights.RegisterParameter(CalcWeightParams::HiddenFactor, "hidden_factor", Float);
-		program_calc_weights.RegisterParameter(CalcWeightParams::VisibleFactor, "visible_factor", Float);
-		program_calc_weights.RegisterParameter(CalcWeightParams::LearningRate, "learning_rate", Float);
-		program_calc_weights.RegisterParameter(CalcWeightParams::L1Regularization, "l1_regularization", Float);
-		program_calc_weights.RegisterParameter(CalcWeightParams::L2Regularization, "l2_regularization", Float);
-
-	program_calc_error.Build(calc_error_vector, "mean_square_error");
-		program_calc_error.RegisterParameter(CalcErrorParams::Visible, "visible", Texture);
-		program_calc_error.RegisterParameter(CalcErrorParams::VisiblePrime, "visible_reconstruction", Texture);
-		program_calc_error.RegisterParameter(CalcErrorParams::Minibatchsize, "minibatch_size", Int);
 }
 
 RBMTrainer::~RBMTrainer()
 {
-	delete[] Textures;
+	delete[] Buffers;
 
-	ShutdownOpenGL();
+	OpenGLRuntime::Finalize();
 }
 
 void RBMTrainer::SetTrainingData(IDX* in_data)
@@ -389,15 +236,15 @@ void RBMTrainer::CalcMeans(AlignedMemoryBlock<float>& out_means)
 	}
 }
 
-GLuint* RBMTrainer::AllocateEmptyMinibatchTextures(uint32_t in_Count)
+OpenGLBuffer2D* RBMTrainer::AllocateEmptyMinibatchTextures(uint32_t in_Count)
 {
-	float* zero_bufffer = new float[MinibatchSize * VisibleCount];
-	memset(zero_bufffer, 0x00, sizeof(float) * MinibatchSize * VisibleCount);
-	GLuint* textures = new GLuint[in_Count];
+	float* zero_bufffer = new float[(VisibleCount + 1) * MinibatchSize];
+	memset(zero_bufffer, 0x00, sizeof(float) * (VisibleCount + 1) * MinibatchSize);
+	OpenGLBuffer2D* textures = new OpenGLBuffer2D[in_Count];
 
 	for(uint32_t i = 0; i < in_Count; i++)
 	{
-		textures[i] = AllocateFloatTexture(MinibatchSize, VisibleCount, zero_bufffer);
+		textures[i] = OpenGLBuffer2D(VisibleCount + 1, MinibatchSize, ReturnType::Float, zero_bufffer);
 	}
 
 	// don't forget to cleanup!
@@ -406,29 +253,31 @@ GLuint* RBMTrainer::AllocateEmptyMinibatchTextures(uint32_t in_Count)
 	return textures;
 }
 
-GLuint* RBMTrainer::AllocatePopulatedMinibatchTextures(uint32_t in_Count, IDX* in_Data)
+OpenGLBuffer2D* RBMTrainer::AllocatePopulatedMinibatchTextures(uint32_t in_Count, IDX* in_Data)
 {
 	// just make sure we're not getting a weird Count value
 	ASSERT(in_Data->GetRowCount() / MinibatchSize >= in_Count);
 
-	float* minibatch_buffer = new float[MinibatchSize * VisibleCount];
+	float* minibatch_buffer = new float[(VisibleCount + 1) * MinibatchSize];
 
 	uint32_t row = 0;
-	GLuint* Textures = new GLuint[in_Count];
+	OpenGLBuffer2D* Textures = new OpenGLBuffer2D[in_Count];
 	for(uint32_t i = 0; i < in_Count; i++)
 	{
 		float* row_buffer = minibatch_buffer;
 		// fill up this minibatch
 		for(uint32_t j = 0; j < MinibatchSize; j++)
 		{
-			in_Data->ReadRow(row, row_buffer);
+			// bias
+			row_buffer[0] = 1.0f;
+			in_Data->ReadRow(row, row_buffer + 1);
 
 			row += 1;
-			row_buffer += VisibleCount;
+			row_buffer += (VisibleCount + 1);
 		}
 
 		// transfer to GPU
-		Textures[i] = AllocateFloatTexture(MinibatchSize, VisibleCount, minibatch_buffer);
+		Textures[i] = OpenGLBuffer2D(VisibleCount + 1, MinibatchSize, ReturnType::Float, minibatch_buffer);
 	}
 
 	// don't forget to cleanup
@@ -437,9 +286,9 @@ GLuint* RBMTrainer::AllocatePopulatedMinibatchTextures(uint32_t in_Count, IDX* i
 	return Textures;
 }
 
-void RBMTrainer::SwapInNewMinibatchTextures(uint32_t in_StartIndex, uint32_t in_Count, IDX* in_Data, GLuint* in_Handles)
+void RBMTrainer::SwapInNewMinibatchData(uint32_t in_StartIndex, uint32_t in_Count, IDX* in_Data, OpenGLBuffer2D* in_Buffers)
 {
-	float* minibatch_buffer = new float[MinibatchSize * VisibleCount];
+	float* minibatch_buffer = new float[(VisibleCount + 1) * MinibatchSize];
 
 	uint32_t row = in_StartIndex;
 	for(uint32_t i = 0; i < in_Count; i++)
@@ -455,8 +304,7 @@ void RBMTrainer::SwapInNewMinibatchTextures(uint32_t in_StartIndex, uint32_t in_
 		}
 
 		// copy this new data into texture memory
-		glBindTexture(GL_TEXTURE_RECTANGLE, in_Handles[i]);
-		glTexSubImage2D(GL_TEXTURE_RECTANGLE, 0, 0, 0, VisibleCount, MinibatchSize, GL_RED, GL_FLOAT, minibatch_buffer);
+		in_Buffers[i].SetData(minibatch_buffer);
 	}
 
 	delete[] minibatch_buffer;
@@ -492,14 +340,14 @@ bool RBMTrainer::Initialize()
 		initial_random_seeds[k] = rand();
 	}
 
-	uint32_t* initial_visible_seeds = new uint32_t[VisibleCount];
-	for(uint32_t k = 0; k < VisibleCount; k++)
+	uint32_t* initial_visible_seeds = new uint32_t[VisibleCount + 1];
+	for(uint32_t k = 0; k <= VisibleCount; k++)
 	{
 		initial_visible_seeds[k] = rand();
 	}
 
-	uint32_t* initial_hidden_seeds = new uint32_t[HiddenCount];
-	for(uint32_t k = 0; k < HiddenCount; k++)
+	uint32_t* initial_hidden_seeds = new uint32_t[HiddenCount + 1];
+	for(uint32_t k = 0; k <= HiddenCount; k++)
 	{
 		initial_hidden_seeds[k] = rand();
 	}
@@ -540,7 +388,7 @@ bool RBMTrainer::Initialize()
 					switch(VisibleType)
 					{
 					case Binary:
-						// logit
+						// logit function
 						{
 							float& m = data_means[i - 1];
 							m = clamp(m, 0.0001f, 0.999f);
@@ -590,101 +438,61 @@ bool RBMTrainer::Initialize()
 		LoadedRBM = NULL;
 	}
 
-	// calculate initial weight factors
-	
-	// visible
-	VFactor = 0.0f;
-	for(uint32_t i = 0; i < VisibleCount; i++)
-		VFactor += abs(initial_rbm_weights[(HiddenCount + 1) * (i + 1)]);
-	VFactor /= VisibleCount;
-
-	// hidden
-	HFactor = 0.0f;
-	for(uint32_t j = 0; j < HiddenCount; j++)
-		HFactor += abs(initial_rbm_weights[j + 1]);
-	HFactor /= HiddenCount;
-
-	// weights
-	WFactor = 0.0f;
-	for(uint32_t i = 0; i < VisibleCount; i++)
-		for(uint32_t j = 0; j < HiddenCount; j++)
-			WFactor += abs(initial_rbm_weights[(HiddenCount + 1) * (i + 1) + (j + 1)]);
-	WFactor /= VisibleCount * HiddenCount; 
-
-	DeltaHFactor = DeltaVFactor = DeltaWFactor = 1.0f;
-
 	/** Allocate Texture Memory for Trainer **/
 	
-	uint32_t TotalAllocated = 0;
-	RegisterAllocationCounter(&TotalAllocated);
+	Buffers = new OpenGLBuffer2D[Tex::Count];
 
-	Textures = new GLuint[Tex::Count];
-
-	Textures[Tex::Visible] = AllocateFloatTexture(MinibatchSize, VisibleCount);
+	Buffers[Tex::Visible] = OpenGLBuffer2D(VisibleCount + 1, MinibatchSize, ReturnType::Float, NULL);
+		
 	// 2 buffers for RBM weights
-	Textures[Tex::Weights0] = AllocateFloatTexture(VisibleCount + 1, HiddenCount + 1, initial_rbm_weights);
-	Textures[Tex::Weights1] = AllocateFloatTexture(VisibleCount + 1, HiddenCount + 1);
+	Buffers[Tex::Weights0] = OpenGLBuffer2D(HiddenCount + 1, VisibleCount + 1, ReturnType::Float, initial_rbm_weights);
+	Buffers[Tex::Weights1] = OpenGLBuffer2D(HiddenCount + 1, VisibleCount + 1, ReturnType::Float, NULL);
 	// hidden buffers
-	Textures[Tex::HiddenProbs] = AllocateFloatTexture(MinibatchSize, HiddenCount);
-	Textures[Tex::HiddenStates] = AllocateFloatTexture(MinibatchSize, HiddenCount);
+	Buffers[Tex::HiddenProbs] = OpenGLBuffer2D(HiddenCount + 1, MinibatchSize, ReturnType::Float, NULL);
+	Buffers[Tex::HiddenStates] = OpenGLBuffer2D(HiddenCount + 1, MinibatchSize, ReturnType::Float, NULL);
 	// reconstruction buffers
-	Textures[Tex::VisiblePrime] = AllocateFloatTexture(MinibatchSize, VisibleCount);
-	Textures[Tex::HiddenPrime] = AllocateFloatTexture(MinibatchSize, HiddenCount);
+	Buffers[Tex::VisiblePrime] = OpenGLBuffer2D(VisibleCount + 1, MinibatchSize, ReturnType::Float, NULL);
+	Buffers[Tex::HiddenPrime] = OpenGLBuffer2D(HiddenCount + 1, MinibatchSize, ReturnType::Float, NULL);
 	// weight delta buffers
-	Textures[Tex::DeltaWeights0] = AllocateFloatTexture(VisibleCount + 1, HiddenCount + 1);
-	Textures[Tex::DeltaWeights1] = AllocateFloatTexture(VisibleCount + 1, HiddenCount + 1);
+	Buffers[Tex::DeltaWeights0] = OpenGLBuffer2D(HiddenCount + 1, VisibleCount + 1, ReturnType::Float, NULL);
+	Buffers[Tex::DeltaWeights1] = OpenGLBuffer2D(HiddenCount + 1, VisibleCount + 1, ReturnType::Float, NULL);
 	// random buffers
-	Textures[Tex::Random0] = AllocateUInt32Texture(MinibatchSize, HiddenCount, initial_random_seeds);
-	Textures[Tex::Random1] = AllocateUInt32Texture(MinibatchSize, HiddenCount);
+	Buffers[Tex::Random0] = OpenGLBuffer2D(HiddenCount + 1, MinibatchSize, ReturnType::UInt, initial_random_seeds);
+	Buffers[Tex::Random1] = OpenGLBuffer2D(HiddenCount + 1, MinibatchSize, ReturnType::UInt, NULL);
 	// error buffer
-	Textures[Tex::Error] = AllocateFloatTexture(1, VisibleCount);
+	Buffers[Tex::Error] = OpenGLBuffer2D(VisibleCount + 1, 1, ReturnType::Float, NULL);
 
 	// extra buffers for getting reconstruction error on validation set
-	Textures[Tex::ValidationVisible] = AllocateFloatTexture(MinibatchSize, VisibleCount);
-	Textures[Tex::ValidationVisiblePrime] = AllocateFloatTexture(MinibatchSize, VisibleCount);
-	Textures[Tex::ValidationHiddenProbs] = AllocateFloatTexture(MinibatchSize, HiddenCount);
-	Textures[Tex::ValidationHidddenStates] = AllocateFloatTexture(MinibatchSize, HiddenCount);
+	Buffers[Tex::ValidationVisible] = OpenGLBuffer2D(VisibleCount + 1, MinibatchSize, ReturnType::Float, NULL);
+	Buffers[Tex::ValidationVisiblePrime] = OpenGLBuffer2D(VisibleCount + 1, MinibatchSize, ReturnType::Float, NULL);
+	Buffers[Tex::ValidationHiddenProbs] = OpenGLBuffer2D(HiddenCount + 1, MinibatchSize, ReturnType::Float, NULL);
+	Buffers[Tex::ValidationHidddenStates] = OpenGLBuffer2D(HiddenCount + 1, MinibatchSize, ReturnType::Float, NULL);
 
 	// enabled hidden units for dropout
-	Textures[Tex::EnabledVisibleUnits] = AllocateFloatTexture(1, VisibleCount);
-	Textures[Tex::EnabledHiddenUnits] = AllocateFloatTexture(1, HiddenCount);
+	Buffers[Tex::EnabledVisibleUnits] = OpenGLBuffer2D(VisibleCount + 1, 1, ReturnType::UInt, NULL);
+	Buffers[Tex::EnabledHiddenUnits] = OpenGLBuffer2D(HiddenCount + 1, 1, ReturnType::UInt, NULL);
 	
 	// random seeds for determining which hidden/visible units are enabled
-	Textures[Tex::EnabledVisibleRandom0] = AllocateUInt32Texture(1, VisibleCount, initial_visible_seeds);
-	Textures[Tex::EnabledVisibleRandom1] = AllocateUInt32Texture(1, VisibleCount);
+	Buffers[Tex::EnabledVisibleRandom0] = OpenGLBuffer2D(VisibleCount + 1, 1, ReturnType::UInt, initial_visible_seeds);
+	Buffers[Tex::EnabledVisibleRandom1] = OpenGLBuffer2D(VisibleCount + 1, 1, ReturnType::UInt, NULL);
 
-	Textures[Tex::EnabledHiddenRandom0] = AllocateUInt32Texture(1, HiddenCount, initial_hidden_seeds);
-	Textures[Tex::EnabledHiddenRandom1] = AllocateUInt32Texture(1, HiddenCount);
+	Buffers[Tex::EnabledHiddenRandom0] = OpenGLBuffer2D(HiddenCount + 1, 1, ReturnType::UInt, initial_hidden_seeds);
+	Buffers[Tex::EnabledHiddenRandom1] = OpenGLBuffer2D(HiddenCount + 1, 1, ReturnType::UInt, NULL);
 	// delete these buffers
 	delete[] initial_rbm_weights;
 	delete[] initial_random_seeds;
 	delete[] initial_visible_seeds;
 	delete[] initial_hidden_seeds;
 
-	/** Generate our various render targets **/
-	target_hidden_rands.Generate(MinibatchSize, HiddenCount);
-		target_hidden_rands.SetTarget(Textures[Tex::Random0]);
-		target_hidden_rands.BindTarget();
-	target_visible_units.Generate(1, VisibleCount);
-		target_visible_units.SetTarget(Textures[Tex::EnabledVisibleUnits]);
-		target_visible_units.BindTarget();
-	target_hidden_units.Generate(1, HiddenCount);
-		target_hidden_units.SetTarget(Textures[Tex::EnabledHiddenUnits]);
-		target_hidden_units.BindTarget();
-	target_visible_minibatch.Generate(MinibatchSize, VisibleCount);
-		target_visible_minibatch.SetTarget(Textures[Tex::Visible]);
-		target_visible_minibatch.BindTarget();
-	target_hidden_minibatch.Generate(MinibatchSize, HiddenCount);
-		target_visible_minibatch.SetTarget(Textures[Tex::HiddenProbs]);
-		target_visible_minibatch.BindTarget();
-	target_weights.Generate(VisibleCount + 1, HiddenCount + 1);
-		target_weights.SetTarget(Textures[Tex::DeltaWeights0]);
-		target_weights.BindTarget();
-	target_error.Generate(1, VisibleCount);
-		target_error.SetTarget(Textures[Tex::Error]);
-		target_error.BindTarget();
-
 	/** Calculate how much texture space we have (given the MaxDataMemory parameter) **/
+
+#pragma region Load Training and Validation Data
+
+	uint32_t TotalAllocated = 0;
+	for(int32_t i = 0;  i < Tex::Count; i++)
+	{
+		TotalAllocated += Buffers[i].GetBufferSize();
+	}
 
 	int64_t RemainingMemory = int64_t(MaxDataMemory) - int64_t(TotalAllocated);
 	int64_t MaxDataMinibatches = RemainingMemory / (TrainingData->GetRowLengthBytes() * MinibatchSize);
@@ -704,12 +512,12 @@ bool RBMTrainer::Initialize()
 		if(SwappingTrainingData == true)
 		{
 			LoadedTrainingMinibatches = MaxDataMinibatches;
-			VisibleTrainingTextures = AllocateEmptyMinibatchTextures(LoadedTrainingMinibatches);
+			VisibleTrainingBuffers = AllocateEmptyMinibatchTextures(LoadedTrainingMinibatches);
 		}
 		else
 		{
 			LoadedTrainingMinibatches = TotalTrainingMinibatches;
-			VisibleTrainingTextures = AllocatePopulatedMinibatchTextures(LoadedTrainingMinibatches, TrainingData);
+			VisibleTrainingBuffers = AllocatePopulatedMinibatchTextures(LoadedTrainingMinibatches, TrainingData);
 		}
 	}
 	// we also have validation data to worry about
@@ -725,8 +533,8 @@ bool RBMTrainer::Initialize()
 			LoadedTrainingMinibatches = TotalTrainingMinibatches;
 			LoadedValidationMinibatches = TotalValidationMinibatches;
 
-			VisibleTrainingTextures = AllocatePopulatedMinibatchTextures(LoadedTrainingMinibatches, TrainingData);
-			VisibleValidationTextures = AllocatePopulatedMinibatchTextures(LoadedValidationMinibatches, ValidationData);
+			VisibleTrainingBuffers = AllocatePopulatedMinibatchTextures(LoadedTrainingMinibatches, TrainingData);
+			VisibleValidationBuffers = AllocatePopulatedMinibatchTextures(LoadedValidationMinibatches, ValidationData);
 		}
 		// if validation set fits in less than half of the total minibatch budget, just load it all up and only swap training
 		else if(TotalValidationMinibatches < MaxDataMinibatches / 2)
@@ -737,8 +545,8 @@ bool RBMTrainer::Initialize()
 			LoadedValidationMinibatches = TotalValidationMinibatches;	// all validation batches
 			LoadedTrainingMinibatches = MaxDataMinibatches - LoadedValidationMinibatches;	// remaining batches go to trianing
 
-			VisibleTrainingTextures = AllocateEmptyMinibatchTextures(LoadedTrainingMinibatches);
-			VisibleValidationTextures = AllocatePopulatedMinibatchTextures(LoadedValidationMinibatches, ValidationData);
+			VisibleTrainingBuffers = AllocateEmptyMinibatchTextures(LoadedTrainingMinibatches);
+			VisibleValidationBuffers = AllocatePopulatedMinibatchTextures(LoadedValidationMinibatches, ValidationData);
 		}
 		// we have to swap in both training and validation data
 		else
@@ -750,12 +558,17 @@ bool RBMTrainer::Initialize()
 			LoadedValidationMinibatches = LoadedTrainingMinibatches = MaxDataMinibatches / 2;
 
 			// empty textures
-			VisibleTrainingTextures = AllocateEmptyMinibatchTextures(LoadedTrainingMinibatches);
-			VisibleValidationTextures = AllocateEmptyMinibatchTextures(LoadedValidationMinibatches);
+			VisibleTrainingBuffers = AllocateEmptyMinibatchTextures(LoadedTrainingMinibatches);
+			VisibleValidationBuffers = AllocateEmptyMinibatchTextures(LoadedValidationMinibatches);
 		}
 	}
 	CurrentTrainingRowIndex = 0;
 	CurrentValidationRowIndex = 0;
+
+#pragma endregion
+
+	// parse and build our training programs !
+	BuildKernels();
 
 	IsInitialized = true;
 
@@ -764,6 +577,106 @@ ErrorOcurred:
 	// cleanup
 	Reset();
 	return false;
+}
+
+void RBMTrainer::BuildKernels()
+{
+	BuildEnabledKernels();
+	BuildVisibleHiddenKernels();
+	BuildWeightKernels();
+}
+
+void RBMTrainer::BuildEnabledKernels()
+{
+	CalcEnabled_Source.enabled_probability = 1.0f - VisibleDropout;
+	CalcEnabled_Source.Parse();
+	SAFE_FREE(CalcEnabledVisible);
+	CalcEnabledVisible = Compiler.Build(CalcEnabled_Source);
+	CalcEnabledVisible->Initialize(VisibleCount + 1, 1);
+	debug_log("CalcEnabledVisible:\n%s\n", CalcEnabledVisible->GetSource().c_str());
+
+	CalcEnabled_Source.enabled_probability = 1.0f - HiddenDropout;
+	CalcEnabled_Source.Parse();
+	SAFE_FREE(CalcEnabledHidden);
+	CalcEnabledHidden = Compiler.Build(CalcEnabled_Source);
+	CalcEnabledHidden->Initialize(HiddenCount + 1, 1);
+	debug_log("CalcEnabledHidden:\n%s\n", CalcEnabledHidden->GetSource().c_str());
+}
+
+void RBMTrainer::BuildVisibleHiddenKernels()
+{
+	CopyVisible_Source.Parse();
+	SAFE_FREE(CopyVisible);
+	CopyVisible = Compiler.Build(CopyVisible_Source);
+	CopyVisible->Initialize(VisibleCount + 1, MinibatchSize);
+	debug_log("CopyVisible:\n%s\n", CopyVisible->GetSource().c_str());
+
+	CalcHiddenProbability_Source.visible_units = VisibleCount;
+	CalcHiddenProbability_Source.Parse();
+	SAFE_FREE(CalcHiddenProbability);
+	CalcHiddenProbability = Compiler.Build(CalcHiddenProbability_Source);
+	CalcHiddenProbability->Initialize(HiddenCount + 1, MinibatchSize);
+	debug_log("CalcHiddenProbability:\n%s\n", CalcHiddenProbability->GetSource().c_str());
+
+	CalcStates_Source.Parse();
+	SAFE_FREE(CalcStates);
+	CalcStates = Compiler.Build(CalcStates_Source);
+	CalcStates->Initialize(HiddenCount + 1, MinibatchSize);
+	debug_log("CalcStates:\n%s\n", CalcStates->GetSource().c_str());
+
+	CalcVisible_Source.use_sigmoid = (VisibleType == Binary);
+	CalcVisible_Source.hidden_units = HiddenCount;
+	CalcVisible_Source.Parse();
+	SAFE_FREE(CalcVisible);
+	CalcVisible = Compiler.Build(CalcVisible_Source);
+	CalcVisible->Initialize(VisibleCount + 1, MinibatchSize);
+	debug_log("CalcVisible:\n%s\n", CalcVisible->GetSource().c_str());
+
+	CalcErrorVector_Source.minibatch_size = MinibatchSize;
+	CalcErrorVector_Source.Parse();
+	SAFE_FREE(CalcErrorVector);
+	CalcErrorVector = Compiler.Build(CalcErrorVector_Source);
+	CalcErrorVector->Initialize(VisibleCount + 1, 1);
+	debug_log("CalcErrorVector:\n%s\n", CalcErrorVector->GetSource().c_str());
+}
+
+void RBMTrainer::BuildWeightKernels()
+{
+	CalcWeightUpdates_Source.minibatch_size = MinibatchSize;
+	CalcWeightUpdates_Source.learning_rate = LearningRate;
+	CalcWeightUpdates_Source.momentum = Momentum;
+	CalcWeightUpdates_Source.l1_regularization = L1Regularization;
+	CalcWeightUpdates_Source.l2_regularization = L2Regularization;
+	CalcWeightUpdates_Source.Parse();
+	SAFE_FREE(CalcWeightUpdates);
+	CalcWeightUpdates = Compiler.Build(CalcWeightUpdates_Source);
+	CalcWeightUpdates->Initialize(HiddenCount + 1, VisibleCount + 1);
+	debug_log("CalcWeightUpdates:\n%s\n", CalcWeightUpdates->GetSource().c_str());
+}
+
+void RBMTrainer::FreeKernels()
+{
+	SAFE_FREE(CalcEnabledVisible);
+	SAFE_FREE(CalcEnabledHidden);
+	SAFE_FREE(CopyVisible);
+	SAFE_FREE(CalcHiddenProbability);
+	SAFE_FREE(CalcStates);
+	SAFE_FREE(CalcVisible);
+	SAFE_FREE(CalcWeightUpdates);
+	SAFE_FREE(CalcErrorVector);
+}
+
+void RBMTrainer::ReleaseBuffers(OpenGLBuffer2D*& buffers, uint32_t count)
+{
+	if(buffers)
+	{
+		for(uint32_t i = 0; i < count; i++)
+		{
+			buffers[i] = OpenGLBuffer2D();
+		}
+		delete[] buffers;
+		buffers = nullptr;
+	}
 }
 
 void RBMTrainer::Reset()
@@ -778,10 +691,10 @@ void RBMTrainer::Reset()
 	LocalErrorBuffer.Release();
 
 	// deallocate training textures
-	ReleaseTextures(Textures, Tex::Count);
+	ReleaseBuffers(Buffers, Tex::Count);
 
 	// deallocate training data textures
-	ReleaseTextures(VisibleTrainingTextures, LoadedTrainingMinibatches);
+	ReleaseBuffers(VisibleTrainingBuffers, LoadedTrainingMinibatches);
 	LoadedTrainingMinibatches = 0;
 	SwappingTrainingData = false;
 	CurrentTrainingRowIndex = 0;
@@ -791,21 +704,14 @@ void RBMTrainer::Reset()
 	if(ValidationData)
 	{
 		// deallocate validation data textures
-		ReleaseTextures(VisibleValidationTextures, LoadedValidationMinibatches);
+		ReleaseBuffers(VisibleValidationBuffers, LoadedValidationMinibatches);
 		LoadedValidationMinibatches = 0;
 		SwappingValidationData = false;
 		CurrentValidationRowIndex = 0;
 		CurrentValidationMinibatchIndex = 0;
 	}
 
-	// release all our render targets
-	target_hidden_rands.Reset();
-	target_visible_units.Reset();
-	target_hidden_units.Reset();
-	target_visible_minibatch.Reset();
-	target_hidden_minibatch.Reset();
-	target_weights.Reset();
-	target_error.Reset();
+	FreeKernels();
 }
 
 void RBMTrainer::Train()
@@ -816,611 +722,144 @@ void RBMTrainer::Train()
 	{
 		if(SwappingTrainingData == true)
 		{
-			SwapInNewMinibatchTextures(CurrentTrainingRowIndex, LoadedTrainingMinibatches, TrainingData, VisibleTrainingTextures);
+			SwapInNewMinibatchData(CurrentTrainingRowIndex, LoadedTrainingMinibatches, TrainingData, VisibleTrainingBuffers);
 		}
 	}
 
-	GLuint visible_data = VisibleTrainingTextures[(CurrentTrainingMinibatchIndex * Prime) % LoadedTrainingMinibatches];
+	if(UpdateDropout)
+	{
+		UpdateDropout = false;
+		BuildEnabledKernels();
+	}
+	if(UpdateTrainingParameters)
+	{
+		UpdateTrainingParameters = false;
+		BuildWeightKernels();
+	}
 
-	CalcRandom();
+	OpenGLBuffer2D& visible_data = VisibleTrainingBuffers[(CurrentTrainingMinibatchIndex * Prime) % LoadedTrainingMinibatches];
+
+	// calc which hidden and visible units will be enabled this round
 	CalcEnabledUnits();
+	// copy data to new buffer and dropout visible data
+	CalcVisibleCopy(visible_data, Buffers[Tex::Visible]);
 
-	CalcVisibleDepth(Textures[Tex::Visible]);
-	CalcVisibleCopy(visible_data, Textures[Tex::Visible]);
+	// 1 gibs sampling
+	CalcHiddenProbs(Buffers[Tex::Visible], Buffers[Tex::HiddenProbs]);
+	CalcHiddenStates(Buffers[Tex::HiddenProbs], Buffers[Tex::HiddenStates]);
+	CalcVisiblePrime(Buffers[Tex::HiddenStates], Buffers[Tex::VisiblePrime]);
+	CalcHiddenProbs(Buffers[Tex::VisiblePrime], Buffers[Tex::HiddenPrime]);
 
-	CalcHiddenDepth(Textures[Tex::HiddenProbs]);
-	CalcHiddenProbs(Textures[Tex::Visible], Textures[Tex::HiddenProbs]);
-	CalcHiddenStates(Textures[Tex::HiddenProbs], Textures[Tex::HiddenStates]);
-
-	
-	CalcVisibleDepth(Textures[Tex::VisiblePrime]);	
-	CalcVisible(Textures[Tex::HiddenStates], Textures[Tex::VisiblePrime]);
-	
-	CalcHiddenDepth(Textures[Tex::HiddenPrime]);
-	CalcHiddenProbs(Textures[Tex::VisiblePrime], Textures[Tex::HiddenPrime]);
-
-	
-	CalcWeightDepth(Textures[Tex::DeltaWeights0], Textures[Tex::DeltaWeights1]);
-	CalcWeightDeltas();
-	
-	CalcWeightDepth(Textures[Tex::Weights0], Textures[Tex::Weights1]);
+	// now update the weights
 	CalcWeights();
-
+	
 	// update the minibatch index
 	CurrentTrainingMinibatchIndex = (CurrentTrainingMinibatchIndex + 1) % LoadedTrainingMinibatches;
 	// and update our row index
 	CurrentTrainingRowIndex = (CurrentTrainingRowIndex + MinibatchSize) % TrainingData->GetRowCount();
 }
 
-float* GetTexture(int width, int height, GLuint texture)
-{
-	float* result = new float[width * height];
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, texture);
-	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED, GL_FLOAT, result);
-
-	return result;
-}
-
-void RBMTrainer::CalcRandom()
-{
-	glDepthFunc(GL_ALWAYS);
-	glDepthMask(GL_FALSE);
-	// set params
-	program_calc_randoms.SetParam(CalcRandomParams::Seeds, Textures[Tex::Random0]);
-	// set render target
-	program_calc_randoms.SetRenderTarget(target_hidden_rands);
-	// run
-	program_calc_randoms.Run(HiddenCount, MinibatchSize, Textures[Tex::Random1]);
-	
-#if ENABLE_DEBUG_CODE
-	{
-		unsigned int* buffer0 = new unsigned int[HiddenCount * MinibatchSize];
-
-		glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::Random0]);
-		glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, buffer0);
-
-		unsigned int* buffer1 = new unsigned int[HiddenCount * MinibatchSize];
-
-		const uint32_t a = 1664525;  
-		const uint32_t c = 1013904223;  
-
-		for(int i = 0; i < HiddenCount * MinibatchSize; i++)
-		{
-			buffer1[i] = buffer0[i] * a + c;
-		}
-
-		glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::Random1]);
-		glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, buffer0);
-
-		delete[] buffer0;
-		delete[] buffer1;
-	}
-#endif
-	// swap those textures
-	swap(Textures[Tex::Random0], Textures[Tex::Random1]);
-}
-
 void RBMTrainer::CalcEnabledUnits()
 {
-	glDepthFunc(GL_ALWAYS);
-	glDepthMask(GL_FALSE);
-	
-	/// Visible
-	// update randoms
-	// set params
+	// update the enabled visible units
+	CalcEnabledVisible->SetInput(0, Buffers[Tex::EnabledVisibleRandom0]);
 
-	program_calc_randoms.SetParam(CalcRandomParams::Seeds, Textures[Tex::EnabledVisibleRandom0]);
-	// run
-	program_calc_randoms.SetRenderTarget(target_visible_units);
-	program_calc_randoms.Run(VisibleCount, 1, Textures[Tex::EnabledVisibleRandom1]);
+	CalcEnabledVisible->BindOutput(0, Buffers[Tex::EnabledVisibleUnits]);
+	CalcEnabledVisible->BindOutput(1, Buffers[Tex::EnabledVisibleRandom1]);
 
-	// calc enabled units
-	// set params
-	program_calc_enabled_units.SetParam(CalcEnabledUnitParams::Random, Textures[Tex::EnabledVisibleRandom1]);
-	program_calc_enabled_units.SetParam(CalcEnabledUnitParams::Probability, 1.0f - VisibleDropout);
-	// run
-	program_calc_enabled_units.SetRenderTarget(target_visible_units);
-	program_calc_enabled_units.Run(VisibleCount, 1, Textures[Tex::EnabledVisibleUnits]);
-	swap(Textures[Tex::EnabledVisibleRandom0], Textures[Tex::EnabledVisibleRandom1]);
-	
-	/// Hidden
-	// update randoms
-	// set params
-	
-	program_calc_randoms.SetParam(CalcRandomParams::Seeds, Textures[Tex::EnabledHiddenRandom0]);
-	// run
-	program_calc_randoms.SetRenderTarget(target_hidden_units);
-	program_calc_randoms.Run(HiddenCount, 1, Textures[Tex::EnabledHiddenRandom1]);
+	CalcEnabledVisible->Run();
 
-	// calc enabled units
-	// set params
-	program_calc_enabled_units.SetParam(CalcEnabledUnitParams::Random, Textures[Tex::EnabledHiddenRandom1]);
-	program_calc_enabled_units.SetParam(CalcEnabledUnitParams::Probability, 1.0f - HiddenDropout);
-	// run
-	program_calc_enabled_units.SetRenderTarget(target_hidden_units);
-	program_calc_enabled_units.Run(HiddenCount, 1, Textures[Tex::EnabledHiddenUnits]);
-	swap(Textures[Tex::EnabledHiddenRandom0], Textures[Tex::EnabledHiddenRandom1]);
+	// update the enabled hidden units
+	CalcEnabledHidden->SetInput(0, Buffers[Tex::EnabledHiddenRandom0]);
 
-#if ENABLE_DEBUG_CODE
-	{
-		float* enabled_hidden_gpu = GetTexture(HiddenCount, 1, Textures[Tex::EnabledHiddenUnits]);
-		unsigned int* hidden_rands = new unsigned int[HiddenCount];
-		glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::EnabledHiddenRandom0]);
-		glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, hidden_rands);
+	CalcEnabledHidden->BindOutput(0, Buffers[Tex::EnabledHiddenUnits]);
+	CalcEnabledHidden->BindOutput(1, Buffers[Tex::EnabledHiddenRandom1]);
 
-		float* enabled_hidden_cpu = new float[HiddenCount];
+	CalcEnabledHidden->Run();
 
-		for(int j = 0; j < HiddenCount; j++)
-		{
-			if( (unsigned int)((1.0f - HiddenDropout) * 4294967296.0) > hidden_rands[j])
-			{
-				enabled_hidden_cpu[j] = 1.0;
-			}
-			else
-			{
-				enabled_hidden_cpu[j] = 0.0;
-			}
-		}
-
-		delete[] enabled_hidden_gpu;
-		delete[] enabled_hidden_cpu;
-		delete[] hidden_rands;
-	}
-#endif
+	// swap the random seed buffers
+	swap(Buffers[Tex::EnabledVisibleRandom0],  Buffers[Tex::EnabledVisibleRandom1]);
+	swap(Buffers[Tex::EnabledHiddenRandom0],  Buffers[Tex::EnabledHiddenRandom1]);
 }
 
-void RBMTrainer::CalcVisibleDepth(GLuint visible_tex)
+void RBMTrainer::CalcVisibleCopy(OpenGLBuffer2D& source, OpenGLBuffer2D& destination)
 {
-	while(glGetError() != GL_NO_ERROR);
+	CopyVisible->SetInput(0, source);
+	CopyVisible->SetInput(1, Buffers[Tex::EnabledVisibleUnits]);
 
-	// first calculate the depth buffer for early-z culling
-	glDepthMask(GL_TRUE);
-	glDepthFunc(GL_ALWAYS);
+	CopyVisible->BindOutput(0, destination);
 
-	target_visible_minibatch.BindTarget();
-	glClearDepthf(1.0f);
-	glClear(GL_DEPTH_BUFFER_BIT);
-#if ENABLE_DEBUG_CODE
-	{
-		glReadBuffer(GL_DEPTH_ATTACHMENT);
-		float* depths = new float[VisibleCount * MinibatchSize];
-		memset(depths, 0xCD, sizeof(float) * (VisibleCount * MinibatchSize));
-		glReadPixels(0, 0, VisibleCount, MinibatchSize, GL_DEPTH_COMPONENT, GL_FLOAT, depths);
-
-		delete[] depths;
-	}
-#endif
-	program_calc_depth_map.SetParam(CalcDepthMapParams::EnabledColumns, Textures[Tex::EnabledVisibleUnits]);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::EnabledRows, (GLuint)0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::PreviousValues, (GLuint)0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::CheckColumns, 1);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::CheckRows, 0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::UsePreviousValues, 0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::Offset, 0.0f, 0.0f);
-
-	program_calc_depth_map.SetDepth(0.0f);
-
-	// run
-	program_calc_depth_map.SetRenderTarget(target_visible_minibatch);
-	program_calc_depth_map.Run(VisibleCount, MinibatchSize, visible_tex);
-}
-	
-
-void RBMTrainer::CalcVisibleCopy(GLuint in_v, GLuint out_v)
-{
-	glDepthMask(GL_FALSE);
-	glDepthFunc(GL_LESS);
-
-	program_calc_copy_texture.SetParam(CalcCopyTextureParams::Source, in_v);
-
-	program_calc_copy_texture.SetRenderTarget(target_visible_minibatch);
-	program_calc_copy_texture.Run(VisibleCount, MinibatchSize, out_v);
-#if ENABLE_DEBUG_CODE
-	{
-		glReadBuffer(GL_DEPTH_ATTACHMENT);
-		float* depths = new float[VisibleCount * MinibatchSize];
-		memset(depths, 0xCD, sizeof(float) * (VisibleCount * MinibatchSize));
-		glReadPixels(0, 0, VisibleCount, MinibatchSize, GL_DEPTH_COMPONENT, GL_FLOAT, depths);
-		
-		float* visible = GetTexture(VisibleCount, MinibatchSize, out_v);
-		
-		delete[] visible;
-		delete[] depths;
-	}
-#endif
+	CopyVisible->Run();
 }
 
-void RBMTrainer::CalcHiddenDepth(GLuint hidden_tex)
+void RBMTrainer::CalcHiddenProbs(OpenGLBuffer2D& visible, OpenGLBuffer2D& hidden_probs)
 {
-	// first calculate the depth buffer for early-z culling
-	glDepthMask(GL_TRUE);
-	glDepthFunc(GL_ALWAYS);
+	CalcHiddenProbability->SetInput(0, visible);
+	CalcHiddenProbability->SetInput(1, Buffers[Tex::Weights0]);
+	CalcHiddenProbability->SetInput(2, Buffers[Tex::EnabledHiddenUnits]);
 
-	target_hidden_minibatch.BindTarget();
-	glClearDepthf(1.0f);
-	glClear(GL_DEPTH_BUFFER_BIT);
+	CalcHiddenProbability->BindOutput(0, hidden_probs);
 
-	program_calc_depth_map.SetParam(CalcDepthMapParams::EnabledColumns, Textures[Tex::EnabledHiddenUnits]);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::EnabledRows, (GLuint)0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::PreviousValues, (GLuint)0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::CheckColumns, 1);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::CheckRows, 0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::UsePreviousValues, 0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::Offset, 0.0f, 0.0f);
-
-	program_calc_depth_map.SetDepth(0.0f);
-
-	// run
-	program_calc_depth_map.SetRenderTarget(target_hidden_minibatch);
-	program_calc_depth_map.Run(HiddenCount, MinibatchSize, hidden_tex);
-#if ENABLE_DEBUG_CODE
-	{
-		float* gpu_hidden = GetTexture(HiddenCount, MinibatchSize, hidden_tex);
-		float* cpu_hidden = new float[HiddenCount * MinibatchSize];
-		float* gpu_enabled_hidden = GetTexture(HiddenCount, 1, Textures[Tex::EnabledHiddenUnits]);
-
-		for(int k = 0; k < MinibatchSize; k++)
-		{
-			for(int j = 0; j < HiddenCount; j++)
-			{
-				cpu_hidden[k * HiddenCount + j] = gpu_enabled_hidden[j] == 0.0 ? 0.0 : -1.0;
-			}
-		}
-
-		glReadBuffer(GL_DEPTH_ATTACHMENT);
-		float* depths = new float[HiddenCount * MinibatchSize];
-		memset(depths, 0xCD, sizeof(float) * (HiddenCount * MinibatchSize));
-		glReadPixels(0, 0, HiddenCount, MinibatchSize, GL_DEPTH_COMPONENT, GL_FLOAT, depths);
-
-		delete[] depths;
-		delete[] gpu_hidden;
-		delete[] cpu_hidden;
-		delete[] gpu_enabled_hidden;
-	}
-#endif
+	CalcHiddenProbability->Run();
 }
 
 
-void RBMTrainer::CalcHiddenProbs(GLuint visible_tex, GLuint hidden_tex)
+void RBMTrainer::CalcHiddenStates(OpenGLBuffer2D& probs, OpenGLBuffer2D& states)
 {
-	// only write fragments with depth less than the current depth (hidden depth shader will have written 0 there otherwise)
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_FALSE);
+	CalcStates->SetInput(0, Buffers[Tex::Random0]);
+	CalcStates->SetInput(1, probs);
 
-	// set params
-	program_calc_hidden_probs.SetParam(CalcHiddenProbParams::VisibleStates, visible_tex);
-	program_calc_hidden_probs.SetParam(CalcHiddenProbParams::VisibleUnits, VisibleCount);
-	program_calc_hidden_probs.SetParam(CalcHiddenProbParams::Weights, Textures[Tex::Weights0]);
-	
-	// run
-	program_calc_hidden_probs.SetRenderTarget(target_hidden_minibatch);
-	program_calc_hidden_probs.Run(HiddenCount, MinibatchSize, hidden_tex);
+	CalcStates->BindOutput(0, Buffers[Tex::Random1]);
+	CalcStates->BindOutput(1, states);
 
-	//CPU comparison
-#if ENABLE_DEBUG_CODE
-	{
-		float* v = GetTexture(VisibleCount, MinibatchSize, visible_tex);
-		float* rbm = GetTexture(HiddenCount+1, VisibleCount + 1, Textures[Tex::Weights0]);
-		float* gpu_enabled_hidden = GetTexture(HiddenCount, 1, Textures[Tex::EnabledHiddenUnits]);
+	CalcStates->Run();
 
-		float* cpu_hidden = new float[HiddenCount * MinibatchSize];
-
-		for(int j = 0; j < HiddenCount; j++)
-		{
-			if(gpu_enabled_hidden[j] == 1.0)
-			{
-				for(int k = 0; k < MinibatchSize; k++)
-				{
-					int index = k * HiddenCount + j;
-					cpu_hidden[index] = rbm[j + 1];
-					for(int i = 0; i < VisibleCount; i++)
-					{
-						cpu_hidden[index] += v[k * VisibleCount + i] * rbm[j + 1 + (HiddenCount + 1) * ( i + 1)];
-					}
-					cpu_hidden[index] = 1.0f / (1.0f + exp(-cpu_hidden[index]));
-				}
-			}
-			else
-			{
-				for(int k = 0; k < MinibatchSize; k++)
-				{
-					int index = k * HiddenCount + j;
-					cpu_hidden[index] = 0.0f;
-				}
-			}
-		}
-		float* gpu_hidden = GetTexture(HiddenCount, MinibatchSize, hidden_tex);
-
-		delete[] v;
-		delete[] rbm;
-		delete[] gpu_enabled_hidden;
-		delete[] cpu_hidden;
-		delete[] gpu_hidden;
-	}
-#endif
-
+	swap(Buffers[Tex::Random0], Buffers[Tex::Random1]);
 }
 
-void RBMTrainer::CalcHiddenStates(GLuint hprob, GLuint hstate)
+void RBMTrainer::CalcVisiblePrime(OpenGLBuffer2D& hidden, OpenGLBuffer2D& visible)
 {
-	// always write states regardless of depth
-	glDepthFunc(GL_ALWAYS);
-	glDepthMask(GL_FALSE);
+	CalcVisible->SetInput(0, hidden);
+	CalcVisible->SetInput(1, Buffers[Tex::Weights0]);
+	CalcVisible->SetInput(2, Buffers[Tex::EnabledVisibleUnits]);
 
-	// set params
-	program_calc_hidden_states.SetParam(CalcHiddenStateParams::Probs, hprob);
-	program_calc_hidden_states.SetParam(CalcHiddenStateParams::Random, Textures[Tex::Random0]);
+	CalcVisible->BindOutput(0, visible);
 
-	// run
-	program_calc_hidden_states.SetRenderTarget(target_hidden_minibatch);
-	program_calc_hidden_states.Run(HiddenCount, MinibatchSize, hstate);
-
-#if ENABLE_DEBUG_CODE
-	{
-		float* h = GetTexture(HiddenCount, MinibatchSize, hprob);
-		unsigned int* random = new unsigned int[HiddenCount * MinibatchSize];
-
-		glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::Random0]);
-		glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED_INTEGER, GL_UNSIGNED_INT, random);
-
-		float* gpu_enabled_hidden = GetTexture(HiddenCount, 1, Textures[Tex::EnabledHiddenUnits]);
-
-		float* h_states_gpu = GetTexture(HiddenCount, MinibatchSize, hstate);
-		float* h_states_cpu = new float[HiddenCount * MinibatchSize];
-
-		for(int j = 0; j < HiddenCount; j++)
-		{
-			if(gpu_enabled_hidden[j] == 1.0)
-			{
-				for(int k = 0; k < MinibatchSize; k++)
-				{
-					int index = k * HiddenCount + j;
-					h_states_cpu[index] = (unsigned int)(h[index] * 4294967296.0) > random[index] ? 1.0f : 0.0f;
-				}
-			}
-			else
-			{
-				for(int k = 0; k < MinibatchSize; k++)
-				{
-					int index = k * HiddenCount + j;
-					h_states_cpu[index] = 0.0f;
-				}
-			}
-
-		}
-
-		delete[] h;
-		delete[] random;
-		delete[] gpu_enabled_hidden;
-		delete[] h_states_gpu;
-		delete[] h_states_cpu;
-	}
-#endif
-}
-
-void RBMTrainer::CalcVisible(GLuint hidden_states, GLuint visible_tex)
-{
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_FALSE);
-	// set params
-	program_calc_visible.SetParam(CalcVisibleParams::HiddenUnits, HiddenCount);
-	program_calc_visible.SetParam(CalcVisibleParams::HiddenStates, hidden_states);
-	program_calc_visible.SetParam(CalcVisibleParams::Weights, Textures[Tex::Weights0]);
-	program_calc_visible.SetParam(CalcVisibleParams::Sigmoid, (int)(VisibleType == Binary));
-
-	// run
-	program_calc_visible.SetRenderTarget(target_visible_minibatch);
-	program_calc_visible.Run(VisibleCount, MinibatchSize, visible_tex);
-
-#if ENABLE_DEBUG_CODE
-	{
-		float* h = GetTexture(HiddenCount, MinibatchSize, Textures[Tex::HiddenStates]);
-		float* rbm = GetTexture(HiddenCount + 1, VisibleCount + 1, Textures[Tex::Weights0]);
-
-		float* v_prime = new float[VisibleCount * MinibatchSize];
-		for(int i = 0; i < VisibleCount; i++)
-		{
-			for(int k = 0; k < MinibatchSize; k++)
-			{
-
-				int index = k * VisibleCount + i;
-				v_prime[index] = rbm[(HiddenCount + 1) * (i + 1)];
-				for(int j = 0; j < HiddenCount; j++)
-				{
-					v_prime[index] += h[k * HiddenCount + j] * rbm[j + 1 + (HiddenCount + 1) * ( i + 1)];
-				}
-				v_prime[index] = 1.0f / (1.0f + exp(-v_prime[index]));
-			}
-		}
-
-		float* v_prime_gpu = GetTexture(VisibleCount, MinibatchSize, Textures[Tex::VisiblePrime]);
-
-		delete[] h;
-		delete[] rbm;
-		delete[] v_prime;
-		delete[] v_prime_gpu;
-	}
-#endif
-}
-
-void RBMTrainer::CalcWeightDepth(GLuint prev_w, GLuint w)
-{
-	// first calculate the depth buffer for early-z culling
-	glDepthMask(GL_TRUE);
-	glDepthFunc(GL_ALWAYS);
-
-	target_weights.BindTarget();
-	glClearDepthf(1.0f);
-	glClear(GL_DEPTH_BUFFER_BIT);
-
-
-	// set dimensions
-	program_calc_depth_map.SetDepth(0.0f);
-	program_calc_depth_map.SetRenderTarget(target_weights);
-
-	// first, always enable biases
-	program_calc_depth_map.SetParam(CalcDepthMapParams::EnabledColumns, (GLuint)0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::EnabledRows, (GLuint)0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::PreviousValues, (GLuint)0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::CheckColumns, 0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::CheckRows, 0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::UsePreviousValues, 0);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::Offset, 0.0f, 0.0f);
-	// run
-	program_calc_depth_map.Run(0, 0, HiddenCount + 1, 1, w);
-	program_calc_depth_map.Run(0, 1, 1, VisibleCount, w);
-
-	// now use the enabled hidden buffer
-	program_calc_depth_map.SetParam(CalcDepthMapParams::EnabledColumns, Textures[Tex::EnabledHiddenUnits]);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::EnabledRows, Textures[Tex::EnabledVisibleUnits]);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::PreviousValues, prev_w);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::CheckColumns, 1);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::CheckRows, 1);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::UsePreviousValues, 1);
-	program_calc_depth_map.SetParam(CalcDepthMapParams::Offset, 1.0f, 1.0f);
-
-	// run
-	program_calc_depth_map.Run(1, 1, HiddenCount, VisibleCount, w);
-
-#if ENABLE_DEBUG_CODE
-	{
-		float* gpu_weights = GetTexture(HiddenCount + 1, VisibleCount + 1, w);
-		float* cpu_weights = new float[(HiddenCount + 1) * (VisibleCount + 1)];
-		float* gpu_enabled_hidden = GetTexture(HiddenCount, 1, Textures[Tex::EnabledHiddenUnits]);
-
-		for(int i = 0; i <= VisibleCount; i++)
-		{
-			for(int j = 0; j <= HiddenCount; j++)
-			{
-				int index = i * (HiddenCount + 1) + j;
-				if(i == 0 || j == 0)
-				{
-					cpu_weights[index] = -1.0f;
-				}
-				else
-				{
-					cpu_weights[index] = gpu_enabled_hidden[j-1] == 0.0 ? 0.0 : -1.0;
-				}
-			}
-		}
-
-		glReadBuffer(GL_DEPTH_ATTACHMENT);
-		float* depths = new float[(HiddenCount + 1) * (VisibleCount + 1)];
-		glReadPixels(0, 0, HiddenCount + 1, VisibleCount + 1, GL_DEPTH_COMPONENT, GL_FLOAT, depths);
-
-		delete[] depths;
-
-		delete[] gpu_weights;
-		delete[] cpu_weights;
-		delete[] gpu_enabled_hidden;
-	}
-#endif
-}
-
-
-void RBMTrainer::CalcWeightDeltas()
-{
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_FALSE);
-
-	// set params
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::Visible, Textures[Tex::Visible]);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::Hidden, Textures[Tex::HiddenProbs]);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::VisiblePrime, Textures[Tex::VisiblePrime]);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::HiddenPrime, Textures[Tex::HiddenPrime]);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::PrevWeightDeltas, Textures[Tex::DeltaWeights0]);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::PrevWeights, Textures[Tex::Weights0]);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::MinibatchSize, MinibatchSize);
-	program_calc_weight_deltas.SetParam(CalcWeightDeltaParams::Momentum, Momentum);
-	
-	// run
-	program_calc_weight_deltas.SetRenderTarget(target_weights);
-	program_calc_weight_deltas.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::DeltaWeights1]);
-
-	// only update these factors every 250 training iterations
-	if(CurrentTrainingMinibatchIndex % 250 == 0)
-	{
-		// read back the deltas so we can get statistics about them
-		glReadBuffer(GL_COLOR_ATTACHMENT0);
-		glReadPixels(1, 0, HiddenCount, 1, GL_RED, GL_FLOAT, LocalHBiasBuffer);
-		glReadPixels(0, 1, 1, VisibleCount, GL_RED, GL_FLOAT, LocalVBiasBuffer);
-		glReadPixels(1, 1, HiddenCount, VisibleCount, GL_RED, GL_FLOAT, LocalWeightBuffer);
-
-		DeltaWFactor = CalcMeanAbsValueParallel(LocalWeightBuffer, HiddenCount * VisibleCount);
-		DeltaVFactor = CalcMeanAbsValue(LocalVBiasBuffer, VisibleCount);
-		DeltaHFactor = CalcMeanAbsValue(LocalHBiasBuffer, HiddenCount);
-
-	}
-	// swap texture handles 
-	swap(Textures[Tex::DeltaWeights0], Textures[Tex::DeltaWeights1]);
+	CalcVisible->Run();
 }
 
 void RBMTrainer::CalcWeights()
 {
-	glDepthFunc(GL_LESS);
-	glDepthMask(GL_FALSE);
+	CalcWeightUpdates->SetInput(0, Buffers[Tex::Visible]);
+	CalcWeightUpdates->SetInput(1, Buffers[Tex::HiddenProbs]);
+	CalcWeightUpdates->SetInput(2, Buffers[Tex::VisiblePrime]);
+	CalcWeightUpdates->SetInput(3, Buffers[Tex::HiddenPrime]);
+	CalcWeightUpdates->SetInput(4, Buffers[Tex::DeltaWeights0]);
+	CalcWeightUpdates->SetInput(5, Buffers[Tex::Weights0]);
 
-	// set params
-	program_calc_weights.SetParam(CalcWeightParams::DeltaWeights, Textures[Tex::DeltaWeights0]);
-	program_calc_weights.SetParam(CalcWeightParams::PrevWeights, Textures[Tex::Weights0]);
+	CalcWeightUpdates->BindOutput(0, Buffers[Tex::DeltaWeights1]);
+	CalcWeightUpdates->BindOutput(1, Buffers[Tex::Weights1]);
 
-	program_calc_weights.SetParam(CalcWeightParams::WeightFactor, WFactor / DeltaWFactor);
-	program_calc_weights.SetParam(CalcWeightParams::VisibleFactor, VFactor / DeltaVFactor);
-	program_calc_weights.SetParam(CalcWeightParams::HiddenFactor, HFactor / DeltaHFactor);
-	
-	program_calc_weights.SetParam(CalcWeightParams::LearningRate, LearningRate);
-	program_calc_weights.SetParam(CalcWeightParams::L1Regularization, L1Regularization);
-	program_calc_weights.SetParam(CalcWeightParams::L2Regularization, L2Regularization);
-	
-	// run
-	program_calc_weights.SetRenderTarget(target_weights);
-	program_calc_weights.Run(HiddenCount + 1, VisibleCount + 1, Textures[Tex::Weights1]);
+	CalcWeightUpdates->Run();
 
-	// only update these factors every 250 training iterations
-	if(CurrentTrainingMinibatchIndex % 250 == 0)
-	{
-		//printf("WFactor: %f\n", WFactor);
-		//printf("DeltaWFactor: %f\n", DeltaWFactor);
-		// read  bacak weights so we can get statistics
-		glReadBuffer(GL_COLOR_ATTACHMENT0);
-		glReadPixels(1, 1, HiddenCount, VisibleCount, GL_RED, GL_FLOAT, LocalWeightBuffer);
-		glReadPixels(0, 1, 1, VisibleCount, GL_RED, GL_FLOAT, LocalVBiasBuffer);
-		glReadPixels(1, 0, HiddenCount, 1, GL_RED, GL_FLOAT, LocalHBiasBuffer);
-
-		WFactor = CalcMeanAbsValueParallel(LocalWeightBuffer, HiddenCount * VisibleCount);
-		VFactor = CalcMeanAbsValue(LocalVBiasBuffer, VisibleCount);
-		HFactor = CalcMeanAbsValue(LocalHBiasBuffer, HiddenCount);
-
-		//printf("%f, %f, %f, %f, %f, %f\n", DeltaWFactor, DeltaVFactor, DeltaHFactor, WFactor, VFactor, HFactor);
-
-	}
-
-	swap(Textures[Tex::Weights0], Textures[Tex::Weights1]);
+	swap(Buffers[Tex::Weights0], Buffers[Tex::Weights1]);
+	swap(Buffers[Tex::DeltaWeights0], Buffers[Tex::DeltaWeights1]);
 }
 
-float RBMTrainer::CalcError(GLuint v, GLuint vp)
+float RBMTrainer::CalcError(OpenGLBuffer2D& v, OpenGLBuffer2D& vp)
 {
-	glDepthFunc(GL_ALWAYS);
-	glDepthMask(GL_FALSE);
+	CalcErrorVector->SetInput(0, v);
+	CalcErrorVector->SetInput(1, vp);
 
-	// set params
-	program_calc_error.SetParam(CalcErrorParams::Visible, v);
-	program_calc_error.SetParam(CalcErrorParams::VisiblePrime, vp);
-	program_calc_error.SetParam(CalcErrorParams::Minibatchsize, MinibatchSize);
+	CalcErrorVector->BindOutput(0, Buffers[Tex::Error]);
 
-	// run
-	program_calc_error.SetRenderTarget(target_error);
-	program_calc_error.Run(VisibleCount, 1, Textures[Tex::Error]);
-
-	// now bring it back
-	glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::Error]);
-	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED, GL_FLOAT, LocalErrorBuffer);
-
-	
-	__m128 result = _mm_set_ps1(0.0f);	// zero out initially
+	CalcErrorVector->Run();
 
 	float* head = LocalErrorBuffer;
+	CalcErrorVector->GetOutput(0, head); 
+
+	__m128 result = _mm_set_ps1(0.0f);	// zero out initially
+	
 	for(uint32_t k = 0; k < LocalErrorBuffer.BlockCount(); k++)
 	{
 		__m128 temp = _mm_load_ps(head);
@@ -1428,13 +867,12 @@ float RBMTrainer::CalcError(GLuint v, GLuint vp)
 		head += 4;
 	}
 
-
 	result = _mm_hadd_ps(result, result);
 	result = _mm_hadd_ps(result, result);
 
 	float error;
 	_mm_store_ss(&error, result);
-	
+
 	return (error / float(VisibleCount)) / (1.0f - VisibleDropout);
 }
 
@@ -1445,11 +883,8 @@ bool RBMTrainer::DumpVisible(float* image, float* recon)
 		return false;
 	}
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::Visible]);
-	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED, GL_FLOAT, image);
-
-	glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::VisiblePrime]);
-	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED, GL_FLOAT, recon);
+	Buffers[Tex::Visible].GetData(image);
+	Buffers[Tex::VisiblePrime].GetData(recon);
 
 	return true; 
 }
@@ -1461,8 +896,7 @@ bool RBMTrainer::DumpHidden(float* activations)
 		return false;
 	}
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::HiddenProbs]);
-	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED, GL_FLOAT, activations);
+	Buffers[Tex::HiddenProbs].GetData(activations);
 
 	return true;
 }
@@ -1474,55 +908,48 @@ bool RBMTrainer::DumpWeights(float * weights)
 		return false;
 	}
 
-	glBindTexture(GL_TEXTURE_RECTANGLE, Textures[Tex::Weights0]);
-	glGetTexImage(GL_TEXTURE_RECTANGLE, 0, GL_RED, GL_FLOAT, weights);
+	Buffers[Tex::Weights0].GetData(weights);
 
 	return true;
 }
 
 float RBMTrainer::GetReconstructionError()
 {
-	return CalcError(Textures[Tex::Visible], Textures[Tex::VisiblePrime]);
+	return CalcError(Buffers[Tex::Visible], Buffers[Tex::VisiblePrime]);
 }
 
 float RBMTrainer::GetValidationReconstructionError()
 {
+	float result = -1.0f;
+
 	if(LoadedValidationMinibatches > 0)
 	{
 		if(CurrentValidationMinibatchIndex == 0)
 		{
 			if(SwappingValidationData == true)
 			{
-				SwapInNewMinibatchTextures(CurrentValidationRowIndex, LoadedValidationMinibatches, ValidationData, VisibleValidationTextures);
+				SwapInNewMinibatchData(CurrentValidationRowIndex, LoadedValidationMinibatches, ValidationData, VisibleValidationBuffers);
 			}
 		}
 
-		// get our validation batch
-		GLuint vis = VisibleValidationTextures[(CurrentValidationMinibatchIndex * Prime) % LoadedValidationMinibatches];
-	
-		// calculate hidden states and reconstructions
-		CalcRandom();
+		OpenGLBuffer2D& visible_data = VisibleValidationBuffers[CurrentValidationMinibatchIndex % LoadedValidationMinibatches];
+
+		// calc which hidden and visible units will be enabled this round
 		CalcEnabledUnits();
+		// copy data to new buffer and dropout visible data
+		CalcVisibleCopy(visible_data, Buffers[Tex::ValidationVisible]);
+		CalcHiddenProbs(visible_data, Buffers[Tex::ValidationHiddenProbs]);
+		CalcHiddenStates(Buffers[Tex::ValidationHiddenProbs], Buffers[Tex::ValidationHidddenStates]);
 
-
-		CalcVisibleDepth(Textures[Tex::ValidationVisible]);
-		CalcVisibleCopy(vis, Textures[Tex::ValidationVisible]);
-
-		CalcHiddenDepth(Textures[Tex::ValidationHiddenProbs]);
-		CalcHiddenProbs(Textures[Tex::ValidationVisible], Textures[Tex::ValidationHiddenProbs]);
-		CalcHiddenStates(Textures[Tex::ValidationHiddenProbs], Textures[Tex::ValidationHidddenStates]);
-		
-		CalcVisibleDepth(Textures[Tex::ValidationVisiblePrime]);
-		CalcVisible(Textures[Tex::ValidationHidddenStates], Textures[Tex::ValidationVisiblePrime]);
-
-		float result = CalcError(Textures[Tex::ValidationVisible], Textures[Tex::ValidationVisiblePrime]);
+		CalcVisiblePrime(Buffers[Tex::ValidationHidddenStates], Buffers[Tex::ValidationVisiblePrime]);
+		result = CalcError(visible_data, Buffers[Tex::ValidationVisiblePrime]);
 
 		// update the minibatch index
 		CurrentValidationMinibatchIndex = (CurrentValidationMinibatchIndex + 1) % LoadedValidationMinibatches;
 		// and update our row index
 		CurrentValidationRowIndex = (CurrentValidationRowIndex + MinibatchSize) % ValidationData->GetRowCount();
-		
-		return result;
 	}
-	return -1.0f;
+
+	return result;
 }
+
