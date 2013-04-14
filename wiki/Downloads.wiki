@@ -1,1 +1,1 @@
-<wiki:gadget url="http://visual-rbm.googlecode.com/svn/wiki/Downloads.xml"  width="877" height="400" border="0" /> 
+<wiki:gadget url="http://visual-rbm.googlecode.com/svn/wiki/Downloads.xml"  width="900" height="500" border="0" /> 
