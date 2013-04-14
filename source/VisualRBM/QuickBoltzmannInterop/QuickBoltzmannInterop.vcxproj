@@ -50,15 +50,13 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>../QuickBoltzmannNative/;$(SolutionDir)\..\..\helpers</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\QuickBoltzmannNative/;$(SolutionDir)\..\..\helpers;$(SolutionDir)\..\..\extern\SiCKL\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)../../extern/SiCKL/lib/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freeglut_static.lib;glew32s.lib;SiCKLD.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -67,16 +65,14 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>../QuickBoltzmannNative/;$(SolutionDir)\..\..\helpers</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\QuickBoltzmannNative/;$(SolutionDir)\..\..\helpers;$(SolutionDir)\..\..\extern\SiCKL\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>
-      </AdditionalLibraryDirectories>
-      <AdditionalDependencies>
-      </AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(SolutionDir)../../extern/SiCKL/lib/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freeglut_static.lib;glew32s.lib;SiCKL.lib</AdditionalDependencies>
     </Link>
     <ProjectReference />
   </ItemDefinitionGroup>

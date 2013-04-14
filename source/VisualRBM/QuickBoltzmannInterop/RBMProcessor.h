@@ -1,7 +1,5 @@
 #pragma once
 
-#include "../FreeGLUT/include/GL/freeglut.h"
-
 #include "../QuickBoltzmannNative/RBMTrainer.h"
 #include "MessageQueue.h"
 #include <stdint.h>

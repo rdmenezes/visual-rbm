@@ -94,8 +94,8 @@ namespace QuickBoltzmann
 					}
 					else
 					{
-						float* image_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetVisibleCount()];
-						float* recon_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetVisibleCount()];
+						float* image_buff = new float[rbmtrainer->GetMinibatchSize() * (rbmtrainer->GetVisibleCount() + 1)];
+						float* recon_buff = new float[rbmtrainer->GetMinibatchSize() * (rbmtrainer->GetVisibleCount() + 1)];
 
 						if(rbmtrainer->DumpVisible(image_buff, recon_buff))
 						{
@@ -107,6 +107,8 @@ namespace QuickBoltzmann
 							{
 								void operator() (uint32_t MiniBatches, uint32_t VisibleCount, float* RawBuff, List<array<float>^>^ ImageList)
 								{
+									// bias on the front
+									RawBuff += 1;
 									for(uint32_t k = 0; k < MiniBatches; k++)
 									{
 										array<float>^ image = gcnew array<float>(VisibleCount);
@@ -114,7 +116,7 @@ namespace QuickBoltzmann
 
 										System::Runtime::InteropServices::Marshal::Copy(IntPtr(RawBuff), image, 0, VisibleCount);
 
-										RawBuff += VisibleCount;
+										RawBuff += VisibleCount + 1;
 									}
 								}
 							} interop_copy;
@@ -147,12 +149,12 @@ namespace QuickBoltzmann
 					}
 					else
 					{
-						float* hidden_buff = new float[rbmtrainer->GetMinibatchSize() * rbmtrainer->GetHiddenCount()];
+						float* hidden_buff = new float[rbmtrainer->GetMinibatchSize() * (rbmtrainer->GetHiddenCount() + 1)];
 
 						if(rbmtrainer->DumpHidden(hidden_buff))
 						{
 							List<array<float>^>^ probs = gcnew List<array<float>^>();
-							float* h_vec = hidden_buff;
+							float* h_vec = hidden_buff + 1;	// +1 for bias
 							for(uint32_t k = 0; k < rbmtrainer->GetMinibatchSize(); k++)
 							{
 								array<float>^ activations = gcnew array<float>(rbmtrainer->GetHiddenCount());
@@ -160,7 +162,7 @@ namespace QuickBoltzmann
 
 								System::Runtime::InteropServices::Marshal::Copy(IntPtr(h_vec), activations, 0, rbmtrainer->GetHiddenCount());
 
-								h_vec += rbmtrainer->GetHiddenCount();
+								h_vec += rbmtrainer->GetHiddenCount() + 1;
 							}
 
 							m["probabilities"] = probs;
