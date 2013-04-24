@@ -199,6 +199,8 @@ struct __CalcWeightUpdates_Source : public SiCKL::Source
 			CONST_DATA(Buffer2D<Float>, hidden_prime)
 			CONST_DATA(Buffer2D<Float>, prev_delta)
 			CONST_DATA(Buffer2D<Float>, prev_weight)
+			CONST_DATA(Buffer2D<UInt>, enabled_visible)
+			CONST_DATA(Buffer2D<UInt>, enabled_hidden)
 		END_CONST_DATA
 
 		BEGIN_OUT_DATA
@@ -210,72 +212,79 @@ struct __CalcWeightUpdates_Source : public SiCKL::Source
 			Int& i = Index().Y;
 			Int& j = Index().X;
 
-			// calculate the delta
-			delta = 0.0f;
-			ForInRange(m, 0, minibatch_size)
-				Float vi = visible(i, m);
-				Float vi_prime = visible_prime(i, m);
+			If(enabled_visible(i, 0) == 1 && enabled_hidden(j, 0) == 1)
 
-				Float hj = hidden(j, m);
-				Float hj_prime = hidden_prime(j, m);
+				// calculate the delta
+				delta = 0.0f;
+				ForInRange(m, 0, minibatch_size)
+					Float vi = visible(i, m);
+					Float vi_prime = visible_prime(i, m);
 
-				delta = delta + (vi * hj);
-				delta = delta - (vi_prime * hj_prime);
-			EndFor
-			delta /= (float)minibatch_size;
+					Float hj = hidden(j, m);
+					Float hj_prime = hidden_prime(j, m);
 
-			delta = Float(1.0f - momentum) * delta + Float(momentum) * prev_delta(Index().X, Index().Y);
+					delta = delta + (vi * hj);
+					delta = delta - (vi_prime * hj_prime);
+				EndFor
+				delta /= (float)minibatch_size;
+
+				delta = Float(1.0f - momentum) * delta + Float(momentum) * prev_delta(Index().X, Index().Y);
 			
 			
-			// get our previous weight
-			Float prev = prev_weight(Index().X, Index().Y);
+				// get our previous weight
+				Float prev = prev_weight(Index().X, Index().Y);
 			
-			// calculate weight update
-			// only L1
-			if(l1_regularization != 0.0f && l2_regularization == 0.0f)
-			{
-				// factor comes out to 0 if we're on a bias, 1 if a weight
-				Float factor = Clamp(Index().X, 0.0f, 1.0f) * Clamp(Index().Y, 0.0f, 1.0f);
+				// calculate weight update
+				// only L1
+				if(l1_regularization != 0.0f && l2_regularization == 0.0f)
+				{
+					// factor comes out to 0 if we're on a bias, 1 if a weight
+					Float factor = Clamp(Index().X, 0.0f, 1.0f) * Clamp(Index().Y, 0.0f, 1.0f);
 
-				Float l1 = Sign(prev) * l1_regularization;
-				Float change = delta - l1 * factor;
+					Float l1 = Sign(prev) * l1_regularization;
+					Float change = delta - l1 * factor;
 
-				// update weight
-				weight = prev + (change * learning_rate);				
-			}
-			// only L2
-			else if(l1_regularization == 0.0f && l2_regularization != 0.0f)
-			{
-				// factor comes out to 0 if we're on a bias, 1 if a weight
-				Float factor = Clamp(Index().X, 0.0f, 1.0f) * Clamp(Index().Y, 0.0f, 1.0f);
+					// update weight
+					weight = prev + (change * learning_rate);				
+				}
+				// only L2
+				else if(l1_regularization == 0.0f && l2_regularization != 0.0f)
+				{
+					// factor comes out to 0 if we're on a bias, 1 if a weight
+					Float factor = Clamp(Index().X, 0.0f, 1.0f) * Clamp(Index().Y, 0.0f, 1.0f);
 
-				Float l2 = prev * l2_regularization;
-				Float change = delta - l2 * factor;
+					Float l2 = prev * l2_regularization;
+					Float change = delta - l2 * factor;
 
-				// update weight
-				weight = prev + (change * learning_rate);
-			} 
-			// both L1 and L2
-			else if(l1_regularization != 0.0f && l2_regularization != 0.0f)
-			{
-				// factor comes out to 0 if we're on a bias, 1 if a weight
-				Float factor = Clamp(Index().X, 0.0f, 1.0f) * Clamp(Index().Y, 0.0f, 1.0f);
+					// update weight
+					weight = prev + (change * learning_rate);
+				} 
+				// both L1 and L2
+				else if(l1_regularization != 0.0f && l2_regularization != 0.0f)
+				{
+					// factor comes out to 0 if we're on a bias, 1 if a weight
+					Float factor = Clamp(Index().X, 0.0f, 1.0f) * Clamp(Index().Y, 0.0f, 1.0f);
 
-				Float l1 = Sign(prev) * l1_regularization;
-				Float l2 = prev * l2_regularization;
-				Float reg = l1 + l2;
+					Float l1 = Sign(prev) * l1_regularization;
+					Float l2 = prev * l2_regularization;
+					Float reg = l1 + l2;
 
-				Float change = delta - (reg * factor);
+					Float change = delta - (reg * factor);
 
-				// update weight
-				weight = prev + (change * learning_rate);
-			}
-			// neither
-			else
-			{
-				// update weight
-				weight = prev + (delta * learning_rate);
-			}
+					// update weight
+					weight = prev + (change * learning_rate);
+				}
+				// neither
+				else
+				{
+					// update weight
+					weight = prev + (delta * learning_rate);
+				}
+			Else
+				weight = prev_weight(Index().X, Index().Y);
+				delta = prev_delta(Index().X, Index().Y);
+
+			EndIf
 		END_MAIN
 
 

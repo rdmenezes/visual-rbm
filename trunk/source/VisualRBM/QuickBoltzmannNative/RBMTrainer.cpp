@@ -836,6 +836,8 @@ void RBMTrainer::CalcWeights()
 	CalcWeightUpdates->SetInput(3, Buffers[Tex::HiddenPrime]);
 	CalcWeightUpdates->SetInput(4, Buffers[Tex::DeltaWeights0]);
 	CalcWeightUpdates->SetInput(5, Buffers[Tex::Weights0]);
+	CalcWeightUpdates->SetInput(6, Buffers[Tex::EnabledVisibleUnits]);
+	CalcWeightUpdates->SetInput(7, Buffers[Tex::EnabledHiddenUnits]);
 
 	CalcWeightUpdates->BindOutput(0, Buffers[Tex::DeltaWeights1]);
 	CalcWeightUpdates->BindOutput(1, Buffers[Tex::Weights1]);
@@ -873,7 +875,7 @@ float RBMTrainer::CalcError(OpenGLBuffer2D& v, OpenGLBuffer2D& vp)
 	float error;
 	_mm_store_ss(&error, result);
 
-	return (error / float(VisibleCount)) / (1.0f - VisibleDropout);
+	return (error / float(VisibleCount * MinibatchSize) );
 }
 
 bool RBMTrainer::DumpVisible(float* image, float* recon)
