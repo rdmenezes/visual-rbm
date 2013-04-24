@@ -129,7 +129,6 @@
   <ItemGroup>
     <ClInclude Include="Common.h" />
     <ClInclude Include="RBMTrainer.h" />
-    <ClInclude Include="Shaders.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Common.cpp" />
