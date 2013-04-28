@@ -296,11 +296,13 @@ void RBMTrainer::SwapInNewMinibatchData(uint32_t in_StartIndex, uint32_t in_Coun
 		float* row_buffer = minibatch_buffer;
 		for(uint32_t j = 0; j < MinibatchSize; j++)
 		{
-			in_Data->ReadRow(row, row_buffer);
+			// bias
+			row_buffer[0] = 1.0f;
+			in_Data->ReadRow(row, row_buffer + 1);
 
 			// row index can overflow in here, in which case go back to beginning
 			row = (row + 1) % in_Data->GetRowCount();
-			row_buffer += VisibleCount;
+			row_buffer += (VisibleCount + 1);
 		}
 
 		// copy this new data into texture memory
@@ -406,7 +408,7 @@ bool RBMTrainer::Initialize()
 				else
 				{
 					// finally, gaussian noise for the rest
-					val = (float)(NextGaussian() * 0.01);
+					val = (float)(NextGaussian() / sqrt((double)HiddenCount)) * 0.1;
 				}
 				// set val
 				initial_rbm_weights[i * (HiddenCount + 1) + j] = val;
