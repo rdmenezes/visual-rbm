@@ -407,8 +407,10 @@ bool RBMTrainer::Initialize()
 				// a regular weight
 				else
 				{
-					// finally, gaussian noise for the rest
-					val = (float)(NextGaussian() / sqrt((double)HiddenCount)) * 0.1;
+					// finally, gaussian noise for the rest 
+					// scaled by sqrt(visible) so that probability of hidden units being acative is the same
+					// regardless of number of visible inputs
+					val = (float)(NextGaussian() * sqrt(500.0f) / sqrt((double)VisibleCount)) * 0.01;
 				}
 				// set val
 				initial_rbm_weights[i * (HiddenCount + 1) + j] = val;
