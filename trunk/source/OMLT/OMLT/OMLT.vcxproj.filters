@@ -18,6 +18,12 @@
     <ClCompile Include="source\DataAtlas.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\BackPropagation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\MovingAverage.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\DataAtlas.h">
@@ -26,7 +32,13 @@
     <ClInclude Include="include\IDX.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\RBM.hpp">
+    <ClInclude Include="include\BackPropagation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\BackPropagationKernels.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\MovingAverage.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
