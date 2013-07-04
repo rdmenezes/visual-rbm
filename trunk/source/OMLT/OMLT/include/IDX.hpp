@@ -589,6 +589,22 @@ namespace OMLT
 
 		inline uint32_t GetRowLength() const {return _row_length;}
 		inline int64_t GetRowLengthBytes() const {return _row_length_bytes;}
+		inline size_t GetDataSize() const
+		{
+			switch(_data_format)
+			{
+			case UInt8:
+			case SInt8:
+				return 1;
+			case SInt16:
+				return 2;
+			case SInt32:
+			case Single:
+				return 4;
+			case Double:
+				return 8;
+			}
+		}
 		inline DataFormat GetDataFormat() const {return _data_format;}
 		inline uint32_t GetRowCount() const {return _row_dimensions[0];}
 		inline uint32_t GetRowDimensionsCount() const {return _row_dimensions_count;}
