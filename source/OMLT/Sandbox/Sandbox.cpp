@@ -19,13 +19,10 @@ void main(int argc, char** argv)
 
 	SiCKL::OpenGLBuffer2D tex_buffer;
 
-	//float* head = nullptr;
-	//float* buffer = nullptr;
-
-	TrainerConfig t_config = {10, 0.1f, 0.5f};
+	TrainerConfig t_config = {10, 0.01f, 0.5f};
 	BackPropagation trainer(data->GetRowLength(), t_config);
 
-	LayerConfig hlayer_config = {500, Sigmoid, 0.2f};
+	LayerConfig hlayer_config = {500, NoisySigmoid, 0.1f};
 	trainer.AddLayer(hlayer_config);
 
 	LayerConfig olayer_config = {data->GetRowLength(), Sigmoid, 0.5f};
@@ -33,41 +30,48 @@ void main(int argc, char** argv)
 
 	trainer.Initialize();
 
-	for(uint32_t b = 0; b < 10000; b++)
+	MovingAverage* average = MovingAverage::Build(100);
+
+	for(uint32_t e = 0; e < 100; e++)
 	{
-		atlas.Next(tex_buffer);
-
-		//printf("Error: %f\n", trainer.Train(tex_buffer, tex_buffer));
-		trainer.Train(tex_buffer, tex_buffer);
-
-		//BMP image;
-		//image.SetSize(28 * 10, 28);
-		//
-		//tex_buffer.GetData(buffer);
-		//head = buffer;
-
-		//for(uint32_t k = 0; k < 10; k++)
-		//{
-		//	for(uint32_t y = 0; y < 28; y++)
-		//	{
-		//		for(uint32_t x = 0; x < 28; x++)
-		//		{
-		//			float& flum = *buffer++;
-		//			uint8_t lum = (uint8_t)(flum * 255.0f);
-
-		//			RGBApixel pixel;
-		//			pixel.Red = pixel.Green =  pixel.Blue = lum;
-
-		//			image.SetPixel(k * 28 + x, y, pixel);
-		//		}
-		//	}
-		//}
-
-		//image.WriteToFile("what.bmp");
-		//buffer = head;
-		//getc(stdin);
-		
+		for(uint32_t b = 0; b < atlas.GetTotalBatches(); b++)
+		{
+			atlas.Next(tex_buffer);
+			average->AddEntry(trainer.Train(tex_buffer, tex_buffer));
+			
+			if((b + 1) % 100 == 0)
+			{
+				printf("Error %i:%i = %f\n", e, b+1, average->GetAverage());
+			}
+		}		
 	}
 
 	getc(stdin);
+}
+
+void ToBMP(float* in_buffer, int id)
+{
+	BMP image;
+	image.SetSize(28 * 10, 28);
+
+	for(uint32_t k = 0; k < 10; k++)
+	{
+		for(uint32_t y = 0; y < 28; y++)
+		{
+			for(uint32_t x = 0; x < 28; x++)
+			{
+				float& flum = *in_buffer++;
+				uint8_t lum = (uint8_t)(flum * 255.0f);
+
+				RGBApixel pixel;
+				pixel.Red = pixel.Green =  pixel.Blue = lum;
+
+				image.SetPixel(k * 28 + x, y, pixel);
+			}
+		}
+	}
+
+	char filename[32] = {0};
+	sprintf(filename, "batch%04i.bmp", id);
+	image.WriteToFile(filename);
 }

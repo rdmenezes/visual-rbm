@@ -93,23 +93,23 @@ namespace OMLT
 
 		// error calculation
 		float err = 0.0f;
-		//{
-		//	static float* calculate_output = nullptr;
-		//	static float* desired_output = nullptr;
+		{
+			static float* calculate_output = nullptr;
+			static float* desired_output = nullptr;
 
-		//	Layers.back()->Activation.GetData(calculate_output);
-		//	example_label.GetData(desired_output);
+			Layers.back()->Activation.GetData(calculate_output);
+			example_label.GetData(desired_output);
 
-		//	uint32_t pixels = example_label.Width * example_label.Height;
+			uint32_t pixels = example_label.Width * example_label.Height;
 
-		//	for(uint32_t i = 0; i < pixels; i++)
-		//	{
-		//		float diff = calculate_output[i] - desired_output[i];
-		//		err += diff*diff;
-		//	}
+			for(uint32_t i = 0; i < pixels; i++)
+			{
+				float diff = calculate_output[i] - desired_output[i];
+				err += diff*diff;
+			}
 
-		//	err /= pixels;
-		//}
+			err /= pixels;
+		}
 		// calc sensitivities, feed backward
 		{
 			auto it = Layers.rbegin();
@@ -326,7 +326,7 @@ namespace OMLT
 					{
 					case Sigmoid:
 					case NoisySigmoid:
-						//bias_init = -4.0f;
+						bias_init = -4.0f;
 						break;
 					case Linear:
 						bias_init = 0.0f;
