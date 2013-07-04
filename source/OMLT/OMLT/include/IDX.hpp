@@ -57,7 +57,7 @@ namespace OMLT
 		FILE* _idx_file;
 		bool _writing;
 		uint32_t _row_length;	// number of elements
-		int64_t _row_length_bytes;	// number of bytes of each row
+		int64_t _row_length_bytes;	// number of bytes in each row
 		void* _empty_row;
 
 		uint32_t HeaderSize() const
@@ -176,8 +176,6 @@ namespace OMLT
 	#pragma endregion
 
 	public:
-
-
 		~IDX()
 		{
 			if(_idx_file)
