@@ -1,22 +1,19 @@
+// std
 #include <stdint.h>
 #include <vector>
+
+// sickl header
 #include <SiCKL.h>
+
+// omlt
+#include "Enums.h"
+#include "MultilayerPerceptron.h"
 
 using std::vector;
 using namespace SiCKL;
 
 namespace OMLT
 {
-	enum ActivationFunction
-	{
-		// no activation function
-		Linear,
-		// sigmoid function
-		Sigmoid,
-		// gaussian noise added to unit accumulation
-		NoisySigmoid,
-	};
-
 	// config for a nn trainer
 	struct TrainerConfig
 	{
@@ -42,12 +39,10 @@ namespace OMLT
 		BackPropagation(uint32_t in_InputUnits, TrainerConfig in_Config);
 
 		void AddLayer(LayerConfig config);
-		void AddOutputLayer(LayerConfig config);
-
 		float Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
-
 		void Initialize();
 
+		MultilayerPerceptron* GetMultilayerPerceptron() const;
 	private:
 
 		struct Layer
@@ -93,8 +88,6 @@ namespace OMLT
 			 * Sensitivity related data
 			 */ 
 			OpenGLBuffer2D Sensitivities;
-	//		OpenGLBuffer2D* NextWeights;
-	//		OpenGLBuffer2D* NextSensitivities;
 
 			// methods
 			OpenGLProgram* CalcEnabledInputs;
@@ -103,14 +96,13 @@ namespace OMLT
 			OpenGLProgram* UpdateWeights;
 		};
 
-		Layer* BuildLayer(LayerConfig in_Config, bool in_TopLayer);
+		Layer* BuildLayer(LayerConfig in_Config);
 
 		vector<Layer*> Layers;
 		const uint32_t InputUnits;
 		const float LearningRate;
 		const float Momentum;
 		const uint32_t MinibatchSize;
-		bool TopLayerAdded;
 
 #		include "BackPropagationKernels.h"
 	};

@@ -52,7 +52,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>include;$(SolutionDir)\..\..\extern\SiCKL\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)\..\..\extern\SiCKL\include;$(SolutionDir)\..\..\extern\cJSON</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -68,7 +68,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>include;$(SolutionDir)\..\..\extern\SiCKL\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)\..\..\extern\SiCKL\include;$(SolutionDir)\..\..\extern\cJSON</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -77,16 +77,21 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\..\extern\cJSON\cJSON.c" />
+    <ClCompile Include="source\Enums.cpp" />
     <ClCompile Include="source\DataAtlas.cpp" />
     <ClCompile Include="source\BackPropagation.cpp" />
     <ClCompile Include="source\MovingAverage.cpp" />
+    <ClCompile Include="source\MultilayerPerceptron.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\DataAtlas.h" />
+    <ClInclude Include="include\Enums.h" />
     <ClInclude Include="include\IDX.hpp" />
     <ClInclude Include="include\BackPropagation.h" />
     <ClInclude Include="include\BackPropagationKernels.h" />
     <ClInclude Include="include\MovingAverage.h" />
+    <ClInclude Include="include\MultilayerPerceptron.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
