@@ -15,25 +15,15 @@ namespace OMLT
 		, LearningRate(in_Config.LearningRate)
 		, Momentum(in_Config.Momentum)
 		, MinibatchSize(in_Config.MinibatchSize)
-		, TopLayerAdded(false)
 	{
 
 	}
 
 	void BackPropagation::AddLayer( LayerConfig config )
 	{
-		assert(TopLayerAdded == false);
-
-		Layers.push_back(BuildLayer(config, false));
+		Layers.push_back(BuildLayer(config));
 	}
 
-	void BackPropagation::AddOutputLayer( LayerConfig config )
-	{
-		assert(TopLayerAdded == false);
-
-		Layers.push_back(BuildLayer(config, true));
-		TopLayerAdded = true;
-	}
 	float BackPropagation::Train( OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label )
 	{
 		assert(example_input.Width == InputUnits);
@@ -218,48 +208,7 @@ namespace OMLT
 
 	}
 
-	static uint32_t seed = 1;
-	uint32_t random()
-	{
-		const uint32_t a = 1664525;
-		const uint32_t c = 1013904223;
-
-		seed = a * seed + c;
-
-		//printf("seed: %u\n", seed);
-
-		return seed;
-	}
-
-	/*
-	uint32_t uniform(uint32_t (*in_random)(void))
-	{
-		return in_random();
-	}
-
-	float next_float(uint32_t (*in_random)(void))
-	{
-		uint32_t next24 = in_random() >> 8;
-		return (float)next24 / (float)(1 << 24);
-	}
-
-	float normal(uint32_t (*in_random)(void))
-	{
-		float u1 = 0.0f;
-		float u2 = 0.0f;
-
-		while(u1 == 0.0f)
-		{
-			u1 = next_float(in_random);
-		}
-		u2 = next_float(in_random);
-
-		const float PI = 3.14159265359f;
-		return std::sqrtf(-2.0f * std::logf(u1)) * std::sinf(2.0f * PI * u2);
-	}
-	*/
-
-	BackPropagation::Layer* BackPropagation::BuildLayer( LayerConfig in_Config, bool in_TopLayer )
+	BackPropagation::Layer* BackPropagation::BuildLayer( LayerConfig in_Config )
 	{
 		std::mt19937_64 random;
 		random.seed(1);
@@ -476,4 +425,30 @@ namespace OMLT
 			delete[] enabled;
 		}
 	}
+
+	MultilayerPerceptron* BackPropagation::GetMultilayerPerceptron() const
+	{
+		MultilayerPerceptron* result = new MultilayerPerceptron();
+
+		for(auto it = Layers.begin(); it < Layers.end(); ++it)
+		{
+			MultilayerPerceptron::Layer* layer = new MultilayerPerceptron::Layer((*it)->InputUnits, (*it)->OutputUnits, (*it)->Function);
+			float* gpu_weights = nullptr;
+			(*it)->Weights0.GetData(gpu_weights);
+
+			for(uint32_t j = 0; j < layer->outputs; j++)
+			{
+				layer->biases[j] = gpu_weights[0];
+				memcpy(layer->weights[j], gpu_weights + 1, sizeof(float) * layer->inputs);
+			}
+
+			bool added = result->AddLayer(layer);
+			assert(added == true);
+
+			free(gpu_weights);
+		}
+
+		return result;
+	}
+
 }

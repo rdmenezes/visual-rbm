@@ -1,0 +1,276 @@
+// std
+#include <assert.h>
+
+ // windows
+#include <malloc.h>
+#include <intrin.h>
+
+// OMLT
+#include "MultilayerPerceptron.h"
+
+// extern
+#include <cJSON.h>
+
+namespace OMLT
+{
+	
+#	define _mm_negabs_ps(x) _mm_or_ps(x, x80000000)
+#	define _mm_abs_ps(x) _mm_and_ps(x, x7FFFFFFF)
+#	define _mm_sign_ps(x) _mm_or_ps(_mm_set_ps1(1.0f), _mm_and_ps(x, x80000000))
+
+	/*
+	 * sigmoid(x) 1/32 * (abs(x) - 4)^2 * -sign(x) + (sign(x) + 1) / 2
+	 */
+	__m128 _mm_sigmoid_ps(__m128 x0)
+	{
+		union
+		{
+			float f;
+			uint32_t u;
+		};
+
+		 // first calculate abs
+		__m128 x;
+		__m128 sign;
+		{
+			u = 0x80000000;
+			__m128 x80000000 = _mm_set_ps1(f);
+
+			x = _mm_negabs_ps(x0);
+			{
+				// now clamp it to -4, 0
+				__m128 neg_4 = _mm_set_ps1(-4.0f);
+				x = _mm_max_ps(neg_4, x);
+				{
+					u = 0x7FFFFFFF;
+					__m128 x7FFFFFFF = _mm_set_ps1(f);
+					// and now abs it
+					x = _mm_abs_ps(x);
+				}
+
+				// subtract 4
+				x = _mm_add_ps(x, neg_4);
+			}
+
+			// square the difference
+			x = _mm_mul_ps(x, x);
+
+			// and divide by 32	
+			x = _mm_div_ps(x, _mm_set_ps1(-32.0f));
+
+			// now we have to fix it for positive x
+
+			// get the sign
+			sign = _mm_sign_ps(x0);
+
+			// multiply the first part by the negative sign
+			x = _mm_mul_ps(x, sign);
+		}
+
+		// calculate sign + 1
+		__m128 shift = _mm_add_ps(sign, _mm_set_ps1(1.0f));
+		// (sign + 1) / 2
+		shift = _mm_div_ps(shift, _mm_set_ps1(2.0f));
+
+		// now shift x5 and we'll be done
+		return _mm_add_ps(shift, x);
+	}
+
+	inline uint32_t block_count(const uint32_t float_count)
+	{
+		return (float_count % 4 == 0 ? float_count / 4 : float_count / 4 + 1);
+	}
+
+	void MultilayerPerceptron::FeedForward( float* input_vector, float* output_vector )
+	{
+		// verify the input vector is properly 16 byte aligned
+		assert((uintptr_t(input_vector) % 16) == 0);
+		_activations[0] = input_vector;
+
+		for(uint32_t L = 0; L < _layers.size(); L++)
+		{
+			const Layer& layer = *_layers[L];
+
+			float* input_head = _activations[L];
+			float* output_accumulation = _accumulations[L+1];
+			
+			const uint32_t input_blocks = block_count(layer.inputs);
+			for(uint32_t j = 0; j < layer.outputs; j++)
+			{
+				float* input_buff = input_head;
+				float* weight_buff = layer.weights[j];
+				__m128 out_j = _mm_setzero_ps();
+				for(uint32_t i = 0; i < input_blocks; i++)
+				{
+					__m128 input = _mm_load_ps(input_buff);
+					__m128 w = _mm_load_ps(weight_buff);
+
+					// dot product
+					out_j = _mm_add_ps(out_j, _mm_mul_ps(input, w));
+
+					input_buff += 4;
+					weight_buff += 4;
+				}
+
+				// finish up our dot product
+				out_j = _mm_hadd_ps(out_j, out_j);
+				out_j = _mm_hadd_ps(out_j, out_j);
+
+				// bring it back
+				_mm_store_ss(output_accumulation + j, out_j);
+
+				// optionally add noise
+			}
+
+			// add in the biases and calc activation
+			const uint32_t output_blocks = block_count(layer.outputs);
+
+			float* output_activation = _activations[L+1];
+			float* biases = layer.biases;
+
+			// now calculate sigmoid on all these buggers
+			
+			for(uint32_t j = 0; j < output_blocks; j++)
+			{
+				__m128 b = _mm_load_ps(biases);
+				// load our current accumulation
+				__m128 acc = _mm_load_ps(output_accumulation);
+				// add in the bias
+				acc = _mm_add_ps(acc, b);
+
+				// calculate activation (only sigmoid for now)
+				__m128 act = _mm_sigmoid_ps(acc);
+				_mm_store_ps(output_activation, act);
+
+				// move up our pointers
+				output_accumulation += 4;
+				output_activation += 4;
+				biases += 4;
+			}
+
+			// zero out the dangling bits here (left over memory from 16 byte padding)
+			// so we don't screw up next layer's dot products
+			for(uint32_t j = layer.outputs; j < output_blocks * 4; j++)
+			{
+				output_activation[j] = 0.0f;
+			}
+		}
+
+		// memcpy activation to the output buffer
+		memcpy(output_vector, _activations.back(), sizeof(float) * _layers.back()->outputs);
+
+		_activations[0] = nullptr;
+	}
+
+	MultilayerPerceptron::Layer* MultilayerPerceptron::GetLayer( uint32_t index )
+	{
+		assert(index < _layers.size());
+		return _layers[index];
+	}
+
+	bool MultilayerPerceptron::AddLayer( Layer* in_layer)
+	{
+		if(_layers.size() == 0)
+		{
+			// we don't get the accumulations for input
+			_accumulations.push_back(nullptr);
+			
+			// we'll always copy in input vectors to the first slot, so give us some aligned memory here
+			size_t input_alloc_size = sizeof(float) * block_count(in_layer->inputs) * 4;
+			_activations.push_back((float*)_aligned_malloc(input_alloc_size, 16));
+
+			memset(_activations.front(), 0x00, input_alloc_size);
+		}
+		else if(_layers.back()->outputs != in_layer->inputs)
+		{
+			// unit count mismatch between existing top layer and new top layer
+			return false;
+		}
+
+		_layers.push_back(in_layer);
+		size_t alloc_size = sizeof(float) * (in_layer->outputs + 4);
+		_accumulations.push_back((float*)_aligned_malloc(alloc_size, 16));
+		_activations.push_back((float*)_aligned_malloc(alloc_size, 16));
+		
+		memset(_accumulations.back(), 0x00, alloc_size);
+		memset(_activations.back(), 0x00, alloc_size);
+		
+		return true;
+	}
+
+	std::string MultilayerPerceptron::ToJSON() const
+	{
+		cJSON* root = cJSON_CreateObject();
+		cJSON* root_layer = cJSON_CreateArray();
+		cJSON_AddStringToObject(root, "Type", "MultilayerPerceptron");
+		cJSON_AddItemToObject(root, "Layers", root_layer);
+
+		for(auto it = _layers.begin(); it < _layers.end(); ++it)
+		{
+			cJSON* layer = cJSON_CreateObject();
+			cJSON_AddItemToArray(root_layer, layer);
+
+			cJSON_AddNumberToObject(layer, "Inputs", (*it)->inputs);			
+			cJSON_AddNumberToObject(layer, "Outputs", (*it)->outputs);
+			cJSON_AddStringToObject(layer, "Function", ActivationFunctionNames[(*it)->function]);
+			cJSON_AddItemToObject(layer, "Biases", cJSON_CreateFloatArray((*it)->biases, (*it)->outputs));
+			
+			cJSON* layer_weights = cJSON_CreateArray();
+			cJSON_AddItemToObject(layer, "Weights", layer_weights);
+
+			// now serialize out all those weights
+			for(uint32_t j = 0; j < (*it)->outputs; j++)
+			{
+				cJSON_AddItemToArray(layer_weights, cJSON_CreateFloatArray((*it)->weights[j], (*it)->inputs));
+			}
+		}
+
+		char* json_buffer = cJSON_Print(root);
+		std::string result(json_buffer);
+		free(json_buffer);
+		
+		return result;
+	}
+
+	MultilayerPerceptron& MultilayerPerceptron::FromJSON( std::string in_JSON )
+	{
+		MultilayerPerceptron percep;
+		return percep;
+	}
+
+	MultilayerPerceptron::Layer::Layer( uint32_t in_inputs, uint32_t in_outputs, ActivationFunction in_function )
+		: inputs(in_inputs)
+		, outputs(in_outputs)
+		, function(in_function)
+		, biases(nullptr)
+		, weights(nullptr)
+	{
+
+		// allocate space for biases
+		const uint32_t biases_alloc_size = sizeof(float) * block_count(outputs) * 4;
+		biases = (float*)_aligned_malloc(biases_alloc_size, 16);
+		memset(biases, 0x00, biases_alloc_size);
+
+		
+		// allocate space for weights
+		weights = new float*[outputs];
+
+		const uint32_t weight_alloc_size = sizeof(float) * block_count(inputs) * 4;
+		for(uint32_t j = 0; j < outputs; j++)
+		{
+			weights[j] = (float*)_aligned_malloc(weight_alloc_size, 16);
+			memset(weights[j], 0x00, weight_alloc_size);
+		}
+	}
+
+	MultilayerPerceptron::Layer::~Layer()
+	{
+		_aligned_free(biases);
+
+		for(uint32_t j = 0; j < outputs; j++)
+		{
+			_aligned_free(weights[j]);
+		}
+		delete[] weights;
+	}
+}
