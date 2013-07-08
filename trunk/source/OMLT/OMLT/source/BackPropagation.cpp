@@ -141,11 +141,6 @@ namespace OMLT
 				assert(lay->Sensitivities.Height == 1);
 
 				calc_sensitivities->Run();
-
-				//float* sensitivities = nullptr;
-				//lay->Sensitivities.GetData(sensitivities);
-
-				//printf("");
 			}
 		}
 
@@ -275,7 +270,7 @@ namespace OMLT
 					{
 					case Sigmoid:
 					case NoisySigmoid:
-						bias_init = -4.0f;
+						//bias_init = -4.0f;
 						break;
 					case Linear:
 						bias_init = 0.0f;
@@ -436,10 +431,13 @@ namespace OMLT
 			float* gpu_weights = nullptr;
 			(*it)->Weights0.GetData(gpu_weights);
 
+			float* gpu_weights_head = gpu_weights;
 			for(uint32_t j = 0; j < layer->outputs; j++)
 			{
-				layer->biases[j] = gpu_weights[0];
-				memcpy(layer->weights[j], gpu_weights + 1, sizeof(float) * layer->inputs);
+				layer->biases[j] = gpu_weights_head[0];
+				memcpy(layer->weights[j], gpu_weights_head + 1, sizeof(float) * layer->inputs);
+
+				gpu_weights_head += layer->inputs + 1;
 			}
 
 			bool added = result->AddLayer(layer);
