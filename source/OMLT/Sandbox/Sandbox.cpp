@@ -167,29 +167,26 @@ void main(int argc, char** argv)
 
 	SiCKL::OpenGLBuffer2D tex_buffer;
 
-	TrainerConfig t_config = {10, 0.01f, 0.5f};
+	TrainerConfig t_config = {10, 0.05f, 0.5f};
 	BackPropagation trainer(data->GetRowLength(), t_config);
 
-	LayerConfig hlayer_config = {500, NoisySigmoid, 0.1f};
+	LayerConfig hlayer_config = {100, NoisySigmoid, 0.0f};
 	trainer.AddLayer(hlayer_config);
 
-	LayerConfig olayer_config = {data->GetRowLength(), Sigmoid, 0.5f};
+	LayerConfig olayer_config = {data->GetRowLength(), Sigmoid, 0.0f};
 	trainer.AddLayer(olayer_config);
 
 	trainer.Initialize();
 
-	MultilayerPerceptron* mlp = trainer.GetMultilayerPerceptron();
-	std::string json = mlp->ToJSON();
-
-	printf("%s\n", json.c_str());
-
-	return;
-
 	MovingAverage* average = MovingAverage::Build(100);
 
-	
+	//{
+	//	MultilayerPerceptron* mlp = trainer.GetMultilayerPerceptron();
+	//	std::string json = mlp->ToJSON();
+	//	printf("%s\n", json.c_str());
+	//}
 
-	for(uint32_t e = 0; e < 3; e++)
+	for(uint32_t e = 0; e < 100; e++)
 	{
 		for(uint32_t b = 0; b < atlas.GetTotalBatches(); b++)
 		{
@@ -203,8 +200,13 @@ void main(int argc, char** argv)
 		}		
 	}
 
+	{
+		MultilayerPerceptron* mlp = trainer.GetMultilayerPerceptron();
+		std::string json = mlp->ToJSON();
+		printf("%s\n", json.c_str());
+	}
 
-	getc(stdin);
+	//getc(stdin);
 }
 
 void ToBMP(float* in_buffer, int id)

@@ -249,10 +249,9 @@ struct SourceUpdateWeights : public SiCKL::Source
 			Float d_k = in_sensitivities(k, 0);
 
 			// bias update
-			If(j == 0)
-				out_weight_delta = (MOMENTUM) * in_prev_weight_deltas(j, k) + 
+			If(j == 0 && in_enabled_outputs(k, 0) == 1.0f)
+				out_weight_delta = MOMENTUM * in_prev_weight_deltas(j, k) + 
 					(1.0f - MOMENTUM) * d_k;
-				//out_weight_delta = 0.0f;
 				out_weight = in_prev_weights(j, k) + LEARNING_RATE * out_weight_delta;
 			// dropout check
 			ElseIf(in_enabled_inputs(j-1, 0) == 1.0f && in_enabled_outputs(k, 0) == 1.0f)
