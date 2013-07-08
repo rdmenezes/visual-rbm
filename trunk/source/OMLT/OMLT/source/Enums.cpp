@@ -7,5 +7,7 @@ namespace OMLT
 		"Linear",
 		"Sigmoid",
 		"NoisySigmoid",
+		"RectifiedLinear",
+		"NoisyRectifiedLinear",
 	};
 }
