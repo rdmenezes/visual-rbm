@@ -227,15 +227,102 @@ namespace OMLT
 
 		char* json_buffer = cJSON_Print(root);
 		std::string result(json_buffer);
+
+		// cleanup
 		free(json_buffer);
-		
+		cJSON_Delete(root);
+
 		return result;
 	}
 
-	MultilayerPerceptron& MultilayerPerceptron::FromJSON( std::string in_JSON )
+	MultilayerPerceptron* MultilayerPerceptron::FromJSON( std::string in_JSON )
 	{
-		MultilayerPerceptron percep;
-		return percep;
+		cJSON* root = cJSON_Parse(in_JSON.c_str());
+		if(root)
+		{
+			MultilayerPerceptron* mlp = new MultilayerPerceptron();
+			cJSON* type =  cJSON_GetObjectItem(root, "Type");
+			if(strcmp(type->valuestring, "MultilayerPerceptron") != 0)
+			{
+				goto Malformed;
+			}
+			cJSON* layers = cJSON_GetObjectItem(root, "Layers");
+			if(layers == nullptr)
+			{
+				goto Malformed;
+			}
+
+			const int layer_count = cJSON_GetArraySize(layers);
+			for(int k = 0; k < layer_count; k++)
+			{
+				cJSON* layers_k = cJSON_GetArrayItem(layers, k);
+				
+				cJSON* inputs = cJSON_GetObjectItem(layers_k, "Inputs");
+				cJSON* outputs = cJSON_GetObjectItem(layers_k, "Outputs");
+				cJSON* function = cJSON_GetObjectItem(layers_k, "Function");
+				cJSON* biases = cJSON_GetObjectItem(layers_k, "Biases");
+				cJSON* weights = cJSON_GetObjectItem(layers_k, "Weights");
+
+				// make sure we didn't get any nulls back
+				if(inputs && outputs && function && biases && weights)
+				{
+					ActivationFunction n_function = (ActivationFunction)-1;
+					for(int func = 0; func < ActivationFunction::Count; func++)
+					{
+						if(strcmp(function->valuestring, ActivationFunctionNames[func]) == 0)
+						{
+							n_function = (ActivationFunction)func;
+							break;
+						}
+					}
+
+					if(n_function == -1)
+					{
+						goto Malformed;
+					}
+
+					if(cJSON_GetArraySize(biases) == outputs->valueint &&
+						cJSON_GetArraySize(weights) == outputs->valueint)
+					{
+
+						Layer* n_layer = new Layer(inputs->valueint, outputs->valueint, n_function);
+						mlp->AddLayer(n_layer);
+
+						for(uint32_t j = 0; j < n_layer->outputs; j++)
+						{
+							// set this bias
+							n_layer->biases[j] = (float)cJSON_GetArrayItem(biases, j)->valuedouble;
+							// and the weights
+							cJSON* weights_j = cJSON_GetArrayItem(weights, j);
+							if(cJSON_GetArraySize(weights_j) == n_layer->inputs)
+							{
+								for(uint32_t i = 0; i < n_layer->inputs; i++)
+								{
+									n_layer->weights[j][i] = (float)cJSON_GetArrayItem(weights_j, i)->valuedouble;
+								}
+							}
+							else
+							{
+								goto Malformed;
+							}
+
+						}
+					}
+				}
+				else
+				{
+					goto Malformed;
+				}
+			}
+
+			return mlp;
+Malformed:
+			delete mlp;
+			cJSON_Delete(root);
+			return nullptr;
+		}
+
+		return nullptr;
 	}
 
 	MultilayerPerceptron::Layer::Layer( uint32_t in_inputs, uint32_t in_outputs, ActivationFunction in_function )

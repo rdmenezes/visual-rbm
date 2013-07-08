@@ -179,13 +179,21 @@ void main(int argc, char** argv)
 	trainer.Initialize();
 
 	MovingAverage* average = MovingAverage::Build(100);
+	/*
+	{
+	MultilayerPerceptron* original_mlp = trainer.GetMultilayerPerceptron();
+	std::string json = original_mlp->ToJSON();
+	printf("%s\n", json.c_str());
 
-	//{
-	//	MultilayerPerceptron* mlp = trainer.GetMultilayerPerceptron();
-	//	std::string json = mlp->ToJSON();
-	//	printf("%s\n", json.c_str());
-	//}
+	MultilayerPerceptron* recon_mlp = MultilayerPerceptron::FromJSON(json);
+	printf("---------------------\n");
 
+	std::string recon_json = recon_mlp->ToJSON();
+	printf("%s\n", recon_json.c_str());
+
+	return;
+	}
+	*/
 	for(uint32_t e = 0; e < 100; e++)
 	{
 		for(uint32_t b = 0; b < atlas.GetTotalBatches(); b++)
