@@ -148,22 +148,19 @@ struct SourceCalcTopSensitivities : public SiCKL::Source
 		BEGIN_MAIN
 
 			Int j = Index().X;
+			Int m = Index().Y;
+			
+			Float label = in_labels(j,m);
+			Float activation = in_activations(j, m);
 
-			out_sensitivity = 0.0f;
-			ForInRange(m, 0, MINIBATCH_SIZE)
-				Float label = in_labels(j,m);
-				Float activation = in_activations(j, m);
+			Float d_j = label - activation;
+			if(FUNC == NoisySigmoid || FUNC == Sigmoid)
+			{
+				Float& sigmoid = activation;
+				d_j = d_j * ((1.0f - sigmoid) * sigmoid);
+			}
 
-				Float d_j = label - activation;
-				if(FUNC == NoisySigmoid || FUNC == Sigmoid)
-				{
-					Float& sigmoid = activation;
-					d_j = d_j * ((1.0f - sigmoid) * sigmoid);
-				}
-
-				out_sensitivity = out_sensitivity + d_j;
-			EndFor
-			out_sensitivity = out_sensitivity * (1.0f / (float)MINIBATCH_SIZE);
+			out_sensitivity = out_sensitivity + d_j;
 
 		END_MAIN
 	END_SOURCE
@@ -188,11 +185,12 @@ struct SourceCalcSensitivities : public SiCKL::Source
 
 		BEGIN_MAIN
 			Int j = Index().X;
+			Int m = Index().Y;
 
 			Float dp = 0.0f;
 			ForInRange(k, 0, NEXT_OUTPUT_COUNT)
 				Float w_jk = in_weights(j + 1, k);
-				Float d_k = in_sensitivities(k, 0);
+				Float d_k = in_sensitivities(k, m);
 
 				dp = dp + (w_jk * d_k);
 			EndFor
@@ -201,19 +199,14 @@ struct SourceCalcSensitivities : public SiCKL::Source
 			// calculate the average derivative
 			if(FUNC == NoisySigmoid || FUNC == Sigmoid)
 			{
-				Float f_prime = 0.0f;
-				ForInRange(m, 0, MINIBATCH_SIZE)
-					Float sigmoid = in_activations(j, m);
-					f_prime = f_prime + ((1.0f - sigmoid) * sigmoid);
-				EndFor
-
-				f_prime = f_prime * (1.0f / MINIBATCH_SIZE);
+				Float sigmoid = in_activations(j, m);
+				Float f_prime = ((1.0f - sigmoid) * sigmoid);
 
 				out_sensitivity = f_prime * dp;
 			}
 			else if(FUNC == Linear)
 			{
-				// average derivative is 1 in this case
+				// derivative is 1 in this case
 				out_sensitivity = dp;
 			}
 
@@ -246,24 +239,31 @@ struct SourceUpdateWeights : public SiCKL::Source
 			Int& j = Index().X;
 			Int& k = Index().Y;
 
-			Float d_k = in_sensitivities(k, 0);
 
 			// bias update
 			If(j == 0 && in_enabled_outputs(k, 0) == 1.0f)
+				Float d_k = 0.0f;
+				ForInRange(m, 0, MINIBATCH_SIZE)
+					d_k = d_k + in_sensitivities(k, m);
+				EndFor
+				d_k = d_k * (1.0f / MINIBATCH_SIZE);
+
 				out_weight_delta = MOMENTUM * in_prev_weight_deltas(j, k) + 
 					(1.0f - MOMENTUM) * d_k;
 				out_weight = in_prev_weights(j, k) + LEARNING_RATE * out_weight_delta;
 			// dropout check
 			ElseIf(in_enabled_inputs(j-1, 0) == 1.0f && in_enabled_outputs(k, 0) == 1.0f)
-				// get average input 
-				Float y_j = 0.0f;
+
+				Float d_k_y_j = 0.0f;
 				ForInRange(m, 0, MINIBATCH_SIZE)
-					y_j = y_j + in_inputs(j-1, m);
+					Float d_k = in_sensitivities(k, m);
+					Float y_j = in_inputs(j-1, m);
+					d_k_y_j = d_k_y_j + (d_k * y_j);
 				EndFor
-				y_j = y_j * (1.0f / (float)MINIBATCH_SIZE);
+				d_k_y_j = d_k_y_j * (1.0f / MINIBATCH_SIZE);
 
 				out_weight_delta = MOMENTUM * in_prev_weight_deltas(j, k) + 
-					(1.0f - MOMENTUM) * d_k * y_j;
+					(1.0f - MOMENTUM) * d_k_y_j;
 
 				out_weight = in_prev_weights(j, k) + LEARNING_RATE * out_weight_delta;
 			// not bias, not enabled so just copy old values over
