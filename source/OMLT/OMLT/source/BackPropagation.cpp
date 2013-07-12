@@ -116,7 +116,7 @@ namespace OMLT
 			
 				calc_sensitivities->BindOutput(0, lay->Sensitivities);
 				assert(lay->Sensitivities.Width == lay->OutputUnits);
-				assert(lay->Sensitivities.Height == 1);
+				assert(lay->Sensitivities.Height == MinibatchSize);
 
 				calc_sensitivities->Run();
 
@@ -138,7 +138,7 @@ namespace OMLT
 
 				calc_sensitivities->BindOutput(0, lay->Sensitivities);
 				assert(lay->Sensitivities.Width == lay->OutputUnits);
-				assert(lay->Sensitivities.Height == 1);
+				assert(lay->Sensitivities.Height == MinibatchSize);
 
 				calc_sensitivities->Run();
 			}
@@ -158,7 +158,7 @@ namespace OMLT
 			update_weights->SetInput(4, lay->Weights0);
 			update_weights->SetInput(5, lay->DeltaWeights0);
 			assert(lay->Sensitivities.Width == lay->OutputUnits);
-			assert(lay->Sensitivities.Height == 1);
+			assert(lay->Sensitivities.Height == MinibatchSize);
 			assert(lay->Input->Width == lay->InputUnits);
 			assert(lay->Input->Height == MinibatchSize);
 			assert(lay->InputEnabled.Width == lay->InputUnits);
@@ -310,7 +310,7 @@ namespace OMLT
 		// sensitivites all on their own
 		{
 			width = result->OutputUnits;
-			height = 1;
+			height = MinibatchSize;
 			result->Sensitivities =  OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 		}
 
@@ -377,7 +377,7 @@ namespace OMLT
 				
 					source.Parse();
 					layer->CalcSensitivity = comp.Build(source);
-					layer->CalcSensitivity->Initialize(layer->OutputUnits, 1);
+					layer->CalcSensitivity->Initialize(layer->OutputUnits, MinibatchSize);
 					//printf("%s\n", layer->CalcSensitivity->GetSource().c_str());
 				}
 				else
@@ -389,7 +389,7 @@ namespace OMLT
 
 					source.Parse();
 					layer->CalcSensitivity = comp.Build(source);
-					layer->CalcSensitivity->Initialize(layer->OutputUnits, 1);
+					layer->CalcSensitivity->Initialize(layer->OutputUnits, MinibatchSize);
 					//printf("%s\n", layer->CalcSensitivity->GetSource().c_str());
 				}
 			}
