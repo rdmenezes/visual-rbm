@@ -55,5 +55,8 @@
     <ClInclude Include="include\Enums.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\ConfusionMatrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
