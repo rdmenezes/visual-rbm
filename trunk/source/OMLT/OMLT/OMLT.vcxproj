@@ -85,6 +85,7 @@
     <ClCompile Include="source\MultilayerPerceptron.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\ConfusionMatrix.h" />
     <ClInclude Include="include\DataAtlas.h" />
     <ClInclude Include="include\Enums.h" />
     <ClInclude Include="include\IDX.hpp" />
