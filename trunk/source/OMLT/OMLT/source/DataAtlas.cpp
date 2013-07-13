@@ -176,12 +176,14 @@ bool OMLT::DataAtlas::Next( SiCKL::OpenGLBuffer2D& inout_Buffer )
 	// copy this guy in
 	inout_Buffer = _batch;
 
+	const uint32_t batches_per_page = _atlas_batch_width * _atlas_batch_height;
+
 	// handle streaming
 	if(_streaming)
 	{
 		// check to see if we need to bring in more IDX data 
 		_current_batch++;
-		uint32_t batches_per_page = _atlas_batch_width * _atlas_batch_height;
+		
 		if(_current_batch == batches_per_page)
 		{
 			// fill in our CPU side buffer
@@ -192,6 +194,10 @@ bool OMLT::DataAtlas::Next( SiCKL::OpenGLBuffer2D& inout_Buffer )
 			// and reset the batch index to 0
 			_current_batch = 0;
 		}
+	}
+	else
+	{
+		_current_batch = (_current_batch + 1) % batches_per_page;
 	}
 
 	return true;
