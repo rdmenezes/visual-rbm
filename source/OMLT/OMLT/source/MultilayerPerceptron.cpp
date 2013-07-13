@@ -83,33 +83,33 @@ namespace OMLT
 
 	void MultilayerPerceptron::FeedForward( float* input_vector, float* output_vector )
 	{
-		// verify the input vector is properly 16 byte aligned
-		assert((uintptr_t(input_vector) % 16) == 0);
-		_activations[0] = input_vector;
+		memcpy(_activations[0], input_vector, sizeof(float) * _layers.front()->inputs);
 
 		for(uint32_t L = 0; L < _layers.size(); L++)
 		{
 			const Layer& layer = *_layers[L];
 
-			float* input_head = _activations[L];
-			float* output_accumulation = _accumulations[L+1];
-			
+			float* input_activation_head = _activations[L];
+			float* output_accumulation_head = _accumulations[L+1];
+			float* output_activation_head = _activations[L+1];
+
 			const uint32_t input_blocks = block_count(layer.inputs);
 			for(uint32_t j = 0; j < layer.outputs; j++)
 			{
-				float* input_buff = input_head;
-				float* weight_buff = layer.weights[j];
+				float* input_activation = input_activation_head;
+				float* weight_vector = layer.weights[j];
+
 				__m128 out_j = _mm_setzero_ps();
 				for(uint32_t i = 0; i < input_blocks; i++)
 				{
-					__m128 input = _mm_load_ps(input_buff);
-					__m128 w = _mm_load_ps(weight_buff);
+					__m128 input = _mm_load_ps(input_activation);
+					__m128 w = _mm_load_ps(weight_vector);
 
 					// dot product
 					out_j = _mm_add_ps(out_j, _mm_mul_ps(input, w));
 
-					input_buff += 4;
-					weight_buff += 4;
+					input_activation += 4;
+					weight_vector += 4;
 				}
 
 				// finish up our dot product
@@ -117,7 +117,7 @@ namespace OMLT
 				out_j = _mm_hadd_ps(out_j, out_j);
 
 				// bring it back
-				_mm_store_ss(output_accumulation + j, out_j);
+				_mm_store_ss(output_accumulation_head + j, out_j);
 
 				// optionally add noise
 			}
@@ -125,7 +125,8 @@ namespace OMLT
 			// add in the biases and calc activation
 			const uint32_t output_blocks = block_count(layer.outputs);
 
-			float* output_activation = _activations[L+1];
+			float* output_activation = output_activation_head;
+			float* output_accumulation = output_accumulation_head;
 			float* biases = layer.biases;
 
 			// now calculate sigmoid on all these buggers
@@ -148,6 +149,8 @@ namespace OMLT
 				biases += 4;
 			}
 
+			// move this back to beginning of buffer
+			output_activation = output_activation_head;
 			// zero out the dangling bits here (left over memory from 16 byte padding)
 			// so we don't screw up next layer's dot products
 			for(uint32_t j = layer.outputs; j < output_blocks * 4; j++)
@@ -158,8 +161,6 @@ namespace OMLT
 
 		// memcpy activation to the output buffer
 		memcpy(output_vector, _activations.back(), sizeof(float) * _layers.back()->outputs);
-
-		_activations[0] = nullptr;
 	}
 
 	MultilayerPerceptron::Layer* MultilayerPerceptron::GetLayer( uint32_t index )
