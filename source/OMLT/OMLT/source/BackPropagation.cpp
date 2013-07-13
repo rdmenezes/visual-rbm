@@ -264,19 +264,8 @@ namespace OMLT
 				// bias is first value in a row
 				int i = 0;
 				{
-					// hidden biases init to -4 to discourage activation
-					float bias_init = 0.0f;
-					switch(result->Function)
-					{
-					case Sigmoid:
-					case NoisySigmoid:
-						//bias_init = -4.0f;
-						break;
-					case Linear:
-						bias_init = 0.0f;
-					}
-
-					weight_buffer[j * width + 0] = bias_init;
+					// always init bias to 0
+					weight_buffer[j * width + 0] = 0.0f;
 				}
 				for(i = 1; i < width; i++)
 				{

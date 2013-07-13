@@ -108,27 +108,63 @@ struct SourceFeedForward : public SiCKL::Source
 
 
 			// add noise if required
-			if(FUNC == NoisySigmoid)
+			switch(FUNC)
 			{
-				Float noise;
-				NextGaussian(in_seeds(Index().X, Index().Y), out_seed, noise);
+			case NoisySigmoid:
+			case NoisyRectifiedLinear:
+				{
+					Float noise;
+					NextGaussian(in_seeds(Index().X, Index().Y), out_seed, noise);
 
-				accumulation = accumulation + noise;
+					accumulation = accumulation + noise;
+				}
 			}
 
 			// activation function
 			switch(FUNC)
 			{
+			case Linear:
+				out_activation = accumulation;
+				break;
+			case RectifiedLinear:
+			case NoisyRectifiedLinear:
+				out_activation = Max(0.0f, accumulation);
+				break;
 			case Sigmoid:
 			case NoisySigmoid:
 				out_activation = 1.0f / (1.0f + Exp(-accumulation));
 				break;
-			case Linear:
-				out_activation = accumulation;
 			}
 		END_MAIN
 	END_SOURCE
 };
+
+static void PartialDerivative(const Float& activation, ActivationFunction func, Float& out_partial)
+{
+	switch(func)
+	{
+	case Linear:
+		{
+			out_partial = 1.0f;
+		}
+		break;
+	case RectifiedLinear:
+	case NoisyRectifiedLinear:
+		{
+			out_partial = Max(0.0f, Sign(activation));
+		}
+		break;
+	case Sigmoid:
+	case NoisySigmoid:
+		{
+			const Float& sigmoid = activation;
+			out_partial = ((1.0f - sigmoid) * sigmoid);
+		}
+		break;
+	default:
+		assert(false);
+	}
+}
 
 struct SourceCalcTopSensitivities : public SiCKL::Source
 {
@@ -153,14 +189,11 @@ struct SourceCalcTopSensitivities : public SiCKL::Source
 			Float label = in_labels(j,m);
 			Float activation = in_activations(j, m);
 
-			Float d_j = label - activation;
-			if(FUNC == NoisySigmoid || FUNC == Sigmoid)
-			{
-				Float& sigmoid = activation;
-				d_j = d_j * ((1.0f - sigmoid) * sigmoid);
-			}
+			Float diff = label - activation;
 
-			out_sensitivity = out_sensitivity + d_j;
+			Float partial;
+			PartialDerivative(activation, FUNC, partial);
+			out_sensitivity = diff * partial;
 
 		END_MAIN
 	END_SOURCE
@@ -196,20 +229,9 @@ struct SourceCalcSensitivities : public SiCKL::Source
 			EndFor
 
 				
-			// calculate the average derivative
-			if(FUNC == NoisySigmoid || FUNC == Sigmoid)
-			{
-				Float sigmoid = in_activations(j, m);
-				Float f_prime = ((1.0f - sigmoid) * sigmoid);
-
-				out_sensitivity = f_prime * dp;
-			}
-			else if(FUNC == Linear)
-			{
-				// derivative is 1 in this case
-				out_sensitivity = dp;
-			}
-
+			Float partial;
+			PartialDerivative(in_activations(j, m), FUNC, partial);
+			out_sensitivity = dp * partial;
 		END_MAIN
 	END_SOURCE
 };

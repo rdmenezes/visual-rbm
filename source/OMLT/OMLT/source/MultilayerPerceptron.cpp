@@ -18,6 +18,12 @@ namespace OMLT
 #	define _mm_abs_ps(x) _mm_and_ps(x, x7FFFFFFF)
 #	define _mm_sign_ps(x) _mm_or_ps(_mm_set_ps1(1.0f), _mm_and_ps(x, x80000000))
 
+
+	__m128 _mm_rectifiedlinear_ps(__m128 x0)
+	{
+		return _mm_max_ps(_mm_setzero_ps(), x0);
+	}
+
 	/*
 	 * sigmoid(x) 1/32 * (abs(x) - 4)^2 * -sign(x) + (sign(x) + 1) / 2
 	 */
@@ -140,7 +146,22 @@ namespace OMLT
 				acc = _mm_add_ps(acc, b);
 
 				// calculate activation (only sigmoid for now)
-				__m128 act = _mm_sigmoid_ps(acc);
+				__m128 act;
+				switch(layer.function)
+				{
+				case Linear:
+					act = acc;
+					break;
+				case RectifiedLinear:
+				case NoisyRectifiedLinear:
+					act = _mm_rectifiedlinear_ps(acc);
+					break;
+				case Sigmoid:
+				case NoisySigmoid:
+					act = _mm_sigmoid_ps(acc);
+					break;
+				}
+
 				_mm_store_ps(output_activation, act);
 
 				// move up our pointers
