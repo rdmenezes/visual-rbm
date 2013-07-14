@@ -6,14 +6,10 @@ namespace OMLT
 	{
 		// linear: f(x) -> x
 		Linear,
-		// sigmoid function: f(x) -> 1 / (1 + exp(-x))
-		Sigmoid,
-		// gaussian noise added
-		NoisySigmoid,
 		// rectified linear function : f(x) -> max(0, x)
 		RectifiedLinear,
-		// guassian noise added
-		NoisyRectifiedLinear,
+		// sigmoid function: f(x) -> 1 / (1 + exp(-x))
+		Sigmoid,
 		// the total number of function
 		Count,
 	};

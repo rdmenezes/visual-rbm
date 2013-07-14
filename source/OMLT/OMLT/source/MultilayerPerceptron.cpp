@@ -153,11 +153,9 @@ namespace OMLT
 					act = acc;
 					break;
 				case RectifiedLinear:
-				case NoisyRectifiedLinear:
 					act = _mm_rectifiedlinear_ps(acc);
 					break;
 				case Sigmoid:
-				case NoisySigmoid:
 					act = _mm_sigmoid_ps(acc);
 					break;
 				}
