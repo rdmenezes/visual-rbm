@@ -223,6 +223,7 @@ namespace OMLT
 		result->OutputUnits = in_Config.OutputUnits;
 	
 		result->Function = in_Config.Function;
+		result->Noisy = in_Config.Noisy;
 		result->InputDropoutProbability = in_Config.InputDropoutProbability;
 
 		if(Layers.size() == 0)
@@ -349,6 +350,7 @@ namespace OMLT
 				source.FUNC = layer->Function;
 				source.INPUT_DROPOUT_PROB = layer->InputDropoutProbability;
 				source.INPUT_COUNT = layer->InputUnits;
+				source.NOISY = layer->Noisy;
 
 				source.Parse();
 				layer->FeedForward = comp.Build(source);

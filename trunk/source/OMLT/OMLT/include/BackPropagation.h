@@ -29,6 +29,8 @@ namespace OMLT
 		uint32_t OutputUnits;
 		// activation function used
 		ActivationFunction Function;
+		// will we add noise to accumulation
+		bool Noisy;
 		// probability an input unit will be dropped out
 		float InputDropoutProbability;
 	};
@@ -56,6 +58,7 @@ namespace OMLT
 			uint32_t OutputUnits;
 
 			ActivationFunction Function;
+			bool Noisy;
 			float InputDropoutProbability;
 
 			/* 

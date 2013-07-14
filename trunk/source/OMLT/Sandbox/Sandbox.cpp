@@ -11,10 +11,14 @@
 #include <IDX.hpp>
 #include <BackPropagation.h>
 #include <MovingAverage.h>
+#include <ConfusionMatrix.h>
+
 using namespace OMLT;
 
 // sandbox
 #include <EasyBMP.h>
+
+#if 0
 
 namespace OMLT
 {
@@ -153,68 +157,130 @@ void test_sigmoid()
 	*/
 }
 
+#endif
+
 void main(int argc, char** argv)
 {
-	//test_sigmoid();
-	//return;
-
 	SiCKL::OpenGLRuntime::Initialize();
 
 	IDX* data = IDX::Load(argv[1]);
+	IDX* labels = IDX::Load(argv[2]);
 
-	DataAtlas atlas(data);
-	atlas.Build(10, 512);
+	assert(data->GetRowCount() == labels->GetRowCount());
 
-	SiCKL::OpenGLBuffer2D tex_buffer;
+	const uint32_t minibatch_size = 10;
 
-	TrainerConfig t_config = {10, 0.05f, 0.5f};
+	DataAtlas data_atlas(data);
+	data_atlas.Build(minibatch_size, 512);
+
+	DataAtlas label_atlas(labels);
+	label_atlas.Build(minibatch_size, 512);
+
+	SiCKL::OpenGLBuffer2D data_buffer, label_buffer;
+
+	TrainerConfig t_config = {minibatch_size, 0.1f, 0.5f};
 	BackPropagation trainer(data->GetRowLength(), t_config);
 
-	LayerConfig hlayer_config = {100, NoisySigmoid, 0.0f};
-	trainer.AddLayer(hlayer_config);
 
-	LayerConfig olayer_config = {data->GetRowLength(), Sigmoid, 0.0f};
+	LayerConfig hlayer1_config = {500, RectifiedLinear, true, 0.2f};
+	trainer.AddLayer(hlayer1_config);
+
+	//LayerConfig hlayer2_config = {500, Sigmoid, true, 0.5f};
+	//trainer.AddLayer(hlayer2_config);
+
+	//LayerConfig olayer_config = {labels->GetRowLength(), Sigmoid, false, 0.5f};
+	LayerConfig olayer_config = {data->GetRowLength(), Sigmoid, false, 0.5f};
+
 	trainer.AddLayer(olayer_config);
 
 	trainer.Initialize();
 
-	MovingAverage* average = MovingAverage::Build(100);
-	/*
+	const uint32_t epoch_count = 10;
+	const uint32_t ma_count = 50;
+	MovingAverage* average = MovingAverage::Build(ma_count);
+
+	for(uint32_t e = 0; e < epoch_count; e++)
 	{
-	MultilayerPerceptron* original_mlp = trainer.GetMultilayerPerceptron();
-	std::string json = original_mlp->ToJSON();
-	printf("%s\n", json.c_str());
-
-	MultilayerPerceptron* recon_mlp = MultilayerPerceptron::FromJSON(json);
-	printf("---------------------\n");
-
-	std::string recon_json = recon_mlp->ToJSON();
-	printf("%s\n", recon_json.c_str());
-
-	return;
-	}
-	*/
-	for(uint32_t e = 0; e < 100; e++)
-	{
-		for(uint32_t b = 0; b < atlas.GetTotalBatches(); b++)
+		for(uint32_t b = 0; b < data_atlas.GetTotalBatches(); b++)
 		{
-			atlas.Next(tex_buffer);
-			average->AddEntry(trainer.Train(tex_buffer, tex_buffer));
+			data_atlas.Next(data_buffer);
+			label_atlas.Next(label_buffer);
+			average->AddEntry(trainer.Train(data_buffer, data_buffer));
 			
-			if((b + 1) % 100 == 0)
+			if((b + 1) % ma_count == 0)
 			{
 				printf("Error %i:%i = %f\n", e, b+1, average->GetAverage());
 			}
 		}		
 	}
 
+	MultilayerPerceptron* mlp = trainer.GetMultilayerPerceptron();
+#if 0
+
+	ConfusionMatrix cm(labels->GetRowLength());
+
+	data->ReadRow(0, input_vector);
+	labels->ReadRow(0, label_vector);
+
+	// cpu feed forward
+	mlp->FeedForward(input_vector, output_vector);
+	
+	data_buffer.SetData(input_vector);
+	label_buffer.SetData(label_vector);
+
+	// gpu feed forward
+	trainer.Train(data_buffer, label_buffer);
+	
+	
+
+	printf("");
+#endif
+	float CalculateMeanSquareError(MultilayerPerceptron* mlp, IDX* inputs, IDX* labels);
+	printf("DataSet Average Square Error: %f\n", CalculateMeanSquareError(mlp, data, data));
+
+
+#if 0
+
+	cm.Print();
+#endif
+
+	getc(stdin);
+}
+
+float CalculateMeanSquareError(MultilayerPerceptron* mlp, IDX* inputs, IDX* labels)
+{
+	const uint32_t input_count = inputs->GetRowLength();
+	const uint32_t output_count = labels->GetRowLength();
+
+	assert(mlp->GetLayer(0)->inputs == input_count);
+	assert(mlp->GetLayer(mlp->LayerCount() - 1)->outputs == output_count);
+	assert(inputs->GetRowCount() == labels->GetRowCount());
+	
+	float* input_vector = new float[input_count];
+	float* label_vector = new float[output_count];
+	float* output_vector = new float[output_count];
+
+	double error = 0.0f;
+	for(uint32_t k = 0; k < inputs->GetRowCount(); k++)
 	{
-		MultilayerPerceptron* mlp = trainer.GetMultilayerPerceptron();
-		std::string json = mlp->ToJSON();
-		printf("%s\n", json.c_str());
+		inputs->ReadRow(k, input_vector);
+		labels->ReadRow(k, label_vector);
+
+		mlp->FeedForward(input_vector, output_vector);
+
+		// errro calculationg
+		double row_error = 0.0f;
+		for(uint32_t j = 0; j < output_count; j++)
+		{
+			double diff = (double)label_vector[j] - (double)output_vector[j];
+			row_error += diff * diff;
+		}
+		error += row_error;
 	}
 
-	//getc(stdin);
+	error /= output_count * inputs->GetRowCount();
+
+	return (float)error;
 }
 
 void ToBMP(float* in_buffer, int id)

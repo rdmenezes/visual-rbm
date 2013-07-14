@@ -69,6 +69,7 @@ struct SourceFeedForward : public SiCKL::Source
 	ActivationFunction FUNC;
 	float INPUT_DROPOUT_PROB;
 	uint32_t INPUT_COUNT;
+	bool NOISY;
 
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
@@ -108,16 +109,12 @@ struct SourceFeedForward : public SiCKL::Source
 
 
 			// add noise if required
-			switch(FUNC)
+			if(NOISY)
 			{
-			case NoisySigmoid:
-			case NoisyRectifiedLinear:
-				{
-					Float noise;
-					NextGaussian(in_seeds(Index().X, Index().Y), out_seed, noise);
+				Float noise;
+				NextGaussian(in_seeds(Index().X, Index().Y), out_seed, noise);
 
-					accumulation = accumulation + noise;
-				}
+				accumulation = accumulation + noise;
 			}
 
 			// activation function
@@ -127,11 +124,9 @@ struct SourceFeedForward : public SiCKL::Source
 				out_activation = accumulation;
 				break;
 			case RectifiedLinear:
-			case NoisyRectifiedLinear:
 				out_activation = Max(0.0f, accumulation);
 				break;
 			case Sigmoid:
-			case NoisySigmoid:
 				out_activation = 1.0f / (1.0f + Exp(-accumulation));
 				break;
 			}
@@ -149,13 +144,11 @@ static void PartialDerivative(const Float& activation, ActivationFunction func, 
 		}
 		break;
 	case RectifiedLinear:
-	case NoisyRectifiedLinear:
 		{
 			out_partial = Max(0.0f, Sign(activation));
 		}
 		break;
 	case Sigmoid:
-	case NoisySigmoid:
 		{
 			const Float& sigmoid = activation;
 			out_partial = ((1.0f - sigmoid) * sigmoid);
