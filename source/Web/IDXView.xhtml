@@ -5,7 +5,7 @@
  
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 	<title>Page Title: Site Name</title>
-	<link href='http://fonts.googleapis.com/css?family=Inconsolata' rel='stylesheet' type='text/css'/>
+	<link href='https://fonts.googleapis.com/css?family=Inconsolata' rel='stylesheet' type='text/css'/>
 	<style type="text/css">
 	
 	body,html
@@ -57,7 +57,6 @@
 		margin-right: 2px;
 		margin-top: 1px;
 		margin-bottom: 1px;
-		/*background-color: #888;*/
 	}
 	
 	div.tile
@@ -83,16 +82,6 @@
 	<script type="text/javascript">
 	<![CDATA[
 
-	//what = new IDXExplorer(document.getElementById("explorer"), null);
-/*
-	var canvas = null;
-	var context = null;
-	var image_data = null;
-	var width = -1;
-	var height = -1;
-	var idx = null;
-	var current_row = -1;
-*/	
 	explorer = null;
 
 	function handleFileSelect(evt) 
@@ -106,68 +95,6 @@
 	}
 
 	document.getElementById('files').addEventListener('change', handleFileSelect);
-	
-/*	
-	ImageData.prototype.SetPixel = function(i, brightness)
-	{
-		var r = brightness;
-		var g = brightness;
-		var b = brightness;
-		var a = 255;
-		var index = i * 4;
-		this.data[index + 0] = r;
-		this.data[index + 1] = g;
-		this.data[index + 2] = b;
-		this.data[index + 3] = a;
-	}
-	
-	function DisplayRow(row)
-	{
-		for(var i = 0; i < row.length; i++)
-		{
-			image_data.SetPixel(i, row[i])
-		}
-		context.putImageData(image_data, 0, 0);
-	}
-
-	
-	
-	function loadFirstImage(idx)
-	{
-		current_row = 0;
-		idx.ReadRow(current_row, 
-		function(row)
-		{
-			canvas = document.getElementById("my_canvas");
-
-			// set canvas dimensions
-			width = Math.sqrt(row.length);
-			height = row.length / width;
-
-			if(width * height < row.length)
-			{
-				height += 1;
-			}
-		
-			canvas.width = width;
-			canvas.height = height;			
-
-			context = canvas.getContext("2d");
-			image_data = context.createImageData(width, height);
-			
-		
-			DisplayRow(row);
-			
-			canvas.addEventListener("click", function()
-			{
-				current_row = (current_row + 1) % idx._row_count;
-				idx.ReadRow(current_row, DisplayRow);
-			});	
-		});
-	}
-
-
-*/	
 	]]>
 	</script>
 </body>

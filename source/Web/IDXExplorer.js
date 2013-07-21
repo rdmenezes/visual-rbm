@@ -27,11 +27,6 @@ img_margin = 3;
 		this._image_pixel_height += 1;
 	}
 	
-	/*
-	this._canvas.width = this._image_pixel_width;
-	this._canvas.height = this._image_pixel_height;
-	*/
-	
 	// number of images we have per row
 	this._row_width = 10;
 	
@@ -39,11 +34,8 @@ img_margin = 3;
 	this._mousedown = false;
 	this._old_y;
 	
-	// current y position of explorer div	
 	this._client_width = this._root.parentNode.clientWidth;
 	this._client_height = this._root.parentNode.clientHeight;
-	
-	console.log(this._root.clientWidth);
 	
 	this._tile_width = this._client_width / (this._row_width + 1);
 	this._img_width = this._tile_width - 2 * img_margin;
@@ -59,7 +51,8 @@ img_margin = 3;
 	
 	this._front_row = Math.floor(this._total_rows - this._rows_loaded / 4);
 	this._back_row = (this._front_row + this._rows_loaded - 1) % this._total_rows;
-	
+
+	// current y position of explorer div	
 	this._scrollY = (this._total_rows - this._front_row) * -this._tile_height;
 	this._root.style.top = this._scrollY + "px";	
 	
@@ -79,8 +72,6 @@ img_margin = 3;
 	{
 		if(explorer._mousedown)
 		{
-			
-			
 			diff = ( explorer._old_y - evt.screenY);
 			
 			explorer._row_offset -= diff;
