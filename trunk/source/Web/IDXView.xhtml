@@ -1,0 +1,174 @@
+ <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+ 
+<head>
+ 
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Page Title: Site Name</title>
+	<link href='http://fonts.googleapis.com/css?family=Inconsolata' rel='stylesheet' type='text/css'/>
+	<style type="text/css">
+	
+	body,html
+	{
+		height: 100%;
+		margin: 0px;
+		overflow : hidden;		
+		
+		background-color : #666;
+		
+		-webkit-touch-callout: none;
+		-webkit-user-select: none;
+		-khtml-user-select: none;
+		-moz-user-select: moz-none;
+		-ms-user-select: none;
+		user-select: none;
+	}
+
+	div#explorer
+	{
+		background-color : #444;
+		
+		width: 100%;
+		margin: 0px;
+		overflow : hidden;
+		left : 0;
+		top : 0;
+		position : absolute;
+	}
+	
+	div.batch
+	{
+		width: 100%;
+		margin: 0px;
+		border: 0px;
+	}
+	
+	.tile
+	{
+		display: inline-block;
+	}
+	
+	img.tile
+	{
+		border-style: dotted;
+		border-color: #BBB;
+		border-width: 1px;
+		margin-left: 2px;
+		margin-right: 2px;
+		margin-top: 1px;
+		margin-bottom: 1px;
+		/*background-color: #888;*/
+	}
+	
+	div.tile
+	{
+		vertical-align: top;
+		margin: 3px;
+		text-align: center;
+		font-family: 'Inconsolata', sans-serif;
+		color: white;
+	}
+	
+	
+</style>
+	
+ 
+</head>
+<body>
+	<input type="file" id="files" name="files[]" multiple=""/>
+	<div id="explorer"/>
+	
+	<script src="IDX.js"/>
+	<script src="IDXExplorer.js"/>
+	<script type="text/javascript">
+	<![CDATA[
+
+	//what = new IDXExplorer(document.getElementById("explorer"), null);
+/*
+	var canvas = null;
+	var context = null;
+	var image_data = null;
+	var width = -1;
+	var height = -1;
+	var idx = null;
+	var current_row = -1;
+*/	
+	explorer = null;
+
+	function handleFileSelect(evt) 
+	{
+		var file = evt.target.files[0]; // FileList object
+
+		new IDX(file, function (in_idx)
+		{
+			explorer = new IDXExplorer(document.getElementById("explorer"), in_idx);
+		});
+	}
+
+	document.getElementById('files').addEventListener('change', handleFileSelect);
+	
+/*	
+	ImageData.prototype.SetPixel = function(i, brightness)
+	{
+		var r = brightness;
+		var g = brightness;
+		var b = brightness;
+		var a = 255;
+		var index = i * 4;
+		this.data[index + 0] = r;
+		this.data[index + 1] = g;
+		this.data[index + 2] = b;
+		this.data[index + 3] = a;
+	}
+	
+	function DisplayRow(row)
+	{
+		for(var i = 0; i < row.length; i++)
+		{
+			image_data.SetPixel(i, row[i])
+		}
+		context.putImageData(image_data, 0, 0);
+	}
+
+	
+	
+	function loadFirstImage(idx)
+	{
+		current_row = 0;
+		idx.ReadRow(current_row, 
+		function(row)
+		{
+			canvas = document.getElementById("my_canvas");
+
+			// set canvas dimensions
+			width = Math.sqrt(row.length);
+			height = row.length / width;
+
+			if(width * height < row.length)
+			{
+				height += 1;
+			}
+		
+			canvas.width = width;
+			canvas.height = height;			
+
+			context = canvas.getContext("2d");
+			image_data = context.createImageData(width, height);
+			
+		
+			DisplayRow(row);
+			
+			canvas.addEventListener("click", function()
+			{
+				current_row = (current_row + 1) % idx._row_count;
+				idx.ReadRow(current_row, DisplayRow);
+			});	
+		});
+	}
+
+
+*/	
+	]]>
+	</script>
+</body>
+</html>
