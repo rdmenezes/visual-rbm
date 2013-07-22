@@ -418,13 +418,24 @@ namespace OMLT
 
 	MultilayerPerceptron* BackPropagation::GetMultilayerPerceptron() const
 	{
+		return GetMultilayerPerceptron(0, Layers.size() - 1);
+	}
+
+	MultilayerPerceptron* BackPropagation::GetMultilayerPerceptron(uint32_t begin_layer, uint32_t end_layer) const
+	{
+		assert(begin_layer < Layers.size() && end_layer < Layers.size());
+		assert(begin_layer <= end_layer);
+
 		MultilayerPerceptron* result = new MultilayerPerceptron();
 
-		for(auto it = Layers.begin(); it < Layers.end(); ++it)
+		//for(auto it = Layers.begin(); it < Layers.end(); ++it)
+		for(uint32_t k = begin_layer; k <= end_layer; k++)
 		{
-			MultilayerPerceptron::Layer* layer = new MultilayerPerceptron::Layer((*it)->InputUnits, (*it)->OutputUnits, (*it)->Function);
+			BackPropagation::Layer* bp_layer = Layers[k];
+
+			MultilayerPerceptron::Layer* layer = new MultilayerPerceptron::Layer(bp_layer->InputUnits, bp_layer->OutputUnits, bp_layer->Function);
 			float* gpu_weights = nullptr;
-			(*it)->Weights0.GetData(gpu_weights);
+			bp_layer->Weights0.GetData(gpu_weights);
 
 			float* gpu_weights_head = gpu_weights;
 			for(uint32_t j = 0; j < layer->outputs; j++)

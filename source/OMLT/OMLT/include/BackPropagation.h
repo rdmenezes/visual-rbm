@@ -46,7 +46,11 @@ namespace OMLT
 		float Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
 		void Initialize();
 
+		uint32_t LayerCount() const {return Layers.size();}
+
 		MultilayerPerceptron* GetMultilayerPerceptron() const;
+		MultilayerPerceptron* GetMultilayerPerceptron(uint32_t being_layer, uint32_t end_layer) const;
+
 	private:
 
 		struct Layer
