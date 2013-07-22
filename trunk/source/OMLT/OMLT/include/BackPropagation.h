@@ -20,6 +20,8 @@ namespace OMLT
 		uint32_t MinibatchSize;
 		float LearningRate;
 		float Momentum;
+		float L1Regularization;
+		float L2Regularization;
 	};
 
 	// training configuration for a given unit
@@ -103,9 +105,12 @@ namespace OMLT
 
 		vector<Layer*> Layers;
 		const uint32_t InputUnits;
+		const uint32_t MinibatchSize;		
 		const float LearningRate;
 		const float Momentum;
-		const uint32_t MinibatchSize;
+		const float L1Regularization;
+		const float L2Regularization;
+
 
 #		include "BackPropagationKernels.h"
 	};

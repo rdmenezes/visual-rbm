@@ -178,7 +178,14 @@ void main(int argc, char** argv)
 
 	SiCKL::OpenGLBuffer2D data_buffer, label_buffer;
 
-	TrainerConfig t_config = {minibatch_size, 0.1f, 0.5f};
+	TrainerConfig t_config = {0};
+	{
+		t_config.MinibatchSize = 10;
+		t_config.LearningRate = 0.1f;
+		t_config.Momentum = 0.5f;
+		t_config.L1Regularization = 0.0001f;
+		t_config.L2Regularization = 0.0f;
+	}
 	BackPropagation trainer(data->GetRowLength(), t_config);
 
 
