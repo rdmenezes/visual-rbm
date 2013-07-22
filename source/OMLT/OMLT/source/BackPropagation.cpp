@@ -15,6 +15,8 @@ namespace OMLT
 		, LearningRate(in_Config.LearningRate)
 		, Momentum(in_Config.Momentum)
 		, MinibatchSize(in_Config.MinibatchSize)
+		, L1Regularization(in_Config.L1Regularization)
+		, L2Regularization(in_Config.L2Regularization)
 	{
 
 	}
@@ -391,6 +393,8 @@ namespace OMLT
 				source.LEARNING_RATE = LearningRate;
 				source.MOMENTUM = Momentum;
 				source.MINIBATCH_SIZE = MinibatchSize;
+				source.L1_REGULARIZATION = L1Regularization;
+				source.L2_REGULARIZATION = L2Regularization;
 
 				source.Parse();
 				layer->UpdateWeights = comp.Build(source);

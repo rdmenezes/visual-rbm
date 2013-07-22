@@ -234,6 +234,8 @@ struct SourceUpdateWeights : public SiCKL::Source
 	float LEARNING_RATE;
 	float MOMENTUM;
 	uint32_t MINIBATCH_SIZE;
+	float L1_REGULARIZATION;
+	float L2_REGULARIZATION;
 
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
@@ -280,7 +282,39 @@ struct SourceUpdateWeights : public SiCKL::Source
 				out_weight_delta = MOMENTUM * in_prev_weight_deltas(j, k) + 
 					(1.0f - MOMENTUM) * d_k_y_j;
 
-				out_weight = in_prev_weights(j, k) + LEARNING_RATE * out_weight_delta;
+				Float prev_weight = in_prev_weights(j, k);
+
+				
+				// Regularization logic (we don't want to do weight decay on biases)
+
+				// only L1
+				if(L1_REGULARIZATION != 0.0f && L2_REGULARIZATION == 0.0f)
+				{
+					Float l1 = Sign(prev_weight) * L1_REGULARIZATION;
+
+					out_weight = prev_weight + LEARNING_RATE * (out_weight_delta - l1);
+				}
+				// only L2
+				else if(L1_REGULARIZATION == 0.0f && L2_REGULARIZATION != 0.0f)
+				{
+					Float l2 = prev_weight * L2_REGULARIZATION;
+
+					out_weight = prev_weight + LEARNING_RATE * (out_weight_delta - l2);
+				}
+				// both L1 and L2
+				else if(L1_REGULARIZATION != 0.0f && L2_REGULARIZATION != 0.0f)
+				{
+					Float l1 = Sign(prev_weight) * L1_REGULARIZATION;
+					Float l2 = prev_weight * L2_REGULARIZATION;
+
+					out_weight = prev_weight + LEARNING_RATE * (out_weight_delta - l1 - l2);
+				}
+				// no L1 or L2 regularization
+				else
+				{
+					out_weight = prev_weight + LEARNING_RATE * out_weight_delta;
+				}
+
 			// not bias, not enabled so just copy old values over
 			Else
 				out_weight_delta = in_prev_weight_deltas(j, k);
