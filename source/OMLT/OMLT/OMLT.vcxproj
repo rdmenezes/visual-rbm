@@ -78,6 +78,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\extern\cJSON\cJSON.c" />
+    <ClCompile Include="source\ContrastiveDivergence.cpp" />
     <ClCompile Include="source\Enums.cpp" />
     <ClCompile Include="source\DataAtlas.cpp" />
     <ClCompile Include="source\BackPropagation.cpp" />
@@ -85,7 +86,10 @@
     <ClCompile Include="source\MultilayerPerceptron.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\Common.h" />
     <ClInclude Include="include\ConfusionMatrix.h" />
+    <ClInclude Include="include\ContrastiveDivergence.h" />
+    <ClInclude Include="include\ContrastiveDivergenceKernels.h" />
     <ClInclude Include="include\DataAtlas.h" />
     <ClInclude Include="include\Enums.h" />
     <ClInclude Include="include\IDX.hpp" />
