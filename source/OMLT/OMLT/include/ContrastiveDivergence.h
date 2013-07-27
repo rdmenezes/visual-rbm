@@ -91,7 +91,8 @@ namespace OMLT
 		OpenGLBuffer2D _delta_weights1;
 		OpenGLBuffer2D _error;
 
-		OpenGLProgram* _calc_enabled_units;
+		OpenGLProgram* _calc_enabled_visible;
+		OpenGLProgram* _calc_enabled_hidden;
 		OpenGLProgram* _copy_visible;
 		OpenGLProgram* _calc_hidden;
 		OpenGLProgram* _calc_hidden_states;
@@ -102,8 +103,9 @@ namespace OMLT
 		// kernel sources definitions
 #		include "ContrastiveDivergenceKernels.h"
 		// recompile kernel programs as necessary
+		void DeleteKernels();
 		void BuildKernels();
-		void AllocateTextures();
+		void AllocateTextures(float* weight_buffer);
 		/** Training Methods **/
 /*
 		void CalcEnabledUnits();
