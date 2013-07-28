@@ -31,11 +31,12 @@ namespace OMLT
 		uint32_t LayerCount() const {return _layers.size();}
 
 		std::string ToJSON() const;
-		static MultilayerPerceptron* FromJSON(std::string in_JSON);
+		static MultilayerPerceptron* FromJSON(const std::string& in_JSON);
 
 private: 
 		std::vector<Layer*> _layers;
 		std::vector<float*> _accumulations;
 		std::vector<float*> _activations;
 	};
+	typedef MultilayerPerceptron MLP;
 }

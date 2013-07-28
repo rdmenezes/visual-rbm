@@ -5,87 +5,17 @@
 #include <malloc.h>
 #include <intrin.h>
 
-// OMLT
-#include "MultilayerPerceptron.h"
-
 // extern
 #include <cJSON.h>
 
+// OMLT
+#include "MultilayerPerceptron.h"
+#include "Common.h"
+
 namespace OMLT
 {
-	
-#	define _mm_negabs_ps(x) _mm_or_ps(x, x80000000)
-#	define _mm_abs_ps(x) _mm_and_ps(x, x7FFFFFFF)
-#	define _mm_sign_ps(x) _mm_or_ps(_mm_set_ps1(1.0f), _mm_and_ps(x, x80000000))
-
-
-	__m128 _mm_rectifiedlinear_ps(__m128 x0)
-	{
-		return _mm_max_ps(_mm_setzero_ps(), x0);
-	}
-
-	/*
-	 * sigmoid(x) 1/32 * (abs(x) - 4)^2 * -sign(x) + (sign(x) + 1) / 2
-	 */
-	__m128 _mm_sigmoid_ps(__m128 x0)
-	{
-		union
-		{
-			float f;
-			uint32_t u;
-		};
-
-		 // first calculate abs
-		__m128 x;
-		__m128 sign;
-		{
-			u = 0x80000000;
-			__m128 x80000000 = _mm_set_ps1(f);
-
-			x = _mm_negabs_ps(x0);
-			{
-				// now clamp it to -4, 0
-				__m128 neg_4 = _mm_set_ps1(-4.0f);
-				x = _mm_max_ps(neg_4, x);
-				{
-					u = 0x7FFFFFFF;
-					__m128 x7FFFFFFF = _mm_set_ps1(f);
-					// and now abs it
-					x = _mm_abs_ps(x);
-				}
-
-				// subtract 4
-				x = _mm_add_ps(x, neg_4);
-			}
-
-			// square the difference
-			x = _mm_mul_ps(x, x);
-
-			// and divide by 32	
-			x = _mm_div_ps(x, _mm_set_ps1(-32.0f));
-
-			// now we have to fix it for positive x
-
-			// get the sign
-			sign = _mm_sign_ps(x0);
-
-			// multiply the first part by the negative sign
-			x = _mm_mul_ps(x, sign);
-		}
-
-		// calculate sign + 1
-		__m128 shift = _mm_add_ps(sign, _mm_set_ps1(1.0f));
-		// (sign + 1) / 2
-		shift = _mm_div_ps(shift, _mm_set_ps1(2.0f));
-
-		// now shift x5 and we'll be done
-		return _mm_add_ps(shift, x);
-	}
-
-	inline uint32_t block_count(const uint32_t float_count)
-	{
-		return (float_count % 4 == 0 ? float_count / 4 : float_count / 4 + 1);
-	}
+	extern __m128 _mm_rectifiedlinear_ps(__m128 x0);
+	extern __m128 _mm_sigmoid_ps(__m128 x0);
 
 	void MultilayerPerceptron::FeedForward( float* input_vector, float* output_vector )
 	{
@@ -99,7 +29,7 @@ namespace OMLT
 			float* output_accumulation_head = _accumulations[L+1];
 			float* output_activation_head = _activations[L+1];
 
-			const uint32_t input_blocks = block_count(layer.inputs);
+			const uint32_t input_blocks = BlockCount(layer.inputs);
 			for(uint32_t j = 0; j < layer.outputs; j++)
 			{
 				float* input_activation = input_activation_head;
@@ -125,17 +55,16 @@ namespace OMLT
 				// bring it back
 				_mm_store_ss(output_accumulation_head + j, out_j);
 
-				// optionally add noise
 			}
 
 			// add in the biases and calc activation
-			const uint32_t output_blocks = block_count(layer.outputs);
+			const uint32_t output_blocks = BlockCount(layer.outputs);
 
 			float* output_activation = output_activation_head;
 			float* output_accumulation = output_accumulation_head;
 			float* biases = layer.biases;
 
-			// now calculate sigmoid on all these buggers
+			// now calculate activation on all these buggers
 			
 			for(uint32_t j = 0; j < output_blocks; j++)
 			{
@@ -145,7 +74,6 @@ namespace OMLT
 				// add in the bias
 				acc = _mm_add_ps(acc, b);
 
-				// calculate activation (only sigmoid for now)
 				__m128 act;
 				switch(layer.function)
 				{
@@ -196,7 +124,7 @@ namespace OMLT
 			_accumulations.push_back(nullptr);
 			
 			// we'll always copy in input vectors to the first slot, so give us some aligned memory here
-			size_t input_alloc_size = sizeof(float) * block_count(in_layer->inputs) * 4;
+			size_t input_alloc_size = sizeof(float) * BlockCount(in_layer->inputs) * 4;
 			_activations.push_back((float*)_aligned_malloc(input_alloc_size, 16));
 
 			memset(_activations.front(), 0x00, input_alloc_size);
@@ -255,7 +183,7 @@ namespace OMLT
 		return result;
 	}
 
-	MultilayerPerceptron* MultilayerPerceptron::FromJSON( std::string in_JSON )
+	MultilayerPerceptron* MultilayerPerceptron::FromJSON( const std::string& in_JSON )
 	{
 		cJSON* root = cJSON_Parse(in_JSON.c_str());
 		if(root)
@@ -354,7 +282,7 @@ Malformed:
 	{
 
 		// allocate space for biases
-		const uint32_t biases_alloc_size = sizeof(float) * block_count(outputs) * 4;
+		const uint32_t biases_alloc_size = sizeof(float) * BlockCount(outputs) * 4;
 		biases = (float*)_aligned_malloc(biases_alloc_size, 16);
 		memset(biases, 0x00, biases_alloc_size);
 
@@ -362,7 +290,7 @@ Malformed:
 		// allocate space for weights
 		weights = new float*[outputs];
 
-		const uint32_t weight_alloc_size = sizeof(float) * block_count(inputs) * 4;
+		const uint32_t weight_alloc_size = sizeof(float) * BlockCount(inputs) * 4;
 		for(uint32_t j = 0; j < outputs; j++)
 		{
 			weights[j] = (float*)_aligned_malloc(weight_alloc_size, 16);

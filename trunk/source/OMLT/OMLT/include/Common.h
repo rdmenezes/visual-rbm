@@ -1,6 +1,10 @@
 #pragma once
 
+// c
 #include <stdlib.h>
+
+// extern
+#include <SiCKL.h>
 
 namespace OMLT
 {
@@ -16,6 +20,11 @@ namespace OMLT
 	{
 		delete ptr;
 		ptr = nullptr;
+	}
+
+	inline uint32_t BlockCount(const uint32_t float_count)
+	{
+		return (float_count % 4 == 0 ? float_count / 4 : float_count / 4 + 1);
 	}
 
 	/// Allocates aligned memory for us
