@@ -26,21 +26,21 @@ START_BUFFER_TYPE(Buffer1D)
 	static_assert(valid_type<TYPE>::is_valid, "Invalid type used in Buffer1D");
 #pragma endregion
 	/// sampling operators
-	TYPE operator()(int32_t A) const
+	Temp<TYPE> operator()(int32_t A) const
 	{
 		COMPUTE_ASSERT(A >= 0);
 		ASTNode* sample  = new ASTNode(NodeType::Sample1D, get_return_type<TYPE>());
 		sample->add_child(new ASTNode(NodeType::ConstVar, get_return_type<Buffer1D<TYPE>>(), _id));
 		sample->add_child(create_literal_node(A));
-		return TYPE(temp_symbol, sample, nullptr);
+		return Temp<TYPE>(sample);
 	}
 
-	TYPE operator()(Int A) const
+	Temp<TYPE> operator()(const Int& A) const
 	{
 		ASTNode* sample  = new ASTNode(NodeType::Sample1D, get_return_type<TYPE>());
 		sample->add_child(new ASTNode(NodeType::ConstVar, get_return_type<Buffer1D<TYPE>>(), _id));
 		sample->add_child(create_data_node(A));
-		return TYPE(temp_symbol, sample, nullptr);
+		return Temp<TYPE>(sample);
 	}
 END_TYPE
 
@@ -73,7 +73,7 @@ START_BUFFER_TYPE(Buffer2D)
 #pragma endregion
 	
 	/// sampling operators  
-	TYPE operator()(int32_t A, int32_t B) const
+	Temp<TYPE>  operator()(int32_t A, int32_t B) const
 	{
 		COMPUTE_ASSERT(A >= 0 && B >= 0);
 
@@ -81,10 +81,10 @@ START_BUFFER_TYPE(Buffer2D)
 		sample->add_child(new ASTNode(NodeType::ConstVar, get_return_type<Buffer2D<TYPE>>(), _id));
 		sample->add_child(create_literal_node(A));
 		sample->add_child(create_literal_node(B));
-		return TYPE(temp_symbol, sample, nullptr);
+		return Temp<TYPE>(sample);
 	}
 
-	TYPE operator()(const Int& A, int B) const
+	Temp<TYPE> operator()(const Int& A, int B) const
 	{
 		COMPUTE_ASSERT(B >= 0);
 
@@ -92,10 +92,10 @@ START_BUFFER_TYPE(Buffer2D)
 		sample->add_child(new ASTNode(NodeType::ConstVar, get_return_type<Buffer2D<TYPE>>(), _id));
 		sample->add_child(create_data_node(A));
 		sample->add_child(create_literal_node(B));
-		return TYPE(temp_symbol, sample, nullptr);
+		return Temp<TYPE>(sample);
 	}
 
-	TYPE operator()(int A, const Int& B) const 
+	Temp<TYPE>  operator()(int A, const Int& B) const 
 	{
 		COMPUTE_ASSERT(A >= 0);
 
@@ -103,15 +103,15 @@ START_BUFFER_TYPE(Buffer2D)
 		sample->add_child(new ASTNode(NodeType::ConstVar, get_return_type<Buffer2D<TYPE>>(), _id));
 		sample->add_child(create_literal_node(A));
 		sample->add_child(create_data_node(B));
-		return TYPE(temp_symbol, sample, nullptr);
+		return Temp<TYPE>(sample);
 	}
 
-	TYPE operator()(const Int& A, const Int& B) const
+	Temp<TYPE> operator()(const Int& A, const Int& B) const
 	{
 		ASTNode* sample  = new ASTNode(NodeType::Sample2D, get_return_type<TYPE>());
 		sample->add_child(new ASTNode(NodeType::ConstVar, get_return_type<Buffer2D<TYPE>>(), _id));
 		sample->add_child(create_data_node(A));
 		sample->add_child(create_data_node(B));
-		return TYPE(temp_symbol, sample, nullptr);
+		return Temp<TYPE>(sample);
 	}
 END_TYPE
