@@ -2,17 +2,21 @@
 
 namespace OMLT
 {
-	enum ActivationFunction
+	namespace ActivationFunction
 	{
-		// linear: f(x) -> x
-		Linear,
-		// rectified linear function : f(x) -> max(0, x)
-		RectifiedLinear,
-		// sigmoid function: f(x) -> 1 / (1 + exp(-x))
-		Sigmoid,
-		// the total number of function
-		Count,
-	};
+		enum Enum
+		{
+			// linear: f(x) -> x
+			Linear,
+			// rectified linear function : f(x) -> max(0, x)
+			RectifiedLinear,
+			// sigmoid function: f(x) -> 1 / (1 + exp(-x))
+			Sigmoid,
+			// the total number of function
+			Count,
+		};
+	}
+	typedef ActivationFunction::Enum ActivationFunction_t;
 
 	extern const char* ActivationFunctionNames[];
 	

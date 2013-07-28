@@ -8,6 +8,7 @@
 
 // OMLT
 #include "Enums.h"
+#include "Common.h"
 
 using namespace SiCKL;
 
@@ -20,9 +21,9 @@ namespace OMLT
 		{
 			uint32_t MinibatchSize;
 			uint32_t VisibleUnits;
-			ActivationFunction VisibleType;
+			ActivationFunction_t VisibleType;
 			uint32_t HiddenUnits;
-			ActivationFunction HiddenType;
+			ActivationFunction_t HiddenType;
 		};
 
 		struct TrainingConfig
@@ -94,27 +95,19 @@ namespace OMLT
 		OpenGLProgram* _calc_enabled_visible;
 		OpenGLProgram* _calc_enabled_hidden;
 		OpenGLProgram* _copy_visible;
-		OpenGLProgram* _calc_hidden;
 		OpenGLProgram* _calc_hidden_states;
 		OpenGLProgram* _calc_visible;
+		OpenGLProgram* _calc_hidden;
 		OpenGLProgram* _update_weights;
 		OpenGLProgram* _calc_error;
 
 		// kernel sources definitions
 #		include "ContrastiveDivergenceKernels.h"
 		// recompile kernel programs as necessary
-		void DeleteKernels();
+		void FreeKernels();
 		void BuildKernels();
 		void AllocateTextures(float* weight_buffer);
-		/** Training Methods **/
-/*
-		void CalcEnabledUnits();
-		void CalcVisibleCopy(OpenGLBuffer2D& source, OpenGLBuffer2D& destination);
-		void CalcHiddenProbs(OpenGLBuffer2D& visible, OpenGLBuffer2D& hidden_probs);
-		void CalcHiddenStates(OpenGLBuffer2D& probs, OpenGLBuffer2D& states);
-		void CalcVisiblePrime(OpenGLBuffer2D& hidden, OpenGLBuffer2D& visible);
-		void CalcWeights();
-		float CalcError(OpenGLBuffer2D& visible, OpenGLBuffer2D& reconstruction);
-*/
+
+		AlignedMemoryBlock<float> _error_buffer;
 	};
 }

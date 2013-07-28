@@ -1,16 +1,18 @@
 // std
 #include <stdint.h>
 #include <vector>
+using std::vector;
 
 // sickl header
 #include <SiCKL.h>
-
+using namespace SiCKL;
 // omlt
 #include "Enums.h"
 #include "MultilayerPerceptron.h"
+#include "Common.h"
 
-using std::vector;
-using namespace SiCKL;
+
+
 
 namespace OMLT
 {
@@ -30,7 +32,7 @@ namespace OMLT
 		// the number of neurons on this layer
 		uint32_t OutputUnits;
 		// activation function used
-		ActivationFunction Function;
+		ActivationFunction_t Function;
 		// will we add noise to accumulation
 		bool Noisy;
 		// probability an input unit will be dropped out
@@ -63,7 +65,7 @@ namespace OMLT
 			uint32_t InputUnits;
 			uint32_t OutputUnits;
 
-			ActivationFunction Function;
+			ActivationFunction_t Function;
 			bool Noisy;
 			float InputDropoutProbability;
 
@@ -114,7 +116,6 @@ namespace OMLT
 		const float Momentum;
 		const float L1Regularization;
 		const float L2Regularization;
-
 
 #		include "BackPropagationKernels.h"
 	};

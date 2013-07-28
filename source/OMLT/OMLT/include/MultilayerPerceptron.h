@@ -18,11 +18,11 @@ namespace OMLT
 		{
 			uint32_t inputs;
 			uint32_t outputs;
-			ActivationFunction function;
+			ActivationFunction_t function;
 			float* biases;
 			float** weights;
 
-			Layer(uint32_t in_inputs, uint32_t in_outputs, ActivationFunction in_function);
+			Layer(uint32_t in_inputs, uint32_t in_outputs, ActivationFunction_t in_function);
 			~Layer();
 		};
 
