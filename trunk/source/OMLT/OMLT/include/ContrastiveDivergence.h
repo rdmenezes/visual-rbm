@@ -17,6 +17,7 @@ namespace OMLT
 	class RestrictedBoltzmannMachine;
 	class ContrastiveDivergence
 	{
+	public:
 		struct ModelConfig
 		{
 			uint32_t MinibatchSize;
@@ -45,7 +46,6 @@ namespace OMLT
 			{ }
 		};
 
-	public:
 		ContrastiveDivergence(const ModelConfig);
 		~ContrastiveDivergence();
 
@@ -110,4 +110,6 @@ namespace OMLT
 
 		AlignedMemoryBlock<float> _error_buffer;
 	};
+
+	typedef ContrastiveDivergence CD;
 }
