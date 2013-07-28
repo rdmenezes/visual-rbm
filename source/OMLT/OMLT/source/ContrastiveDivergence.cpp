@@ -6,8 +6,9 @@ using std::swap;
 
 
 // OMLT
-#include "ContrastiveDivergence.h"
 #include "Common.h"
+#include "ContrastiveDivergence.h"
+#include "RestrictedBoltzmannMachine.h"
 
 namespace OMLT
 {
@@ -188,7 +189,45 @@ namespace OMLT
 
 	RestrictedBoltzmannMachine* ContrastiveDivergence::GetRestrictedBoltzmannMachine() const
 	{
-		return nullptr;
+		RestrictedBoltzmannMachine* rbm = new RestrictedBoltzmannMachine(_model_config.VisibleUnits, _model_config.HiddenUnits, _model_config.VisibleType, _model_config.HiddenType);	
+		
+		uint32_t weight_count = (_model_config.VisibleUnits + 1) * (_model_config.HiddenUnits + 1);
+		float* raw_weights = new float[weight_count];
+
+		// pull weights from GPU
+		_weights0.GetData(raw_weights);
+
+		// fill in our RBM object
+		for(uint32_t i = 0; i <= _model_config.VisibleUnits; i++)
+		{
+			for(uint32_t j = 0; j <= _model_config.HiddenUnits; j++)
+			{
+				uint32_t index = i * (_model_config.HiddenUnits + 1) + j;
+				float& val = raw_weights[index];
+				if(i == 0 && j == 0)
+				{
+					continue;
+				}
+				else if(i == 0)
+				{
+					// hidden bias
+					rbm->hidden_biases[j-1] = val;
+				}
+				else if(j == 0)
+				{
+					// visible bias
+					rbm->visible_biases[i-1] = val;
+				}
+				else
+				{
+					// regular weight
+					rbm->visible_features[i-1][j-1] = val;
+					rbm->hidden_features[j-1][i-1] = val;
+				}
+			}
+		}
+
+		return rbm;
 	}
 
 	bool ContrastiveDivergence::DumpLastVisible( float* image, float* recon )
@@ -231,7 +270,7 @@ namespace OMLT
 		_calc_enabled_visible = compiler.Build(src_calc_enabled_visible);
 		_calc_enabled_visible->Initialize(_model_config.VisibleUnits, 1);
 
-		printf("%s\n", _calc_enabled_visible->GetSource().c_str());
+		//printf("%s\n", _calc_enabled_visible->GetSource().c_str());
 
 		/// Calc Enabled Hidden
 		SourceCalcEnabled src_calc_enabled_hidden;
@@ -241,7 +280,7 @@ namespace OMLT
 		_calc_enabled_hidden = compiler.Build(src_calc_enabled_hidden);
 		_calc_enabled_hidden->Initialize(_model_config.HiddenUnits, 1);
 
-		printf("%s\n", _calc_enabled_hidden->GetSource().c_str());
+		//printf("%s\n", _calc_enabled_hidden->GetSource().c_str());
 
 		/// Copy Visible
 		SourceCopyVisible src_copy_visible;
@@ -250,7 +289,7 @@ namespace OMLT
 		_copy_visible = compiler.Build(src_copy_visible);
 		_copy_visible->Initialize(_model_config.VisibleUnits, _model_config.MinibatchSize);
 
-		printf("%s\n", _copy_visible->GetSource().c_str());
+		//printf("%s\n", _copy_visible->GetSource().c_str());
 
 		/// Calc Hidden And States
 		SourceCalcHiddenAndStates src_calc_hidden_and_states;
@@ -262,7 +301,7 @@ namespace OMLT
 		_calc_hidden_states = compiler.Build(src_calc_hidden_and_states);
 		_calc_hidden_states->Initialize(_model_config.HiddenUnits, _model_config.MinibatchSize);
 
-		printf("%s\n", _calc_hidden_states->GetSource().c_str());
+		//printf("%s\n", _calc_hidden_states->GetSource().c_str());
 
 		/// Calc Visible
 		SourceCalcVisible src_calc_visible;
@@ -274,7 +313,7 @@ namespace OMLT
 		_calc_visible = compiler.Build(src_calc_visible);
 		_calc_visible->Initialize(_model_config.VisibleUnits, _model_config.MinibatchSize);
 
-		printf("%s\n", _calc_visible->GetSource().c_str());
+		//printf("%s\n", _calc_visible->GetSource().c_str());
 
 		/// Calc Hidden
 		SourceCalcHidden src_calc_hidden;
@@ -286,7 +325,7 @@ namespace OMLT
 		_calc_hidden = compiler.Build(src_calc_hidden);	
 		_calc_hidden->Initialize(_model_config.HiddenUnits, _model_config.MinibatchSize);
 
-		printf("%s\n", _calc_hidden->GetSource().c_str());
+		//printf("%s\n", _calc_hidden->GetSource().c_str());
 
 		/// Update Weights
 		SourceCalcWeightUpdates src_update_weights;
@@ -300,7 +339,7 @@ namespace OMLT
 		_update_weights = compiler.Build(src_update_weights);
 		_update_weights->Initialize(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1);
 
-		printf("%s\n", _update_weights->GetSource().c_str());
+		//printf("%s\n", _update_weights->GetSource().c_str());
 
 		/// Calc Error
 		SourceCalcErrorVector src_calc_error;
@@ -310,7 +349,7 @@ namespace OMLT
 		_calc_error = compiler.Build(src_calc_error);
 		_calc_error->Initialize(_model_config.VisibleUnits, 1);
 
-		printf("%s\n", _calc_error->GetSource().c_str());
+		//printf("%s\n", _calc_error->GetSource().c_str());
 
 		_recompile_required = false;
 	}

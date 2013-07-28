@@ -85,6 +85,7 @@
     <ClCompile Include="source\BackPropagation.cpp" />
     <ClCompile Include="source\MovingAverage.cpp" />
     <ClCompile Include="source\MultilayerPerceptron.cpp" />
+    <ClCompile Include="source\RestrictedBoltzmannMachine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\Common.h" />
@@ -98,6 +99,7 @@
     <ClInclude Include="include\BackPropagationKernels.h" />
     <ClInclude Include="include\MovingAverage.h" />
     <ClInclude Include="include\MultilayerPerceptron.h" />
+    <ClInclude Include="include\RestrictedBoltzmannMachine.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
