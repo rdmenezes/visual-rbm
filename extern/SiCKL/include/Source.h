@@ -111,14 +111,14 @@ namespace SiCKL
 	public:
 
 
-#define If( A ) Source::_If(A); {
-#define ElseIf( A ) } Source::_ElseIf(A); {
-#define Else } Source::_Else(); {
-#define EndIf } Source::_EndBlock();
-#define While( A ) Source::_While(A); {
-#define EndWhile } Source::_EndBlock();
-#define ForInRange(I, START, STOP) { const Int I; Source::_ForInRange(I, START, STOP); {
-#define EndFor } Source::_EndBlock(); }
+#define If( A ) SiCKL::Source::_If(A); {
+#define ElseIf( A ) } SiCKL::Source::_ElseIf(A); {
+#define Else } SiCKL::Source::_Else(); {
+#define EndIf } SiCKL::Source::_EndBlock();
+#define While( A ) SiCKL::Source::_While(A); {
+#define EndWhile } SiCKL::Source::_EndBlock();
+#define ForInRange(I, START, STOP) { const Int I; SiCKL::Source::_ForInRange(I, START, STOP); {
+#define EndFor } SiCKL::Source::_EndBlock(); }
 
 		
 		// override Main for new program
