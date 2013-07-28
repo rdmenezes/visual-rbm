@@ -231,6 +231,8 @@ namespace OMLT
 		_calc_enabled_visible = compiler.Build(src_calc_enabled_visible);
 		_calc_enabled_visible->Initialize(_model_config.VisibleUnits, 1);
 
+		printf("%s\n", _calc_enabled_visible->GetSource().c_str());
+
 		/// Calc Enabled Hidden
 		SourceCalcEnabled src_calc_enabled_hidden;
 		src_calc_enabled_hidden.DROPOUT_PROB = _training_config.HiddenDropout;
@@ -239,12 +241,16 @@ namespace OMLT
 		_calc_enabled_hidden = compiler.Build(src_calc_enabled_hidden);
 		_calc_enabled_hidden->Initialize(_model_config.HiddenUnits, 1);
 
+		printf("%s\n", _calc_enabled_hidden->GetSource().c_str());
+
 		/// Copy Visible
 		SourceCopyVisible src_copy_visible;
 		src_copy_visible.Parse();
 
 		_copy_visible = compiler.Build(src_copy_visible);
 		_copy_visible->Initialize(_model_config.VisibleUnits, _model_config.MinibatchSize);
+
+		printf("%s\n", _copy_visible->GetSource().c_str());
 
 		/// Calc Hidden And States
 		SourceCalcHiddenAndStates src_calc_hidden_and_states;
@@ -256,6 +262,8 @@ namespace OMLT
 		_calc_hidden_states = compiler.Build(src_calc_hidden_and_states);
 		_calc_hidden_states->Initialize(_model_config.HiddenUnits, _model_config.MinibatchSize);
 
+		printf("%s\n", _calc_hidden_states->GetSource().c_str());
+
 		/// Calc Visible
 		SourceCalcVisible src_calc_visible;
 		src_calc_visible.FUNCTION = _model_config.VisibleType;
@@ -266,6 +274,8 @@ namespace OMLT
 		_calc_visible = compiler.Build(src_calc_visible);
 		_calc_visible->Initialize(_model_config.VisibleUnits, _model_config.MinibatchSize);
 
+		printf("%s\n", _calc_visible->GetSource().c_str());
+
 		/// Calc Hidden
 		SourceCalcHidden src_calc_hidden;
 		src_calc_hidden.FUNCTION = _model_config.HiddenType;
@@ -275,6 +285,8 @@ namespace OMLT
 
 		_calc_hidden = compiler.Build(src_calc_hidden);	
 		_calc_hidden->Initialize(_model_config.HiddenUnits, _model_config.MinibatchSize);
+
+		printf("%s\n", _calc_hidden->GetSource().c_str());
 
 		/// Update Weights
 		SourceCalcWeightUpdates src_update_weights;
@@ -288,6 +300,8 @@ namespace OMLT
 		_update_weights = compiler.Build(src_update_weights);
 		_update_weights->Initialize(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1);
 
+		printf("%s\n", _update_weights->GetSource().c_str());
+
 		/// Calc Error
 		SourceCalcErrorVector src_calc_error;
 		src_calc_error.MINIBATCH_SIZE = _model_config.MinibatchSize;
@@ -295,6 +309,8 @@ namespace OMLT
 
 		_calc_error = compiler.Build(src_calc_error);
 		_calc_error->Initialize(_model_config.VisibleUnits, 1);
+
+		printf("%s\n", _calc_error->GetSource().c_str());
 
 		_recompile_required = false;
 	}

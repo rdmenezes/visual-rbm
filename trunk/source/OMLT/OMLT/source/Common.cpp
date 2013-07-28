@@ -32,7 +32,7 @@ namespace OMLT
 		While(u1 == 0.0f)
 			NextFloat(in_seed, out_seed, u1);
 		EndWhile
-			NextFloat(in_seed, out_seed, u2);
+		NextFloat(out_seed, out_seed, u2);
 
 		// calculate a normally distributed variable
 		const float PI = 3.14159265359f;
