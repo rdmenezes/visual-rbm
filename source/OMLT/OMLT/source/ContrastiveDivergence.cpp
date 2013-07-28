@@ -188,22 +188,22 @@ namespace OMLT
 
 	RestrictedBoltzmannMachine* ContrastiveDivergence::GetRestrictedBoltzmannMachine() const
 	{
-
+		return nullptr;
 	}
 
 	bool ContrastiveDivergence::DumpLastVisible( float* image, float* recon )
 	{
-
+		return false;
 	}
 
 	bool ContrastiveDivergence::DumpLastHidden( float* activations )
 	{
-
+		return false;
 	}
 
 	bool ContrastiveDivergence::DumpLastWeights( float* weights )
 	{
-
+		return false;
 	}
 
 	void ContrastiveDivergence::FreeKernels()
@@ -236,8 +236,8 @@ namespace OMLT
 		src_calc_enabled_hidden.DROPOUT_PROB = _training_config.HiddenDropout;
 		src_calc_enabled_hidden.Parse();
 
-		_calc_enabled_visible = compiler.Build(src_calc_enabled_hidden);
-		_calc_enabled_visible->Initialize(_model_config.HiddenUnits, 1);
+		_calc_enabled_hidden = compiler.Build(src_calc_enabled_hidden);
+		_calc_enabled_hidden->Initialize(_model_config.HiddenUnits, 1);
 
 		/// Copy Visible
 		SourceCopyVisible src_copy_visible;
@@ -254,6 +254,7 @@ namespace OMLT
 		src_calc_hidden_and_states.Parse();
 
 		_calc_hidden_states = compiler.Build(src_calc_hidden_and_states);
+		_calc_hidden_states->Initialize(_model_config.HiddenUnits, _model_config.MinibatchSize);
 
 		/// Calc Visible
 		SourceCalcVisible src_calc_visible;
@@ -263,6 +264,7 @@ namespace OMLT
 		src_calc_visible.Parse();
 
 		_calc_visible = compiler.Build(src_calc_visible);
+		_calc_visible->Initialize(_model_config.VisibleUnits, _model_config.MinibatchSize);
 
 		/// Calc Hidden
 		SourceCalcHidden src_calc_hidden;
@@ -272,6 +274,7 @@ namespace OMLT
 		src_calc_hidden.Parse();
 
 		_calc_hidden = compiler.Build(src_calc_hidden);	
+		_calc_hidden->Initialize(_model_config.HiddenUnits, _model_config.MinibatchSize);
 
 		/// Update Weights
 		SourceCalcWeightUpdates src_update_weights;
@@ -283,13 +286,17 @@ namespace OMLT
 		src_update_weights.Parse();
 
 		_update_weights = compiler.Build(src_update_weights);
-		
+		_update_weights->Initialize(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1);
+
 		/// Calc Error
 		SourceCalcErrorVector src_calc_error;
 		src_calc_error.MINIBATCH_SIZE = _model_config.MinibatchSize;
 		src_calc_error.Parse();
 
 		_calc_error = compiler.Build(src_calc_error);
+		_calc_error->Initialize(_model_config.VisibleUnits, 1);
+
+		_recompile_required = false;
 	}
 
 	// free result when done
