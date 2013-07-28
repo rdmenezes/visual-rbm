@@ -111,7 +111,10 @@ struct SourceCalcHiddenAndStates : public SiCKL::Source
 						{
 							out_hidden = Max(accumulation, 0.0f);
 							Float noise;
+							// mean 0, variance sigmoid(x) per http://www.cs.toronto.edu/~hinton/absps/reluICML.pdf
+							// "Rectified linear units improve restricted Boltzmann machines."
 							NextGaussian(seed, out_seed, noise);
+							noise = noise * Sqrt(Sigmoid(accumulation));
 							out_state = Max(accumulation + noise, 0.0f);
 						}
 						break;
