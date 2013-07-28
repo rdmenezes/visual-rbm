@@ -1,6 +1,7 @@
 // stdlib
 #include <string.h>
 #include <algorithm>
+using std::swap;
 #include <random>
 
 
@@ -27,7 +28,7 @@ namespace OMLT
 
 	ContrastiveDivergence::~ContrastiveDivergence()
 	{
-		DeleteKernels();
+		FreeKernels();
 	}
 
 	void ContrastiveDivergence::SetTrainingConfig( const TrainingConfig& in_config)
@@ -42,17 +43,147 @@ namespace OMLT
 
 	void ContrastiveDivergence::Train( const OpenGLBuffer2D& in_example)
 	{
+		if(_recompile_required)
+		{
+			FreeKernels();
+			BuildKernels();
+		}
+
+		/// Calculate Enabled Units
+
+		_calc_enabled_visible->SetInput(0, _visible_dropout_random0);
+		_calc_enabled_visible->BindOutput(0, _enabled_visible);
+		_calc_enabled_visible->BindOutput(1, _visible_dropout_random1);
+		_calc_enabled_visible->Run();
+
+		_calc_enabled_hidden->SetInput(0, _hidden_dropout_random0);
+		_calc_enabled_hidden->BindOutput(0, _enabled_hidden);
+		_calc_enabled_hidden->BindOutput(1, _hidden_dropout_random1);
+		_calc_enabled_hidden->Run();
+
+		// ping pong seed buffers
+		swap(_visible_dropout_random0, _visible_dropout_random1);
+		swap(_hidden_dropout_random0, _hidden_dropout_random1);
+
+		/// Copy in Visible Data
+
+		_copy_visible->SetInput(0, in_example);
+		_copy_visible->SetInput(1, _enabled_visible);
+		_copy_visible->BindOutput(0, _visible);
+		_copy_visible->Run();
 		
+		/// Calc Hidden and States from Visible
+
+		_calc_hidden_states->SetInput(0, _visible);
+		_calc_hidden_states->SetInput(1, _weights0);
+		_calc_hidden_states->SetInput(2, _enabled_hidden);
+		_calc_hidden_states->SetInput(3, _hidden_random0);
+		_calc_hidden_states->BindOutput(0, _hidden_random1);
+		_calc_hidden_states->BindOutput(1, _hidden);
+		_calc_hidden_states->BindOutput(2, _hidden_states);
+		_calc_hidden_states->Run();
+
+		swap(_hidden_random0, _hidden_random1);
+
+		/// Calc Visible Prime
+
+		_calc_visible->SetInput(0, _hidden_states);
+		_calc_visible->SetInput(1, _weights0);
+		_calc_visible->SetInput(2, _enabled_visible);
+		_calc_visible->BindOutput(0, _visible_prime);
+		_calc_visible->Run();
+
+		/// Calc Hidden Prime
+
+		_calc_hidden->SetInput(0, _visible_prime);
+		_calc_hidden->SetInput(1, _weights0);
+		_calc_hidden->SetInput(2, _enabled_hidden);
+		_calc_hidden->BindOutput(0, _hidden_prime);
+		_calc_hidden->Run();
+
+		/// Update Weights
+
+		_update_weights->SetInput(0, _visible);
+		_update_weights->SetInput(1, _hidden);
+		_update_weights->SetInput(2, _visible_prime);
+		_update_weights->SetInput(3, _hidden_prime);
+		_update_weights->SetInput(4, _delta_weights0);
+		_update_weights->SetInput(5, _weights0);
+		_update_weights->SetInput(6, _enabled_visible);
+		_update_weights->SetInput(7, _enabled_hidden);
+		_update_weights->BindOutput(0, _delta_weights1);
+		_update_weights->BindOutput(1, _weights1);
+		_update_weights->Run();
+
+		swap(_delta_weights0, _delta_weights1);
+		swap(_weights0, _weights1);
+
+		/// Done!
+
+	}
+
+	float TotalError(float* buffer, uint32_t count, uint32_t height)
+	{
+		float result = 0.0f;
+		for(uint32_t k = 0; k < count; k++)
+		{
+			result += buffer[k];
+		}
+
+		return result / float(count * height);
 	}
 
 	float ContrastiveDivergence::GetLastReconstructionError()
 	{
+		/// Calc error
 
+		_calc_error->SetInput(0, _visible);
+		_calc_error->SetInput(1, _visible_prime);
+		_calc_error->BindOutput(0, _error);
+		_calc_error->Run();
+
+		float* ptr = _error_buffer;
+		_calc_error->GetOutput(0, ptr);
+
+		return TotalError(ptr, _model_config.VisibleUnits, _model_config.MinibatchSize);
 	}
 
-	float ContrastiveDivergence::GetReconstructionError( const OpenGLBuffer2D& )
+	float ContrastiveDivergence::GetReconstructionError( const OpenGLBuffer2D& in_example)
 	{
+		/// Copy example in and dropout data (using precalculated enabled visibles)
 
+		_copy_visible->SetInput(0, in_example);
+		_copy_visible->SetInput(1, _enabled_visible);
+		_copy_visible->BindOutput(0, _visible);
+		_copy_visible->Run();
+
+		/// Calc Hidden
+
+		_calc_hidden->SetInput(0, _visible);
+		_calc_hidden->SetInput(1, _weights0);
+		_calc_hidden->SetInput(2, _enabled_hidden);
+		_calc_hidden->BindOutput(0, _hidden);
+		_calc_hidden->Run();
+
+		/// Calc Visible Prime
+
+		_calc_visible->SetInput(0, _hidden);
+		_calc_visible->SetInput(1, _weights0);
+		_calc_visible->SetInput(2, _enabled_visible);
+		_calc_visible->BindOutput(0, _visible_prime);
+		_calc_visible->Run();
+
+		/// Finally Calc error
+
+		_calc_error->SetInput(0, _visible);
+		_calc_error->SetInput(1, _visible_prime);
+		_calc_error->BindOutput(0, _error);
+		_calc_error->Run();
+
+		float* ptr = _error_buffer;
+		_calc_error->GetOutput(0, ptr);
+
+		return TotalError(ptr, _model_config.VisibleUnits, _model_config.MinibatchSize);
 	}
 
 	RestrictedBoltzmannMachine* ContrastiveDivergence::GetRestrictedBoltzmannMachine() const
@@ -75,7 +206,7 @@ namespace OMLT
 
 	}
 
-	void ContrastiveDivergence::DeleteKernels()
+	void ContrastiveDivergence::FreeKernels()
 	{
 		// delete our kernels
 		SafeDelete(_calc_enabled_visible);
@@ -115,26 +246,32 @@ namespace OMLT
 		_copy_visible = compiler.Build(src_copy_visible);
 		_copy_visible->Initialize(_model_config.VisibleUnits, _model_config.MinibatchSize);
 
-		/// Calc Hidden
-		SourceCalcHidden src_calc_hidden;
-		src_calc_hidden.VISIBLE_UNITS = _model_config.VisibleUnits;
-		src_calc_hidden.Parse();
+		/// Calc Hidden And States
+		SourceCalcHiddenAndStates src_calc_hidden_and_states;
+		src_calc_hidden_and_states.FUNCTION = _model_config.HiddenType;
+		src_calc_hidden_and_states.VISIBLE_UNITS = _model_config.VisibleUnits;
+		src_calc_hidden_and_states.VISIBLE_DROPOUT_PROB = _training_config.VisibleDropout;
+		src_calc_hidden_and_states.Parse();
 
-		_calc_hidden = compiler.Build(src_calc_hidden);	
-
-		/// Calc Hidden States
-		SourceCalcStates src_calc_states;
-		src_calc_states.Parse();
-
-		_calc_hidden_states = compiler.Build(src_calc_states);
+		_calc_hidden_states = compiler.Build(src_calc_hidden_and_states);
 
 		/// Calc Visible
 		SourceCalcVisible src_calc_visible;
-		src_calc_visible.USE_SIGMOID = true;
+		src_calc_visible.FUNCTION = _model_config.VisibleType;
 		src_calc_visible.HIDDEN_UNITS = _model_config.HiddenUnits;
+		src_calc_visible.HIDDEN_DROPOUT_PROB = _training_config.HiddenDropout;
 		src_calc_visible.Parse();
 
 		_calc_visible = compiler.Build(src_calc_visible);
+
+		/// Calc Hidden
+		SourceCalcHidden src_calc_hidden;
+		src_calc_hidden.FUNCTION = _model_config.HiddenType;
+		src_calc_hidden.VISIBLE_UNITS = _model_config.VisibleUnits;
+		src_calc_hidden.VISIBLE_DROPOUT_PROB = _training_config.VisibleDropout;
+		src_calc_hidden.Parse();
+
+		_calc_hidden = compiler.Build(src_calc_hidden);	
 
 		/// Update Weights
 		SourceCalcWeightUpdates src_update_weights;
@@ -198,13 +335,14 @@ namespace OMLT
 		_visible_prime = OpenGLBuffer2D(_model_config.VisibleUnits, _model_config.MinibatchSize, ReturnType::Float, nullptr);
 		_hidden_prime = OpenGLBuffer2D(_model_config.HiddenUnits, _model_config.MinibatchSize, ReturnType::Float, nullptr);
 
+		// allocate a weight buffer and copy it to buffer
 		if(weight_buffer == nullptr)
 		{
 			// initialize weights to random values 
 			uint32_t weight_count = (_model_config.VisibleUnits + 1) * (_model_config.HiddenUnits + 1);
 			float* weight_buffer = (float*)malloc(sizeof(float) * weight_count);
 
-			float extent = 1.0f / std::sqrtf(_model_config.VisibleUnits);
+			float extent = float(1.0 / std::sqrt((double)_model_config.VisibleUnits));
 			std::uniform_real_distribution<float> uniform(-extent, extent);
 
 			for(uint32_t i = 0; i <= _model_config.VisibleUnits; i++)
@@ -234,8 +372,14 @@ namespace OMLT
 		_delta_weights0 = OpenGLBuffer2D(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1, ReturnType::Float, nullptr);
 		_delta_weights1 = OpenGLBuffer2D(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1, ReturnType::Float, nullptr);
 
+		_error = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::Float, nullptr);
+
+		// free freshly allocated seed buffers
 		free(visible_dropout_seed_buffer);
 		free(hidden_dropout_seed_buffer);
 		free(hidden_seed_buffer);
+
+		// acquire memory for our error buffer 
+		_error_buffer.Acquire(_model_config.VisibleUnits);
 	}
 }

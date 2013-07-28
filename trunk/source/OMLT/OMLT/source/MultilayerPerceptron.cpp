@@ -149,13 +149,13 @@ namespace OMLT
 				__m128 act;
 				switch(layer.function)
 				{
-				case Linear:
+				case ActivationFunction::Linear:
 					act = acc;
 					break;
-				case RectifiedLinear:
+				case ActivationFunction::RectifiedLinear:
 					act = _mm_rectifiedlinear_ps(acc);
 					break;
-				case Sigmoid:
+				case ActivationFunction::Sigmoid:
 					act = _mm_sigmoid_ps(acc);
 					break;
 				}
@@ -286,12 +286,12 @@ namespace OMLT
 				// make sure we didn't get any nulls back
 				if(inputs && outputs && function && biases && weights)
 				{
-					ActivationFunction n_function = (ActivationFunction)-1;
+					ActivationFunction_t n_function = (ActivationFunction_t)-1;
 					for(int func = 0; func < ActivationFunction::Count; func++)
 					{
 						if(strcmp(function->valuestring, ActivationFunctionNames[func]) == 0)
 						{
-							n_function = (ActivationFunction)func;
+							n_function = (ActivationFunction_t)func;
 							break;
 						}
 					}
@@ -345,7 +345,7 @@ Malformed:
 		return nullptr;
 	}
 
-	MultilayerPerceptron::Layer::Layer( uint32_t in_inputs, uint32_t in_outputs, ActivationFunction in_function )
+	MultilayerPerceptron::Layer::Layer( uint32_t in_inputs, uint32_t in_outputs, ActivationFunction_t in_function )
 		: inputs(in_inputs)
 		, outputs(in_outputs)
 		, function(in_function)

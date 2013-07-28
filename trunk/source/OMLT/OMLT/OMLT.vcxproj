@@ -78,6 +78,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\extern\cJSON\cJSON.c" />
+    <ClCompile Include="Common.cpp" />
     <ClCompile Include="source\ContrastiveDivergence.cpp" />
     <ClCompile Include="source\Enums.cpp" />
     <ClCompile Include="source\DataAtlas.cpp" />
