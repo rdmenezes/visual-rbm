@@ -263,6 +263,7 @@ namespace OMLT
 				}
 			}
 
+			cJSON_Delete(root);
 			return mlp;
 Malformed:
 			delete mlp;
