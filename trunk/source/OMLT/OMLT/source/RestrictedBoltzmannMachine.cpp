@@ -5,6 +5,9 @@
 #include <malloc.h>
 #include <intrin.h>
 
+// extern
+#include <cJSON.h>
+
 // OMLT
 #include "Common.h"
 #include "RestrictedBoltzmannMachine.h"
@@ -190,11 +193,132 @@ namespace OMLT
 
 	std::string RestrictedBoltzmannMachine::ToJSON() const
 	{
-		return "";
+		cJSON* root = cJSON_CreateObject();
+		cJSON_AddStringToObject(root, "Type", "RestrictedBoltzmannMachine");
+		cJSON_AddNumberToObject(root, "VisibleCount", visible_count);
+		cJSON_AddNumberToObject(root, "HiddenCount", hidden_count);
+		cJSON_AddStringToObject(root, "VisibleType", ActivationFunctionNames[visible_type]);
+		cJSON_AddStringToObject(root, "HiddenType", ActivationFunctionNames[hidden_type]);
+		cJSON_AddItemToObject(root, "VisibleBiases", cJSON_CreateFloatArray(visible_biases, visible_count));
+		cJSON_AddItemToObject(root, "HiddenBiases", cJSON_CreateFloatArray(hidden_biases, hidden_count));
+
+		cJSON* root_weights = cJSON_CreateArray();
+		cJSON_AddItemToObject(root, "Weights", root_weights);
+
+		for(uint32_t j = 0; j < hidden_count; j++)
+		{
+			cJSON_AddItemToArray(root_weights, cJSON_CreateFloatArray(hidden_features[j], visible_count));
+		}
+
+		char* json_buffer = cJSON_Print(root);
+		std::string result(json_buffer);
+
+		//cleanup
+		free(json_buffer);
+		cJSON_Delete(root);
+
+		return result;
 	}
 
 	RestrictedBoltzmannMachine* RestrictedBoltzmannMachine::FromJSON( const std::string& in_JSON )
 	{
+		cJSON* root = cJSON_Parse(in_JSON.c_str());
+		if(root)
+		{
+			RestrictedBoltzmannMachine* rbm = nullptr;
+
+			cJSON* cj_visible_count = cJSON_GetObjectItem(root, "VisibleCount");
+			cJSON* cj_hidden_count = cJSON_GetObjectItem(root, "HiddenCount");
+			cJSON* cj_visible_type = cJSON_GetObjectItem(root, "VisibleType");
+			cJSON* cj_hidden_type = cJSON_GetObjectItem(root, "HiddenType");
+			cJSON* cj_visible_biases = cJSON_GetObjectItem(root, "VisibleBiases");
+			cJSON* cj_hidden_biases = cJSON_GetObjectItem(root, "HiddenBiases");
+			cJSON* cj_weights = cJSON_GetObjectItem(root, "Weights");
+
+			if(cj_visible_count && cj_hidden_count &&
+				cj_visible_type && cj_hidden_type &&
+				cj_visible_biases && cj_hidden_biases &&
+				cj_weights)
+			{
+				uint32_t visible_count = cj_visible_count->valueint;
+				uint32_t hidden_count = cj_hidden_count->valueint;
+				ActivationFunction_t visible_type = (ActivationFunction_t)-1;
+				ActivationFunction_t hidden_type = (ActivationFunction_t)-1;
+
+				for(int func = 0; func < ActivationFunction::Count; func++)
+				{
+					if(strcmp(cj_visible_type->valuestring, ActivationFunctionNames[func]) == 0)
+					{
+						visible_type = (ActivationFunction_t)func;
+					}
+
+					if(strcmp(cj_hidden_type->valuestring, ActivationFunctionNames[func]) == 0)
+					{
+						hidden_type = (ActivationFunction_t)func;
+					}
+				}
+
+				// make sure we found an activation function
+				if(visible_type == -1 || hidden_type == -1)
+				{
+					goto Malformed;
+				}
+
+				// verify these arrays are the right size
+				if( cJSON_GetArraySize(cj_visible_biases) == visible_count &&
+					cJSON_GetArraySize(cj_hidden_biases) == hidden_count &&
+					cJSON_GetArraySize(cj_weights) == hidden_count)
+				{
+					rbm = new RestrictedBoltzmannMachine(visible_count, hidden_count, visible_type, hidden_type);
+					
+					// copy in visible biases
+					for(uint32_t i = 0; i < visible_count; i++)
+					{
+						rbm->visible_biases[i] = (float)cJSON_GetArrayItem(cj_visible_biases, i)->valuedouble;
+					}
+
+					// copy in hidden biases
+					for(uint32_t j = 0; j < hidden_count; j++)
+					{
+						rbm->hidden_biases[j] = (float)cJSON_GetArrayItem(cj_hidden_biases, j)->valuedouble;
+					}
+
+					// copy in weights
+					for(uint32_t j = 0; j < hidden_count; j++)
+					{
+						cJSON* cj_feature_vector = cJSON_GetArrayItem(cj_weights, j);
+						if(cJSON_GetArraySize(cj_feature_vector) != visible_count)
+						{
+							delete rbm;
+							goto Malformed;
+						}
+						else
+						{
+							for(uint32_t i = 0; i < visible_count; i++)
+							{
+								float w_ij = (float)cJSON_GetArrayItem(cj_feature_vector, i)->valuedouble;
+								rbm->hidden_features[j][i] = w_ij;
+								rbm->visible_features[i][j] = w_ij;
+							}
+						}
+					}
+				}
+				else
+				{
+					goto Malformed;
+				}
+			}
+			else 
+			{
+				goto Malformed;
+			}
+
+			cJSON_Delete(root);
+			return rbm;
+Malformed:
+			cJSON_Delete(root);
+			return nullptr;
+		}
 		return nullptr;
 	}
 
