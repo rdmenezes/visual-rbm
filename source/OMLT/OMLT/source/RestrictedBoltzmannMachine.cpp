@@ -203,14 +203,14 @@ namespace OMLT
 	{
 		assert(visible_type == ActivationFunction::Sigmoid && hidden_type == ActivationFunction::Sigmoid);
 
-		// log sum calcualtion
+		// log sum calculation
 		calc_feature_map(
 			in_visible, _hidden_buffer,
 			_visible_buffer, _hidden_buffer,
 			visible_count, hidden_count,
 			hidden_biases, hidden_features, ActivationFunction::Linear);
 
-		// set the last dangling floats to -4 (so that log(1 + e^x) maps them to 0)
+		// set the last dangling floats to -4 so that ln(1 + e^x) maps them to 0 (see _mm_ln_1_plus_e_x_ps for details)
 		// otherwise, we'll have random garbage being appended
 		const size_t hidden_blocks = BlockCount(hidden_count);
 		for(uint32_t k = hidden_count; k < 4 * hidden_blocks; k++)
@@ -236,6 +236,7 @@ namespace OMLT
 		const uint32_t visible_blocks = BlockCount(visible_count);
 
 		dp = _mm_setzero_ps();
+		// calc_feature_map copies in visible_biases 
 		for(uint32_t k = 0; k < visible_blocks; k++)
 		{
 			__m128 b = _mm_load_ps(visible_biases + 4 * k);
@@ -250,8 +251,7 @@ namespace OMLT
 		float bias_dp;
 		_mm_store_ss(&bias_dp, dp);
 
-
-		return 0.0f;
+		return -(bias_dp + log_dp);
 	}
 
 	std::string RestrictedBoltzmannMachine::ToJSON() const
