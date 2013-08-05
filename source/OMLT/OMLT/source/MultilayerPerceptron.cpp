@@ -17,6 +17,25 @@ namespace OMLT
 	extern __m128 _mm_rectifiedlinear_ps(__m128 x0);
 	extern __m128 _mm_sigmoid_ps(__m128 x0);
 
+	MultilayerPerceptron::~MultilayerPerceptron()
+	{
+		for(uint32_t k = 0; k < _layers.size(); k++)
+		{
+			delete _layers[k];
+		}
+
+		// offset index because first ptr is nullptr
+		for(uint32_t k = 1; k < _accumulations.size(); k++)
+		{
+			_aligned_free(_accumulations[k]);
+		}
+
+		for(uint32_t k = 0; k < _activations.size(); k++)
+		{
+			_aligned_free(_activations[k]);
+		}
+	}
+
 	void MultilayerPerceptron::FeedForward( float* input_vector, float* output_vector )
 	{
 		memcpy(_activations[0], input_vector, sizeof(float) * _layers.front()->inputs);
