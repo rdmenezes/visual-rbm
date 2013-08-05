@@ -1,3 +1,7 @@
+// windows
+#include <intrin.h>
+
+// extern
 #include <SiCKL.h>
 using namespace SiCKL;
 
@@ -118,5 +122,47 @@ namespace OMLT
 
 		// now shift x5 and we'll be done
 		return _mm_add_ps(shift, x);
+	}
+
+	/*
+	 * ln(1 + e^x) ~ (64 + x * (12 * (4+x)-x^2 * sign(x))) / 96 on -4, 4; 0 when x < -4, x when x > 4
+	 */
+	__m128 _mm_log_1_plus_e_x_ps(__m128 x)
+	{
+		// union for setting bitwise constants
+		union
+		{
+			float f;
+			uint32_t u;
+		};
+
+		// first, set the min of x to be -4, everything to the left of that is 0 which is f(-4)
+		x = _mm_max_ps(_mm_set_ps1(-4.0f), x);
+		
+		// need this constant for _mm_sign_ps
+		u = 0x80000000;
+		__m128 x80000000 = _mm_set_ps1(f);
+
+		//y0 = (64 + x * (12 * (4+x)-x^2 * sign(x))) / 96
+
+		__m128 y0 = _mm_add_ps(_mm_set_ps1(4.0f), x);
+		y0 = _mm_mul_ps(_mm_set_ps1(12.0f), y0);
+		y0 = _mm_sub_ps(y0, _mm_mul_ps(_mm_mul_ps(x, x), _mm_sign_ps(x)));
+		y0 = _mm_mul_ps(x, y0);
+		y0 = _mm_add_ps(_mm_set_ps1(64.0f), y0);
+		y0 = _mm_mul_ps(y0, _mm_set_ps1( 1.0f / 96.0f));
+
+		// y1 = [y0 + y0 * sign(4.0 - x)] / 2.0f + [x - x * sign(4.0 - x)]
+		__m128 sign_4_minus_x = _mm_sign_ps(_mm_sub_ps(_mm_set_ps1(4.0f), x));
+
+		// either y0 or 0.0f based on sign 4 minux x (ie, x < 4)
+		__m128 left = _mm_mul_ps(_mm_add_ps(y0, _mm_mul_ps(y0, sign_4_minus_x)), _mm_set_ps1(0.5f));
+
+		// either x or 0.0f based 
+		__m128 right = _mm_mul_ps(_mm_sub_ps(x, _mm_mul_ps(x, sign_4_minus_x)), _mm_set_ps1(0.5f));
+
+		// 
+		__m128 y1 = _mm_max_ps(left, right);
+		return y1;
 	}
 }

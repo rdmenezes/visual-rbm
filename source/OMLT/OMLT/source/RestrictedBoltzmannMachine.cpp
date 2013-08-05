@@ -20,6 +20,7 @@ namespace OMLT
 		for(uint32_t i = 0; i < width; i++)
 		{
 			ptr[i] = (float*)_aligned_malloc(size, 16);
+			memset(ptr[i], 0x00, size);
 		}
 	}
 
@@ -46,6 +47,9 @@ namespace OMLT
 		// biases
 		visible_biases = (float*)_aligned_malloc(visible_allocsize, 16);
 		hidden_biases = (float*)_aligned_malloc(hidden_allocsize, 16);
+
+		memset(visible_biases, 0x00, visible_allocsize);
+		memset(hidden_biases, 0x00, hidden_allocsize);
 
 		// weights
 		allocate_features(hidden_features, hidden_count, visible_allocsize);
@@ -138,6 +142,11 @@ namespace OMLT
 		return result;
 	}
 
+	inline size_t DanglingBytes(const uint32_t block_count, uint32_t input_count)
+	{
+		return (block_count * 4 * sizeof(float)) - input_count * sizeof(float);
+	}
+
 	static void calc_feature_map(
 		const float* input_buffer, float* output_buffer, 
 		float* input_scratch, float* output_scratch, 
@@ -151,7 +160,7 @@ namespace OMLT
 		const uint32_t input_blockcount = BlockCount(input_count);
 		
 		// set dangling floats to 0 so we don't screw up any calculations
-		const size_t dangling_bytes = (input_blockcount * 4 * sizeof(float)) - input_count * sizeof(float);
+		const size_t dangling_bytes = DanglingBytes(input_blockcount, input_count);
 		if(dangling_bytes > 0)
 		{
 			memset(input_scratch + input_count, 0x00, dangling_bytes);
@@ -165,7 +174,10 @@ namespace OMLT
 		calc_activation(biases, output_scratch, BlockCount(output_count), activation);
 
 		// copy from aligned scratch space to output buffer
-		memcpy(output_buffer, output_scratch, output_count * sizeof(float));
+		if(output_buffer != output_scratch)
+		{
+			memcpy(output_buffer, output_scratch, output_count * sizeof(float));
+		}
 	}
 
 	void RestrictedBoltzmannMachine::CalcHidden( const float* in_visible, float* out_hidden ) const
@@ -180,14 +192,65 @@ namespace OMLT
 	void RestrictedBoltzmannMachine::CalcVisible( const float* in_hidden, float* out_visible ) const
 	{
 		calc_feature_map(
-			in_hidden, out_visible, 
+			in_hidden, out_visible,		
 			_hidden_buffer, _visible_buffer, 
 			hidden_count, visible_count,
 			visible_biases, visible_features, visible_type);
 	}
 
+	extern __m128 _mm_ln_1_plus_e_x_ps(__m128 x);
 	float RestrictedBoltzmannMachine::CalcFreeEnergy( const float* in_visible ) const
 	{
+		assert(visible_type == ActivationFunction::Sigmoid && hidden_type == ActivationFunction::Sigmoid);
+
+		// log sum calcualtion
+		calc_feature_map(
+			in_visible, _hidden_buffer,
+			_visible_buffer, _hidden_buffer,
+			visible_count, hidden_count,
+			hidden_biases, hidden_features, ActivationFunction::Linear);
+
+		// set the last dangling floats to -4 (so that log(1 + e^x) maps them to 0)
+		// otherwise, we'll have random garbage being appended
+		const size_t hidden_blocks = BlockCount(hidden_count);
+		for(uint32_t k = hidden_count; k < 4 * hidden_blocks; k++)
+		{
+			_hidden_buffer[k] = -4.0f;
+		}
+
+		// calc log(1 + e^x) and add to sum
+		__m128 dp = _mm_setzero_ps();
+		for(uint32_t k = 0; k < hidden_blocks; k++)
+		{
+			__m128 x = _mm_load_ps(_hidden_buffer + 4 * k);
+			dp = _mm_add_ps(dp, _mm_ln_1_plus_e_x_ps(x));	
+		}
+		
+		dp = _mm_hadd_ps(dp, dp);
+		dp = _mm_hadd_ps(dp, dp);
+
+		float log_dp;
+		_mm_store_ss(&log_dp, dp);
+
+		// bias sum calculation
+		const uint32_t visible_blocks = BlockCount(visible_count);
+
+		dp = _mm_setzero_ps();
+		for(uint32_t k = 0; k < visible_blocks; k++)
+		{
+			__m128 b = _mm_load_ps(visible_biases + 4 * k);
+			__m128 vec = _mm_load_ps(_visible_buffer + 4 * k);
+
+			dp = _mm_add_ps(dp, _mm_mul_ps(b, vec));
+		}
+
+		dp = _mm_hadd_ps(dp, dp);
+		dp = _mm_hadd_ps(dp, dp);
+
+		float bias_dp;
+		_mm_store_ss(&bias_dp, dp);
+
+
 		return 0.0f;
 	}
 
