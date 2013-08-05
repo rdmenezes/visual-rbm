@@ -61,7 +61,7 @@ namespace SiCKL
 		uint32_t GetBufferSize() const;
 		
 		template<typename T>
-		inline void GetData(T*& in_out_buffer)
+		inline void GetData(T*& in_out_buffer) const
 		{
 			get_data((void**)&in_out_buffer);
 		}
