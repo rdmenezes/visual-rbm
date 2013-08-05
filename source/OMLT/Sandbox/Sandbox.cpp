@@ -21,8 +21,6 @@ using namespace OMLT;
 // sandbox
 #include <EasyBMP.h>
 
-#if 0
-
 namespace OMLT
 {
 	extern __m128 _mm_sigmoid_ps(__m128 x0);
@@ -81,6 +79,24 @@ inline float sign(const float x)
 	u = abs | u;
 	return f;
 }
+
+/*
+inline float sign(const float x)
+{
+	if(x == 0.0f)
+	{
+		return 0.0f;
+	}
+	else if(x < 0.0f)
+	{
+		return -1.0f;
+	}
+	else if(x > 0.0f)
+	{
+		return 1.0f;
+	}
+}
+*/
 
 void test_sigmoid()
 {
@@ -142,12 +158,14 @@ void test_sigmoid()
 
 	QueryPerformanceCounter((LARGE_INTEGER*)&memcpy_end);
 
-	
-	std::cout << "SIMD sigmoid: " << (simd_end - simd_start) << std::endl;
-	std::cout << "Fast sigmoid: " << (normal_end - simd_end) << std::endl;
-	std::cout << "Slow Sigmoid: " << (slow_end - normal_end) << std::endl;
+	std::cout << "1.0 / (1.0 + exp(-x))" << std::endl;
+	std::cout << "SIMD  " << (simd_end - simd_start) << std::endl;
+	std::cout << "Fast  " << (normal_end - simd_end) << std::endl;
+	std::cout << "Slow  " << (slow_end - normal_end) << std::endl;
 	std::cout << "Memcpy: " << (memcpy_end - slow_end) << std::endl;
-	getc(stdin);
+
+	std::cout << std::endl;
+
 	return;
 	/*
 	printf("input, simd, slow\n");
@@ -160,10 +178,12 @@ void test_sigmoid()
 	*/
 }
 
-#endif
+namespace OMLT
+{
+	extern __m128 _mm_ln_1_plus_e_x_ps(__m128 x);
+}
 
-extern __m128 _mm_ln_1_plus_e_x_ps(__m128 x);
-void test_log_1_plus_e_x()
+void test_ln_1_plus_e_x()
 {
 	const uint32_t block_count = 50000;
 	float* buffer = (float*)_aligned_malloc(sizeof(float) * 4 * block_count, 16);
@@ -192,7 +212,7 @@ void test_log_1_plus_e_x()
 	for(uint32_t k = 0; k < block_count; k++)
 	{
 		__m128 in = _mm_load_ps(buffer_head);
-		__m128 sigm = _mm_sigmoid_ps(in);
+		__m128 sigm = _mm_ln_1_plus_e_x_ps(in);
 		_mm_store_ps(simd_head, sigm);
 		buffer_head += 4;
 		simd_head += 4;
@@ -202,19 +222,23 @@ void test_log_1_plus_e_x()
 
 	for(uint32_t k = 0; k < block_count * 4; k++)
 	{
-		float& x = buffer[k];
-		float diff = (std::abs(x) - 4.0f);
+		const float& x = buffer[k];
+		
+		float y0 = (64.0f + x * (12 + (4 + x) - x*x * sign(x))) * (1.0f / 96.0f);
+		
+		float sign_4_sans_x = sign(4.0f - x);
 
-		float s = sign(x);
-
-		normal_result[k] = -1.0f/32.0f * diff * diff * s + (s + 1.0f) / 2.0f;
+		float y1 = (y0 + y0 * sign_4_sans_x) * (1.0f / 2.0f) + (x + x * sign_4_sans_x) * (1.0f / 2.0f);
+		
+		normal_result[k] = y1;
+		//normal_result[k] = -1.0f/32.0f * diff * diff * s + (s + 1.0f) / 2.0f;
 	}
 
 	QueryPerformanceCounter((LARGE_INTEGER*)&normal_end);
 
 	for(uint32_t k = 0; k < block_count * 4; k++)
 	{
-		slow_result[k] = 1.0f / (1.0f + std::expf(-buffer[k]));
+		slow_result[k] = std::logf(1.0f + std::expf(buffer[k]));
 	}
 
 	QueryPerformanceCounter((LARGE_INTEGER*)&slow_end);
@@ -223,22 +247,22 @@ void test_log_1_plus_e_x()
 
 	QueryPerformanceCounter((LARGE_INTEGER*)&memcpy_end);
 
-	
-	std::cout << "SIMD sigmoid: " << (simd_end - simd_start) << std::endl;
-	std::cout << "Fast sigmoid: " << (normal_end - simd_end) << std::endl;
-	std::cout << "Slow Sigmoid: " << (slow_end - normal_end) << std::endl;
+	std::cout << "ln(1.0 + exp(x))" << std::endl;
+	std::cout << "SIMD: " << (simd_end - simd_start) << std::endl;
+	std::cout << "Fast: " << (normal_end - simd_end) << std::endl;
+	std::cout << "Slow: " << (slow_end - normal_end) << std::endl;
 	std::cout << "Memcpy: " << (memcpy_end - slow_end) << std::endl;
-	getc(stdin);
-	return;
+	
 	/*
-	printf("input, simd, slow\n");
+	printf("input, simd, slow, normal\n");
 	for(uint32_t k = 0; k < block_count * 4; k++)
 	{
-		printf("%f,%f,%f\n", buffer[k], simd_result[k], slow_result[k]);
+		printf("%f,%f,%f,%f\n", buffer[k], simd_result[k], slow_result[k], normal_result[k]);
 	}
+	*/
 
 	//getc(stdin);
-	*/
+	
 }
 
 float CalcSquareError(const float* buff1, const float* buff2, const uint32_t size)
@@ -349,9 +373,13 @@ void TestContrastiveDivergence(const char* in_filename, const char* out_filename
 
 void main(int argc, char** argv)
 {
+	test_sigmoid();
+	test_ln_1_plus_e_x();
+/*
 	SiCKL::OpenGLRuntime::Initialize();
 	TestContrastiveDivergence("C:\\Users\\pospeselr\\Projects\\VisualRBM\\data\\mnist-train-images.idx", "rbm-recon.idx");
-	getc(stdin);
+*/
+	//getc(stdin);
 #if 0
 	SiCKL::OpenGLRuntime::Initialize();
 
