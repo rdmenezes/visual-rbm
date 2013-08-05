@@ -70,6 +70,9 @@ namespace OMLT
 
 		free_features(hidden_features, hidden_count);
 		free_features(visible_features, visible_count);
+
+		_aligned_free(_visible_buffer);
+		_aligned_free(_hidden_buffer);
 	}
 
 	static void calc_activation(const float* biases, float* inout_buffer, const uint32_t blocks, ActivationFunction_t func)
