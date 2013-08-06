@@ -10,20 +10,64 @@ using std::swap;
 namespace OMLT
 {
 
-	BackPropagation::BackPropagation( uint32_t in_InputUnits, TrainerConfig in_Config )
-		: InputUnits(in_InputUnits)
-		, LearningRate(in_Config.LearningRate)
-		, Momentum(in_Config.Momentum)
-		, MinibatchSize(in_Config.MinibatchSize)
-		, L1Regularization(in_Config.L1Regularization)
-		, L2Regularization(in_Config.L2Regularization)
+	BackPropagation::BackPropagation( uint32_t in_input_units, TrainerConfig in_config )
+		: InputUnits(in_input_units)
+		, LearningRate(in_config.LearningRate)
+		, Momentum(in_config.Momentum)
+		, MinibatchSize(in_config.MinibatchSize)
+		, L1Regularization(in_config.L1Regularization)
+		, L2Regularization(in_config.L2Regularization)
 	{
 
 	}
 
+	BackPropagation::BackPropagation( MultilayerPerceptron* in_mlp, TrainerConfig in_config )
+		: InputUnits(in_mlp->GetLayer(0)->inputs)
+		, LearningRate(in_config.LearningRate)
+		, Momentum(in_config.Momentum)
+		, MinibatchSize(in_config.MinibatchSize)
+		, L1Regularization(in_config.L1Regularization)
+		, L2Regularization(in_config.L2Regularization)
+	{
+		for(uint32_t k = 0; k < in_mlp->LayerCount(); k++)
+		{
+			MLP::Layer* layer = in_mlp->GetLayer(k);
+			
+			LayerConfig layer_config;
+			{
+				layer_config.Function = layer->function;
+				layer_config.InputDropoutProbability = 0.0f;
+				layer_config.Noisy = false;
+				layer_config.OutputUnits = layer->outputs;
+			}
+
+			// allocate contiguous memory block to put into texture memory
+			float* weight_buffer = new float[(layer->inputs + 1) * layer->outputs];
+
+			// copy weights from this layer in the MLP to the buffer
+			for(uint32_t j = 0; j < layer->outputs; j++)
+			{
+				weight_buffer[j * (layer->inputs + 1)] = layer->biases[j];
+				for(uint32_t i = 1; i <= layer->inputs; i++)
+				{
+					weight_buffer[j * (layer->inputs + 1) + i] = layer->weights[j][i];
+				}
+			}
+
+			// add layer and use weight buffer as initial weights
+			AddLayer(layer_config, weight_buffer);
+			delete[] weight_buffer;
+		}
+	}
+
 	void BackPropagation::AddLayer( LayerConfig config )
 	{
-		Layers.push_back(BuildLayer(config));
+		AddLayer(config, nullptr);
+	}
+
+	void BackPropagation::AddLayer( LayerConfig config, float* weights )
+	{
+		Layers.push_back(BuildLayer(config, weights));
 	}
 
 	float BackPropagation::Train( OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label )
@@ -205,7 +249,7 @@ namespace OMLT
 
 	}
 
-	BackPropagation::Layer* BackPropagation::BuildLayer( LayerConfig in_Config )
+	BackPropagation::Layer* BackPropagation::BuildLayer( LayerConfig in_Config, float* in_weights )
 	{
 		std::mt19937_64 random;
 		random.seed(1);
@@ -256,29 +300,37 @@ namespace OMLT
 		}
 
 		// init weights, delta weights
+		// weight format: j rows, each containing i + 1 values, first value in each row is bias
 		{
 			width = result->InputUnits + 1;
 			height = result->OutputUnits;
 
-			float* weight_buffer = new float[width * height];
-		
-			for(uint32_t j = 0; j < height; j++)
+			
+			if(in_weights == nullptr)
 			{
-				// bias is first value in a row
-				int i = 0;
+				float* weight_buffer = new float[width * height];
+		
+				for(uint32_t j = 0; j < height; j++)
 				{
+					// bias is first value in a row
+					int i = 0;
 					// always init bias to 0
 					weight_buffer[j * width + 0] = 0.0f;
-				}
-				for(i = 1; i < width; i++)
-				{
-					weight_buffer[j * width + i] = normal(random) * 0.1f;
+					for(i = 1; i < width; i++)
+					{
+						weight_buffer[j * width + i] = normal(random) * 0.1f;
 
-					//printf("From %i to %i: %f\n", i, j, weight_buffer[j * width + i]);
+						//printf("From %i to %i: %f\n", i, j, weight_buffer[j * width + i]);
+					}
 				}
+
+				result->Weights0 = OpenGLBuffer2D(width, height, ReturnType::Float, weight_buffer);
+				delete[] weight_buffer;
 			}
-
-			result->Weights0 = OpenGLBuffer2D(width, height, ReturnType::Float, weight_buffer);
+			else
+			{
+				result->Weights0 = OpenGLBuffer2D(width, height, ReturnType::Float, in_weights);
+			}
 			result->Weights1 = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 			result->DeltaWeights0 = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 			result->DeltaWeights1 = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
@@ -428,7 +480,6 @@ namespace OMLT
 
 		MultilayerPerceptron* result = new MultilayerPerceptron();
 
-		//for(auto it = Layers.begin(); it < Layers.end(); ++it)
 		for(uint32_t k = begin_layer; k <= end_layer; k++)
 		{
 			BackPropagation::Layer* bp_layer = Layers[k];

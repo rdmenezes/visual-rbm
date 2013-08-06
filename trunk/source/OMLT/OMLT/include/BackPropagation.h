@@ -11,9 +11,6 @@ using namespace SiCKL;
 #include "MultilayerPerceptron.h"
 #include "Common.h"
 
-
-
-
 namespace OMLT
 {
 	// config for a nn trainer
@@ -42,13 +39,19 @@ namespace OMLT
 	class BackPropagation
 	{
 	public:
-		BackPropagation(uint32_t in_InputUnits, TrainerConfig in_Config);
+		BackPropagation(MultilayerPerceptron* in_mlp, TrainerConfig in_config);
+		BackPropagation(uint32_t in_input_units, TrainerConfig in_config);
 
 		void AddLayer(LayerConfig config);
+		void AddLayer(LayerConfig config, float* weights);
 		float Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
 		void Initialize();
 
 		uint32_t LayerCount() const {return Layers.size();}
+
+		void SetActivationFunction(uint32_t in_layer_index, ActivationFunction_t in_func);
+		void SetNoisy(uint32_t in_layer_index, bool in_noisy);
+		void SetInputDropoutProbability(uint32_t in_layer_index, float in_prob);
 
 		MultilayerPerceptron* GetMultilayerPerceptron() const;
 		MultilayerPerceptron* GetMultilayerPerceptron(uint32_t being_layer, uint32_t end_layer) const;
@@ -107,7 +110,7 @@ namespace OMLT
 			OpenGLProgram* UpdateWeights;
 		};
 
-		Layer* BuildLayer(LayerConfig in_Config);
+		Layer* BuildLayer(LayerConfig in_Config, float* in_weights);
 
 		vector<Layer*> Layers;
 		const uint32_t InputUnits;
