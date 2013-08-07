@@ -9,8 +9,8 @@ typedef bool (*TestFunction)(int argc, char** argv);
 
 // externs here
 
-EXTERN(TestSigmoid);
-
+EXTERN(VerifySigmoid);
+EXTERN(VerifyLn1PlusEx);
 // function list
 
 struct
@@ -19,5 +19,6 @@ struct
 	const char* Name;
 } TestList[] =
 {
-	TEST(TestSigmoid),
+	TEST(VerifySigmoid),
+	TEST(VerifyLn1PlusEx),
 };
