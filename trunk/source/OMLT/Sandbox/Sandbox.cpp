@@ -222,13 +222,13 @@ void test_ln_1_plus_e_x()
 
 	for(uint32_t k = 0; k < block_count * 4; k++)
 	{
-		const float& x = buffer[k];
+		const float x = max(buffer[k], -4.0f);
 		
 		float y0 = (64.0f + x * (12 + (4 + x) - x*x * sign(x))) * (1.0f / 96.0f);
 		
 		float sign_4_sans_x = sign(4.0f - x);
 
-		float y1 = (y0 + y0 * sign_4_sans_x) * (1.0f / 2.0f) + (x + x * sign_4_sans_x) * (1.0f / 2.0f);
+		float y1 = (y0 + y0 * sign_4_sans_x) * (1.0f / 2.0f) + (x - x * sign_4_sans_x) * (1.0f / 2.0f);
 		
 		normal_result[k] = y1;
 		//normal_result[k] = -1.0f/32.0f * diff * diff * s + (s + 1.0f) / 2.0f;
