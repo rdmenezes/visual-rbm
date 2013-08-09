@@ -45,7 +45,7 @@ img_margin = 3;
 	this._canvas.width = this._img_width;
 	this._canvas.height = this._img_height;
 	
-	this._total_rows = this._idx_rows / this._row_width;
+	this._total_rows = Math.floor(this._idx_rows / this._row_width);
 	this._visible_rows = Math.ceil(this._client_height / (this._img_height + img_margin));
 	this._rows_loaded = 2 * (this._visible_rows + 1);
 	
