@@ -17,7 +17,6 @@ struct SourceCalcEnabled  : public SiCKL::Source
 			Float p;
 			NextFloat(in_seeds(Index().X, Index().Y), out_seed, p);
 
-			// bias is always enabled
 			If(p > DROPOUT_PROB)
 				out_state = 1u;
 			Else

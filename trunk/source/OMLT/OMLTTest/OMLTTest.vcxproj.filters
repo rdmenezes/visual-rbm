@@ -18,7 +18,10 @@
     <ClCompile Include="OMLTTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Tests\SIMD.cpp">
+    <ClCompile Include="Tests\TestCD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Tests\TestSIMD.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
