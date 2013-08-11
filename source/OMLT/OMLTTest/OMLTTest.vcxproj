@@ -79,7 +79,8 @@
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
       </AdditionalIncludeDirectories>
     </ClCompile>
-    <ClCompile Include="Tests\SIMD.cpp" />
+    <ClCompile Include="Tests\TestCD.cpp" />
+    <ClCompile Include="Tests\TestSIMD.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="OMLTTest.h" />

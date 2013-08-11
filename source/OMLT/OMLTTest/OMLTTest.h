@@ -11,6 +11,7 @@ typedef bool (*TestFunction)(int argc, char** argv);
 
 EXTERN(VerifySigmoid);
 EXTERN(VerifyLn1PlusEx);
+EXTERN(VerifyCD);
 // function list
 
 struct
@@ -21,4 +22,5 @@ struct
 {
 	TEST(VerifySigmoid),
 	TEST(VerifyLn1PlusEx),
+	TEST(VerifyCD),
 };

@@ -1,6 +1,5 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <iostream>
 
 #include "OMLTTest.h"
 
@@ -10,13 +9,43 @@ size_t ArraySize(const T (&)[N])
 	return N;
 };
 
-int main(int argc, char** argv)
+void print_tests()
 {
+	printf("Available Tests:\n");
 	for(uint32_t k = 0; k < ArraySize(TestList); k++)
 	{
-		std::cout << "Begin Test \"" << TestList[k].Name << "\"\n";
-		std::cout << (TestList[k].Func(argc, argv) ? " Success!" : " Failure") << std::endl << std::endl;
+		printf(" %u : %s\n", k, TestList[k].Name);
+	}
+}
+
+int main(int argc, char** argv)
+{
+	setbuf(stdout, nullptr);
+
+	if(argc == 1)
+	{
+		print_tests();
+	}
+	else if(argc >= 2)
+	{
+		uint32_t index;
+		if(sscanf(argv[1], "%u", &index) == 1)
+		{
+			if(index < ArraySize(TestList))
+			{
+				printf("Running %s...\n", TestList[index].Name);
+				printf("%s\n", (TestList[index].Func(argc - 2, argv + 2) ? "Success!" : "Failure!"));
+			}
+			else
+			{
+				print_tests();
+			}
+		}
+		else
+		{
+			printf("Could not parse \"%s\" as index\n", argv[1]);
+		}
 	}
 
-	getc(stdin);
+	return 0;
 }

@@ -404,8 +404,8 @@ namespace OMLT
 			uint32_t weight_count = (_model_config.VisibleUnits + 1) * (_model_config.HiddenUnits + 1);
 			float* weight_buffer = (float*)malloc(sizeof(float) * weight_count);
 
-			float extent = float(1.0 / std::sqrt((double)(_model_config.VisibleUnits + _model_config.HiddenUnits)));
-			std::uniform_real_distribution<float> uniform(-extent, extent);
+			float weight_stdev = float(1.0 / std::sqrtf((float)(_model_config.VisibleUnits + _model_config.HiddenUnits)));
+			std::normal_distribution<float> normal(0.0f, weight_stdev);
 
 			for(uint32_t i = 0; i <= _model_config.VisibleUnits; i++)
 			{
@@ -418,7 +418,7 @@ namespace OMLT
 					}
 					else
 					{
-						weight_buffer[ index ] = uniform(random);
+						weight_buffer[ index ] = normal(random);
 					}
 				}
 			}
