@@ -10,24 +10,18 @@ using std::swap;
 namespace OMLT
 {
 
-	BackPropagation::BackPropagation( uint32_t in_input_units, TrainerConfig in_config )
-		: InputUnits(in_input_units)
-		, LearningRate(in_config.LearningRate)
-		, Momentum(in_config.Momentum)
-		, MinibatchSize(in_config.MinibatchSize)
-		, L1Regularization(in_config.L1Regularization)
-		, L2Regularization(in_config.L2Regularization)
+	BackPropagation::BackPropagation( uint32_t in_input_units, uint32_t in_minibatchsize )
+		: _input_units(in_input_units)
+		, _minibatch_size(in_minibatchsize)
+		, _recompile_required(true)
 	{
 
 	}
 
-	BackPropagation::BackPropagation( MultilayerPerceptron* in_mlp, TrainerConfig in_config )
-		: InputUnits(in_mlp->GetLayer(0)->inputs)
-		, LearningRate(in_config.LearningRate)
-		, Momentum(in_config.Momentum)
-		, MinibatchSize(in_config.MinibatchSize)
-		, L1Regularization(in_config.L1Regularization)
-		, L2Regularization(in_config.L2Regularization)
+	BackPropagation::BackPropagation( MultilayerPerceptron* in_mlp, uint32_t in_minibatchsize )
+		: _input_units(in_mlp->InputLayer()->inputs)
+		, _minibatch_size(in_minibatchsize)
+		, _recompile_required(true)
 	{
 		for(uint32_t k = 0; k < in_mlp->LayerCount(); k++)
 		{
@@ -60,6 +54,11 @@ namespace OMLT
 		}
 	}
 
+	BackPropagation::~BackPropagation()
+	{
+
+	}
+
 	void BackPropagation::AddLayer( LayerConfig config )
 	{
 		AddLayer(config, nullptr);
@@ -67,19 +66,37 @@ namespace OMLT
 
 	void BackPropagation::AddLayer( LayerConfig config, float* weights )
 	{
-		Layers.push_back(BuildLayer(config, weights));
+		_layers.push_back(BuildLayer(config, weights));
+	}
+
+	void BackPropagation::SetTrainingConfig( const TrainingConfig& in_config)
+	{
+		// only set recompile flag if the new config is different
+		if(memcmp(&in_config, &_training_config, sizeof(TrainingConfig)) != 0)
+		{
+			_training_config = in_config;
+			_recompile_required = true;
+		}
 	}
 
 	float BackPropagation::Train( OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label )
 	{
-		assert(example_input.Width == InputUnits);
-		assert(example_input.Height == MinibatchSize);
-		assert(example_label.Width == Layers.back()->OutputUnits);
-		assert(example_label.Height == MinibatchSize);
+		if(_recompile_required)
+		{
+			free_kernels();
+			build_kernels();
+
+			_recompile_required = false;
+		}
+
+		assert(example_input.Width == _input_units);
+		assert(example_input.Height == _minibatch_size);
+		assert(example_label.Width == _layers.back()->OutputUnits);
+		assert(example_label.Height == _minibatch_size);
 
 		// feed forward
-		Layers.front()->Input = &example_input;
-		for(auto it = Layers.begin(); it != Layers.end(); ++it)
+		_layers.front()->Input = &example_input;
+		for(auto it = _layers.begin(); it != _layers.end(); ++it)
 		{
 			Layer* lay = *it;
 
@@ -108,16 +125,16 @@ namespace OMLT
 				feed_forward->SetInput(2, lay->Weights0);
 				feed_forward->SetInput(3, lay->OutputRandom0);
 				assert(lay->Input->Width == lay->InputUnits);
-				assert(lay->Input->Height == MinibatchSize);
+				assert(lay->Input->Height == _minibatch_size);
 				assert(lay->Weights0.Width == (lay->InputUnits + 1));
 				assert(lay->Weights0.Height == lay->OutputUnits);
 				assert(lay->OutputRandom0.Width == lay->OutputUnits);
-				assert(lay->OutputRandom0.Height == MinibatchSize);
+				assert(lay->OutputRandom0.Height == _minibatch_size);
 
 				feed_forward->BindOutput(0, lay->Activation);
 				feed_forward->BindOutput(1, lay->OutputRandom1);
 				assert(lay->Activation.Width == lay->OutputUnits);
-				assert(lay->Activation.Height == MinibatchSize);
+				assert(lay->Activation.Height == _minibatch_size);
 				assert(lay->OutputRandom1.Width == lay->OutputRandom0.Width);
 				assert(lay->OutputRandom1.Height == lay->OutputRandom0.Height);
 
@@ -133,7 +150,7 @@ namespace OMLT
 			static float* calculate_output = nullptr;
 			static float* desired_output = nullptr;
 
-			Layers.back()->Activation.GetData(calculate_output);
+			_layers.back()->Activation.GetData(calculate_output);
 			example_label.GetData(desired_output);
 
 			uint32_t pixels = example_label.Width * example_label.Height;
@@ -148,7 +165,7 @@ namespace OMLT
 		}
 		// calc sensitivities, feed backward
 		{
-			auto it = Layers.rbegin();
+			auto it = _layers.rbegin();
 			Layer* lay = *it;
 			OpenGLProgram* calc_sensitivities = lay->CalcSensitivity;
 			{
@@ -156,13 +173,13 @@ namespace OMLT
 				calc_sensitivities->SetInput(0, example_label);
 				calc_sensitivities->SetInput(1, lay->Activation);
 				assert(example_label.Width == lay->OutputUnits);
-				assert(example_label.Height == MinibatchSize);
+				assert(example_label.Height == _minibatch_size);
 				assert(lay->Activation.Width == lay->OutputUnits);
-				assert(lay->Activation.Height == MinibatchSize);
+				assert(lay->Activation.Height == _minibatch_size);
 			
 				calc_sensitivities->BindOutput(0, lay->Sensitivities);
 				assert(lay->Sensitivities.Width == lay->OutputUnits);
-				assert(lay->Sensitivities.Height == MinibatchSize);
+				assert(lay->Sensitivities.Height == _minibatch_size);
 
 				calc_sensitivities->Run();
 
@@ -171,7 +188,7 @@ namespace OMLT
 
 				//printf("");
 			}
-			while(++it != Layers.rend())
+			while(++it != _layers.rend())
 			{
 				lay = *it;
 				// fill out whatever
@@ -184,14 +201,14 @@ namespace OMLT
 
 				calc_sensitivities->BindOutput(0, lay->Sensitivities);
 				assert(lay->Sensitivities.Width == lay->OutputUnits);
-				assert(lay->Sensitivities.Height == MinibatchSize);
+				assert(lay->Sensitivities.Height == _minibatch_size);
 
 				calc_sensitivities->Run();
 			}
 		}
 
 		// now update all the weight matrices
-		for(auto it = Layers.rbegin(); it != Layers.rend(); ++it)
+		for(auto it = _layers.rbegin(); it != _layers.rend(); ++it)
 		{
 			Layer* lay = *it;
 			OpenGLProgram* update_weights = lay->UpdateWeights;
@@ -204,9 +221,9 @@ namespace OMLT
 			update_weights->SetInput(4, lay->Weights0);
 			update_weights->SetInput(5, lay->DeltaWeights0);
 			assert(lay->Sensitivities.Width == lay->OutputUnits);
-			assert(lay->Sensitivities.Height == MinibatchSize);
+			assert(lay->Sensitivities.Height == _minibatch_size);
 			assert(lay->Input->Width == lay->InputUnits);
-			assert(lay->Input->Height == MinibatchSize);
+			assert(lay->Input->Height == _minibatch_size);
 			assert(lay->InputEnabled.Width == lay->InputUnits);
 			assert(lay->InputEnabled.Height == 1);
 			assert(lay->OutputEnabled->Width == lay->OutputUnits);
@@ -258,13 +275,13 @@ namespace OMLT
 
 		Layer* result = new Layer();
 
-		if(Layers.size() == 0)
+		if(_layers.size() == 0)
 		{
-			result->InputUnits = this->InputUnits;
+			result->InputUnits = this->_input_units;
 		}
 		else
 		{
-			result->InputUnits = Layers.back()->OutputUnits;
+			result->InputUnits = _layers.back()->OutputUnits;
 		}
 		result->OutputUnits = in_Config.OutputUnits;
 	
@@ -272,13 +289,13 @@ namespace OMLT
 		result->Noisy = in_Config.Noisy;
 		result->InputDropoutProbability = in_Config.InputDropoutProbability;
 
-		if(Layers.size() == 0)
+		if(_layers.size() == 0)
 		{
 			result->Input = nullptr;
 		}
 		else
 		{
-			result->Input = &Layers.back()->Activation;
+			result->Input = &_layers.back()->Activation;
 		}
 
 		uint32_t width, height;
@@ -336,16 +353,16 @@ namespace OMLT
 			result->DeltaWeights1 = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 			result->OutputEnabled = nullptr;
 
-			if(Layers.size() > 0)
+			if(_layers.size() > 0)
 			{
-				Layers.back()->OutputEnabled = &result->InputEnabled;
+				_layers.back()->OutputEnabled = &result->InputEnabled;
 			}
 		}
 
 		// now init our output related buffers
 		{
 			width = result->OutputUnits;
-			height = MinibatchSize;
+			height = _minibatch_size;
 			result->Activation =  OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 			result->OutputRandom0 =  OpenGLBuffer2D(width, height, ReturnType::UInt, nullptr);
 			result->OutputRandom1 =  OpenGLBuffer2D(width, height, ReturnType::UInt, nullptr);
@@ -354,7 +371,7 @@ namespace OMLT
 		// sensitivites all on their own
 		{
 			width = result->OutputUnits;
-			height = MinibatchSize;
+			height = _minibatch_size;
 			result->Sensitivities =  OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 		}
 
@@ -364,125 +381,29 @@ namespace OMLT
 		result->UpdateWeights = nullptr;
 	
 		result->NextLayer = nullptr;
-		if(Layers.size() > 0)
+		if(_layers.size() > 0)
 		{
-			Layers.back()->NextLayer = result;
+			_layers.back()->NextLayer = result;
 		}
 
 		return result;
 	}
 
-	void BackPropagation::Initialize()
-	{
-		OpenGLCompiler comp;
-
-		for(auto it = Layers.begin(); it != Layers.end(); ++it)
-		{
-			Layer* layer = *it;
-
-	#		define DeleteAndNull(X) delete X; X = nullptr;
-			DeleteAndNull(layer->CalcEnabledInputs)
-			DeleteAndNull(layer->FeedForward)
-			DeleteAndNull(layer->CalcSensitivity)
-			DeleteAndNull(layer->UpdateWeights)
-	#		undef DeleteAndNull
-
-			// calc enabled inputs
-			{
-				SourceCalcEnabledUnits source;
-				source.DROPOUT_PROB = layer->InputDropoutProbability;
-			
-				source.Parse();
-				layer->CalcEnabledInputs = comp.Build(source);
-				layer->CalcEnabledInputs->Initialize(layer->InputUnits, 1);
-				//printf("%s\n", layer->CalcEnabledInputs->GetSource().c_str());
-			}
-
-			// feed forward
-			{
-				SourceFeedForward source;
-				source.FUNC = layer->Function;
-				source.INPUT_DROPOUT_PROB = layer->InputDropoutProbability;
-				source.INPUT_COUNT = layer->InputUnits;
-				source.NOISY = layer->Noisy;
-
-				source.Parse();
-				layer->FeedForward = comp.Build(source);
-				layer->FeedForward->Initialize(layer->OutputUnits, MinibatchSize);
-				//printf("%s\n", layer->FeedForward->GetSource().c_str());
-			}
-
-			// calc sensitivies
-			{
-				if(layer == Layers.back())
-				{
-					SourceCalcTopSensitivities source;
-					source.FUNC = layer->Function;
-					source.MINIBATCH_SIZE = MinibatchSize;
-				
-					source.Parse();
-					layer->CalcSensitivity = comp.Build(source);
-					layer->CalcSensitivity->Initialize(layer->OutputUnits, MinibatchSize);
-					//printf("%s\n", layer->CalcSensitivity->GetSource().c_str());
-				}
-				else
-				{
-					SourceCalcSensitivities source;
-					source.FUNC = layer->Function;
-					source.MINIBATCH_SIZE = MinibatchSize;
-					source.NEXT_OUTPUT_COUNT = layer->NextLayer->OutputUnits;
-
-					source.Parse();
-					layer->CalcSensitivity = comp.Build(source);
-					layer->CalcSensitivity->Initialize(layer->OutputUnits, MinibatchSize);
-					//printf("%s\n", layer->CalcSensitivity->GetSource().c_str());
-				}
-			}
-
-			// update weights
-			{
-				SourceUpdateWeights source;
-				source.LEARNING_RATE = LearningRate;
-				source.MOMENTUM = Momentum;
-				source.MINIBATCH_SIZE = MinibatchSize;
-				source.L1_REGULARIZATION = L1Regularization;
-				source.L2_REGULARIZATION = L2Regularization;
-
-				source.Parse();
-				layer->UpdateWeights = comp.Build(source);
-				layer->UpdateWeights->Initialize(layer->InputUnits + 1, layer->OutputUnits);
-				//printf("%s\n", layer->UpdateWeights->GetSource().c_str());
-			}
-		}	
-
-		{
-			Layer* last_layer = Layers.back();
-			float* enabled = new float[last_layer->OutputUnits];
-			for(uint32_t j = 0; j < last_layer->OutputUnits; j++)
-			{
-				enabled[j] = 1.0f;
-			}
-
-			last_layer->OutputEnabled = new OpenGLBuffer2D(last_layer->OutputUnits, 1, ReturnType::Float, enabled);
-			delete[] enabled;
-		}
-	}
-
 	MultilayerPerceptron* BackPropagation::GetMultilayerPerceptron() const
 	{
-		return GetMultilayerPerceptron(0, Layers.size() - 1);
+		return GetMultilayerPerceptron(0, _layers.size() - 1);
 	}
 
 	MultilayerPerceptron* BackPropagation::GetMultilayerPerceptron(uint32_t begin_layer, uint32_t end_layer) const
 	{
-		assert(begin_layer < Layers.size() && end_layer < Layers.size());
+		assert(begin_layer < _layers.size() && end_layer < _layers.size());
 		assert(begin_layer <= end_layer);
 
 		MultilayerPerceptron* result = new MultilayerPerceptron();
 
 		for(uint32_t k = begin_layer; k <= end_layer; k++)
 		{
-			BackPropagation::Layer* bp_layer = Layers[k];
+			BackPropagation::Layer* bp_layer = _layers[k];
 
 			MultilayerPerceptron::Layer* layer = new MultilayerPerceptron::Layer(bp_layer->InputUnits, bp_layer->OutputUnits, bp_layer->Function);
 			float* gpu_weights = nullptr;
@@ -506,4 +427,107 @@ namespace OMLT
 		return result;
 	}
 
+	void BackPropagation::free_kernels()
+	{
+		for(auto it = _layers.begin(); it < _layers.end(); ++it)
+		{
+			Layer* layer = *it;
+			SafeDelete(layer->CalcEnabledInputs);
+			SafeDelete(layer->FeedForward);
+			SafeDelete(layer->CalcSensitivity);
+			SafeDelete(layer->UpdateWeights);
+		}
+	}
+
+	void BackPropagation::build_kernels()
+	{
+		OpenGLCompiler comp;
+
+		for(auto it = _layers.begin(); it != _layers.end(); ++it)
+		{
+			Layer* layer = *it;
+
+			// calc enabled inputs
+			{
+				SourceCalcEnabledUnits source;
+				source.DROPOUT_PROB = layer->InputDropoutProbability;
+
+				source.Parse();
+				layer->CalcEnabledInputs = comp.Build(source);
+				layer->CalcEnabledInputs->Initialize(layer->InputUnits, 1);
+				//printf("%s\n", layer->CalcEnabledInputs->GetSource().c_str());
+			}
+
+			// feed forward
+			{
+				SourceFeedForward source;
+				source.FUNC = layer->Function;
+				source.INPUT_DROPOUT_PROB = layer->InputDropoutProbability;
+				source.INPUT_COUNT = layer->InputUnits;
+				source.NOISY = layer->Noisy;
+
+				source.Parse();
+				layer->FeedForward = comp.Build(source);
+				layer->FeedForward->Initialize(layer->OutputUnits, _minibatch_size);
+				//printf("%s\n", layer->FeedForward->GetSource().c_str());
+			}
+
+			// calc sensitivies
+			{
+				if(layer == _layers.back())
+				{
+					SourceCalcTopSensitivities source;
+					source.FUNC = layer->Function;
+					source.MINIBATCH_SIZE = _minibatch_size;
+
+					source.Parse();
+					layer->CalcSensitivity = comp.Build(source);
+					layer->CalcSensitivity->Initialize(layer->OutputUnits, _minibatch_size);
+					//printf("%s\n", layer->CalcSensitivity->GetSource().c_str());
+				}
+				else
+				{
+					SourceCalcSensitivities source;
+					source.FUNC = layer->Function;
+					source.MINIBATCH_SIZE = _minibatch_size;
+					source.NEXT_OUTPUT_COUNT = layer->NextLayer->OutputUnits;
+
+					source.Parse();
+					layer->CalcSensitivity = comp.Build(source);
+					layer->CalcSensitivity->Initialize(layer->OutputUnits, _minibatch_size);
+					//printf("%s\n", layer->CalcSensitivity->GetSource().c_str());
+				}
+			}
+
+			// update weights
+			{
+				SourceUpdateWeights source;
+				source.LEARNING_RATE = _training_config.LearningRate;
+				source.MOMENTUM = _training_config.Momentum;
+				source.MINIBATCH_SIZE = _minibatch_size;
+				source.L1_REGULARIZATION = _training_config.L1Regularization;
+				source.L2_REGULARIZATION = _training_config.L2Regularization;
+
+				source.Parse();
+				layer->UpdateWeights = comp.Build(source);
+				layer->UpdateWeights->Initialize(layer->InputUnits + 1, layer->OutputUnits);
+				//printf("%s\n", layer->UpdateWeights->GetSource().c_str());
+			}
+		}	
+
+		{
+			Layer* last_layer = _layers.back();
+			if(last_layer->OutputEnabled == nullptr)
+			{
+				float* enabled = new float[last_layer->OutputUnits];
+				for(uint32_t j = 0; j < last_layer->OutputUnits; j++)
+				{
+					enabled[j] = 1.0f;
+				}
+
+				last_layer->OutputEnabled = new OpenGLBuffer2D(last_layer->OutputUnits, 1, ReturnType::Float, enabled);
+				delete[] enabled;
+			}
+		}
+	}
 }
