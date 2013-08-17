@@ -83,6 +83,36 @@ namespace OMLT
 		}
 	}
 
+	void BackPropagation::SetActivationFunction( uint32_t in_layer_index, ActivationFunction_t in_func )
+	{
+		assert(in_layer_index < _layers.size());
+		if(_layers[in_layer_index]->Function != in_func)
+		{
+			_layers[in_layer_index]->Function = in_func;
+			_recompile_required = true;
+		}
+	}
+
+	void BackPropagation::SetNoisy( uint32_t in_layer_index, bool in_noisy )
+	{
+		assert(in_layer_index < _layers.size());
+		if(_layers[in_layer_index]->Noisy != in_noisy)
+		{
+			_layers[in_layer_index]->Noisy = in_noisy;
+			_recompile_required = true;
+		}
+	}
+
+	void BackPropagation::SetInputDropoutProbability( uint32_t in_layer_index, float in_prob )
+	{
+		assert(in_layer_index < _layers.size());
+		if(_layers[in_layer_index]->InputDropoutProbability != in_prob)
+		{
+			_layers[in_layer_index]->InputDropoutProbability = in_prob;
+			_recompile_required = true;
+		}
+	}
+
 	float BackPropagation::Train( OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label )
 	{
 		if(_recompile_required)
