@@ -27,14 +27,20 @@ namespace OMLT
 		};
 
 		Layer* GetLayer(uint32_t index);
+		Layer* InputLayer() {return GetLayer(0);}
+		Layer* OutputLayer() {return GetLayer(_layers.size() - 1);}
+
+		Layer* PopInputLayer();
+		Layer* PopOutputLayer();
 		bool AddLayer(Layer*);
 		uint32_t LayerCount() const {return _layers.size();}
 
+		// serialization
 		std::string ToJSON() const;
 		static MultilayerPerceptron* FromJSON(const std::string& in_JSON);
-
 private: 
 		std::vector<Layer*> _layers;
+		// properly aligned scratch buffers
 		std::vector<float*> _accumulations;
 		std::vector<float*> _activations;
 	};
