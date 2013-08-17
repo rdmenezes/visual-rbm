@@ -48,6 +48,8 @@ namespace OMLT
 		{
 			FreeKernels();
 			BuildKernels();
+
+			_recompile_required = false;
 		}
 
 		/// Calculate Enabled Units
@@ -350,8 +352,6 @@ namespace OMLT
 		_calc_error->Initialize(_model_config.VisibleUnits, 1);
 
 		//printf("%s\n", _calc_error->GetSource().c_str());
-
-		_recompile_required = false;
 	}
 
 	// free result when done

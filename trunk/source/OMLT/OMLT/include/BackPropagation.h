@@ -16,14 +16,21 @@ namespace OMLT
 	class BackPropagation
 	{
 	public:
+
 		// config for a nn trainer
-		struct TrainerConfig
+		struct TrainingConfig
 		{
-			uint32_t MinibatchSize;
 			float LearningRate;
 			float Momentum;
 			float L1Regularization;
 			float L2Regularization;
+
+			TrainingConfig()
+				: LearningRate(0.0f)
+				, Momentum(0.0f)
+				, L1Regularization(0.0f)
+				, L2Regularization(0.0f)
+			{ }
 		};
 
 		// training configuration for a given unit
@@ -39,22 +46,26 @@ namespace OMLT
 			float InputDropoutProbability;
 		};
 
-		BackPropagation(MultilayerPerceptron* in_mlp, TrainerConfig in_config);
-		BackPropagation(uint32_t in_input_units, TrainerConfig in_config);
+		BackPropagation(uint32_t in_input_units, uint32_t in_minibatchsize);
+		BackPropagation(MultilayerPerceptron* in_mlp, uint32_t in_minibatchsize);
+
+		~BackPropagation();
 
 		void AddLayer(LayerConfig config);
 		void AddLayer(LayerConfig config, float* weights);
-		float Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
-		void Initialize();
 
-		uint32_t LayerCount() const {return Layers.size();}
+		void SetTrainingConfig(const TrainingConfig&);
+
+		float Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
+
+		uint32_t LayerCount() const {return _layers.size();}
 
 		void SetActivationFunction(uint32_t in_layer_index, ActivationFunction_t in_func);
 		void SetNoisy(uint32_t in_layer_index, bool in_noisy);
 		void SetInputDropoutProbability(uint32_t in_layer_index, float in_prob);
 
 		MultilayerPerceptron* GetMultilayerPerceptron() const;
-		MultilayerPerceptron* GetMultilayerPerceptron(uint32_t being_layer, uint32_t end_layer) const;
+		MultilayerPerceptron* GetMultilayerPerceptron(uint32_t begin_layer, uint32_t end_layer) const;
 
 	private:
 
@@ -112,15 +123,21 @@ namespace OMLT
 
 		Layer* BuildLayer(LayerConfig in_Config, float* in_weights);
 
-		vector<Layer*> Layers;
-		const uint32_t InputUnits;
-		const uint32_t MinibatchSize;		
-		const float LearningRate;
-		const float Momentum;
-		const float L1Regularization;
-		const float L2Regularization;
+		const uint32_t _input_units;
+		const uint32_t _minibatch_size;
+		TrainingConfig _training_config;
+		bool _recompile_required;
 
+		vector<Layer*> _layers;
+
+		// kernel source definitions
 #		include "BackPropagationKernels.h"
+
+		// recomplie kernel programs as necessary when parameters change
+		void free_kernels();
+		void build_kernels();
+
+
 	};
 
 	typedef BackPropagation BP;
