@@ -76,9 +76,6 @@ namespace OMLT
 
 		struct Layer
 		{
-			Layer();
-			~Layer();
-
 			Layer* NextLayer;
 
 			uint32_t InputUnits;
@@ -126,7 +123,7 @@ namespace OMLT
 			OpenGLProgram* UpdateWeights;
 		};
 
-		Layer* BuildLayer(LayerConfig in_Config, float* in_weights);
+		
 
 		const uint32_t _input_units;
 		const uint32_t _minibatch_size;
@@ -143,10 +140,7 @@ namespace OMLT
 		// recomplie kernel programs as necessary when parameters change
 		void free_kernels();
 		void build_kernels();
-
-		// layer building methods called in constructors
-		void add_layer(LayerConfig config);
-		void add_layer(LayerConfig config, float* weights);
+		void build_layer(LayerConfig in_Config, float* in_weights);
 	};
 
 	typedef BackPropagation BP;

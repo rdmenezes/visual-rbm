@@ -18,7 +18,7 @@ namespace OMLT
 		assert(in_config.LayerConfigs.size() > 0);
 		for(auto it = in_config.LayerConfigs.begin(); it < in_config.LayerConfigs.end(); ++it)
 		{
-			add_layer(*it);
+			build_layer(*it, nullptr);
 		}
 	}
 
@@ -53,24 +53,24 @@ namespace OMLT
 			}
 
 			// add layer and use weight buffer as initial weights
-			add_layer(layer_config, weight_buffer);
+			build_layer(layer_config, weight_buffer);
 			delete[] weight_buffer;
 		}
 	}
 
 	BackPropagation::~BackPropagation()
 	{
+		// delete the dangling OutputEnabled we newed in build_kernels first
+		delete _layers.back()->OutputEnabled;
 
-	}
+		// delete all our kernels
+		free_kernels();
 
-	void BackPropagation::add_layer( LayerConfig config )
-	{
-		add_layer(config, nullptr);
-	}
-
-	void BackPropagation::add_layer( LayerConfig config, float* weights )
-	{
-		_layers.push_back(BuildLayer(config, weights));
+		// finally delete all of our layers
+		for(auto it = _layers.begin(); it < _layers.end(); ++it)
+		{
+			delete *it;
+		}
 	}
 
 	void BackPropagation::SetTrainingConfig( const TrainingConfig& in_config)
@@ -259,18 +259,7 @@ namespace OMLT
 		return err;
 	}
 
-
-	BackPropagation::Layer::Layer()
-	{
-
-	}
-
-	BackPropagation::Layer::~Layer()
-	{
-
-	}
-
-	BackPropagation::Layer* BackPropagation::BuildLayer( LayerConfig in_Config, float* in_weights )
+	void BackPropagation::build_layer( LayerConfig in_Config, float* in_weights )
 	{
 		std::mt19937_64 random;
 		random.seed(1);
@@ -390,7 +379,8 @@ namespace OMLT
 			_layers.back()->NextLayer = result;
 		}
 
-		return result;
+		// finally, append our newly created layer to the list
+		_layers.push_back(result);
 	}
 
 	MultilayerPerceptron* BackPropagation::GetMultilayerPerceptron() const
