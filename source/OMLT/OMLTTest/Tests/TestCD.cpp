@@ -73,6 +73,7 @@ bool TrainRBM(int argc, char** argv)
 
 	printf("Setting up model and training parameters\n");
 
+	const uint32_t minibatch_size = 10;
 	// configure our model paramters
 	CD::ModelConfig model_config;
 	{
@@ -80,7 +81,6 @@ bool TrainRBM(int argc, char** argv)
 		model_config.HiddenUnits = hidden_units;
 		model_config.VisibleType = ActivationFunction::Sigmoid;
 		model_config.HiddenType = ActivationFunction::Sigmoid;
-		model_config.MinibatchSize = 10;
 	}
 
 	const float base_rate = 0.1f;
@@ -100,18 +100,18 @@ bool TrainRBM(int argc, char** argv)
 
 	// construct our data atlas
 	DataAtlas atlas(in_data);
-	atlas.Build(model_config.MinibatchSize, 512);
+	atlas.Build(minibatch_size, 512);
 
 	SiCKL::OpenGLBuffer2D training_example;
 
 	printf("Constructing Contrastive Divergence algorithm\n");
 
-	ContrastiveDivergence cd(model_config);
+	ContrastiveDivergence cd(model_config, minibatch_size);
 
 	printf("Training\n");
 
 	// do actual training
-	const uint32_t epochs = 500;
+	const uint32_t epochs = 50;
 	for(uint32_t e = 0; e < epochs; e++)
 	{
 		train_config.LearningRate = 1.0f / ( 1.0f + 0.005f * e) * base_rate;
@@ -122,11 +122,11 @@ bool TrainRBM(int argc, char** argv)
 		{
 			atlas.Next(training_example);
 			cd.Train(training_example);
-			//error += cd.GetLastReconstructionError();
+			error += cd.GetLastReconstructionError();
 		}
 		error /= atlas.GetTotalBatches();
-		//printf("Epoch : %u, learning rate : %f, error : %f\n", e, train_config.LearningRate, error);
-		printf("Epoch : %u, learning rate : %f\n", e, train_config.LearningRate);
+		printf("Epoch : %u, learning rate : %f, error : %f\n", e, train_config.LearningRate, error);
+		//printf("Epoch : %u, learning rate : %f\n", e, train_config.LearningRate);
 	}
 
 	printf("Dumping RBM from GPU\n");

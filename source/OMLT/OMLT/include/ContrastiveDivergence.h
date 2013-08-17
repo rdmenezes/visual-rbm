@@ -20,7 +20,6 @@ namespace OMLT
 	public:
 		struct ModelConfig
 		{
-			uint32_t MinibatchSize;
 			uint32_t VisibleUnits;
 			ActivationFunction_t VisibleType;
 			uint32_t HiddenUnits;
@@ -46,7 +45,7 @@ namespace OMLT
 			{ }
 		};
 
-		ContrastiveDivergence(const ModelConfig);
+		ContrastiveDivergence(const ModelConfig, uint32_t in_minibatch_size);
 		~ContrastiveDivergence();
 
 		void SetTrainingConfig(const TrainingConfig&);
@@ -65,6 +64,7 @@ namespace OMLT
 		bool DumpLastWeights(float* weights);
 
 	private:
+		uint32_t _minibatch_size;
 		ModelConfig _model_config;
 		TrainingConfig _training_config;
 		// we need to recompile the shaders if the training config changes

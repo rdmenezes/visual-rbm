@@ -75,6 +75,13 @@ bool TrainAutoEncoder(int argc, char** argv)
 		output_config.InputDropoutProbability = 0.5f;
 	}
 
+	BP::ModelConfig model_config;
+	{
+		model_config.InputCount = in_data->GetRowLength();
+		model_config.LayerConfigs.push_back(hidden_config);
+		model_config.LayerConfigs.push_back(output_config);
+	}
+
 	const float base_rate = 0.5f;
 	const uint32_t minibatch_size = 10;
 
@@ -96,10 +103,8 @@ bool TrainAutoEncoder(int argc, char** argv)
 
 	printf("Constructing BackPropagation algorithm\n");
 
-	BackPropagation bp(in_data->GetRowLength(), minibatch_size);
-	bp.AddLayer(hidden_config);
-	bp.AddLayer(output_config);
-	
+	BackPropagation bp(model_config, minibatch_size);
+
 	printf("Training\n");
 
 	// do actual training

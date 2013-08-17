@@ -12,8 +12,9 @@ using std::swap;
 
 namespace OMLT
 {
-	ContrastiveDivergence::ContrastiveDivergence( const ModelConfig in_config)
+	ContrastiveDivergence::ContrastiveDivergence( const ModelConfig in_config, uint32_t in_minibatch_size)
 		: _model_config(in_config)
+		, _minibatch_size(in_minibatch_size)
 		, _calc_enabled_visible(nullptr)
 		, _calc_enabled_hidden(nullptr)
 		, _copy_visible(nullptr)
@@ -148,7 +149,7 @@ namespace OMLT
 		float* ptr = _error_buffer;
 		_calc_error->GetOutput(0, ptr);
 
-		return TotalError(ptr, _model_config.VisibleUnits, _model_config.MinibatchSize);
+		return TotalError(ptr, _model_config.VisibleUnits, _minibatch_size);
 	}
 
 	float ContrastiveDivergence::GetReconstructionError( const OpenGLBuffer2D& in_example)
@@ -186,7 +187,7 @@ namespace OMLT
 		float* ptr = _error_buffer;
 		_calc_error->GetOutput(0, ptr);
 
-		return TotalError(ptr, _model_config.VisibleUnits, _model_config.MinibatchSize);
+		return TotalError(ptr, _model_config.VisibleUnits, _minibatch_size);
 	}
 
 	RestrictedBoltzmannMachine* ContrastiveDivergence::GetRestrictedBoltzmannMachine() const
@@ -289,7 +290,7 @@ namespace OMLT
 		src_copy_visible.Parse();
 
 		_copy_visible = compiler.Build(src_copy_visible);
-		_copy_visible->Initialize(_model_config.VisibleUnits, _model_config.MinibatchSize);
+		_copy_visible->Initialize(_model_config.VisibleUnits, _minibatch_size);
 
 		//printf("%s\n", _copy_visible->GetSource().c_str());
 
@@ -301,7 +302,7 @@ namespace OMLT
 		src_calc_hidden_and_states.Parse();
 
 		_calc_hidden_states = compiler.Build(src_calc_hidden_and_states);
-		_calc_hidden_states->Initialize(_model_config.HiddenUnits, _model_config.MinibatchSize);
+		_calc_hidden_states->Initialize(_model_config.HiddenUnits, _minibatch_size);
 
 		//printf("%s\n", _calc_hidden_states->GetSource().c_str());
 
@@ -313,7 +314,7 @@ namespace OMLT
 		src_calc_visible.Parse();
 
 		_calc_visible = compiler.Build(src_calc_visible);
-		_calc_visible->Initialize(_model_config.VisibleUnits, _model_config.MinibatchSize);
+		_calc_visible->Initialize(_model_config.VisibleUnits, _minibatch_size);
 
 		//printf("%s\n", _calc_visible->GetSource().c_str());
 
@@ -325,13 +326,13 @@ namespace OMLT
 		src_calc_hidden.Parse();
 
 		_calc_hidden = compiler.Build(src_calc_hidden);	
-		_calc_hidden->Initialize(_model_config.HiddenUnits, _model_config.MinibatchSize);
+		_calc_hidden->Initialize(_model_config.HiddenUnits, _minibatch_size);
 
 		//printf("%s\n", _calc_hidden->GetSource().c_str());
 
 		/// Update Weights
 		SourceCalcWeightUpdates src_update_weights;
-		src_update_weights.MINIBATCH_SIZE = _model_config.MinibatchSize;
+		src_update_weights.MINIBATCH_SIZE = _minibatch_size;
 		src_update_weights.LEARNING_RATE = _training_config.LearningRate;
 		src_update_weights.MOMENTUM = _training_config.Momentum;
 		src_update_weights.L1_REGULARIZATION = _training_config.L1Regularization;
@@ -345,7 +346,7 @@ namespace OMLT
 
 		/// Calc Error
 		SourceCalcErrorVector src_calc_error;
-		src_calc_error.MINIBATCH_SIZE = _model_config.MinibatchSize;
+		src_calc_error.MINIBATCH_SIZE = _minibatch_size;
 		src_calc_error.Parse();
 
 		_calc_error = compiler.Build(src_calc_error);
@@ -379,7 +380,7 @@ namespace OMLT
 
 		uint32_t* visible_dropout_seed_buffer = GetSeedBuffer(_model_config.VisibleUnits, 1, random);
 		uint32_t* hidden_dropout_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits, 1, random);
-		uint32_t* hidden_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits, _model_config.MinibatchSize, random);
+		uint32_t* hidden_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits, _minibatch_size, random);
 
 		_visible_dropout_random0 = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, nullptr);
 		_visible_dropout_random1 = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, nullptr);
@@ -389,13 +390,13 @@ namespace OMLT
 		_enabled_visible = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, nullptr);
 		_enabled_hidden = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt, nullptr);
 
-		_visible = OpenGLBuffer2D(_model_config.VisibleUnits, _model_config.MinibatchSize, ReturnType::Float, nullptr);
-		_hidden = OpenGLBuffer2D(_model_config.HiddenUnits, _model_config.MinibatchSize, ReturnType::Float, nullptr);
-		_hidden_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, _model_config.MinibatchSize, ReturnType::UInt, nullptr);
-		_hidden_random1 = OpenGLBuffer2D(_model_config.HiddenUnits, _model_config.MinibatchSize, ReturnType::UInt, nullptr);
-		_hidden_states = OpenGLBuffer2D(_model_config.HiddenUnits, _model_config.MinibatchSize, ReturnType::Float, nullptr);
-		_visible_prime = OpenGLBuffer2D(_model_config.VisibleUnits, _model_config.MinibatchSize, ReturnType::Float, nullptr);
-		_hidden_prime = OpenGLBuffer2D(_model_config.HiddenUnits, _model_config.MinibatchSize, ReturnType::Float, nullptr);
+		_visible = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
+		_hidden = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
+		_hidden_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt, nullptr);
+		_hidden_random1 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt, nullptr);
+		_hidden_states = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
+		_visible_prime = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
+		_hidden_prime = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
 
 		// allocate a weight buffer and copy it to buffer
 		if(weight_buffer == nullptr)
