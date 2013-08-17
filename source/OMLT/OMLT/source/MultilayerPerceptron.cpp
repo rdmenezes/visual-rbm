@@ -135,6 +135,47 @@ namespace OMLT
 		return _layers[index];
 	}
 
+	MultilayerPerceptron::Layer* MultilayerPerceptron::PopInputLayer()
+	{
+		assert(_layers.size() > 0);
+		
+		// first accumulation ptr is nullptr
+		_accumulations.erase(_accumulations.begin());
+		if(_layers.size() > 1)
+		{
+			_aligned_free(_accumulations.front());
+			_accumulations.front() = nullptr;
+
+		}		
+
+		_aligned_free(_activations.front());
+		_activations.erase(_activations.begin());
+
+		MLP::Layer* result = _layers.front();
+		_layers.erase(_layers.begin());
+
+		return result;
+	}
+
+	MultilayerPerceptron::Layer* MultilayerPerceptron::PopOutputLayer()
+	{
+		assert(_layers.size() > 0);
+
+		if(_layers.size() > 1)
+		{
+			_aligned_free(_accumulations.back());
+		}
+		_accumulations.erase(_accumulations.end() - 1);
+		
+		_aligned_free(_activations.back());
+		_activations.erase(_activations.end() - 1);
+
+		MLP::Layer* result = _layers.back();
+		_layers.erase(_layers.end() - 1);
+
+		return result;
+	}
+
 	bool MultilayerPerceptron::AddLayer( Layer* in_layer)
 	{
 		if(_layers.size() == 0)

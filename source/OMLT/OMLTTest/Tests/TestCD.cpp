@@ -9,7 +9,7 @@
 
 using namespace OMLT;
 
-float CalcSquareError(const float* buff1, const float* buff2, const uint32_t size)
+float calc_square_error(const float* buff1, const float* buff2, const uint32_t size)
 {
 	float result = 0.0f;
 	for(uint32_t i = 0; i < size; i++)
@@ -28,11 +28,11 @@ void rescale(const float* in_buffer, float* out_buffer, const uint32_t count, co
 	}
 }
 
-bool VerifyCD(int argc, char** argv)
+bool TrainRBM(int argc, char** argv)
 {
 	if(argc != 4)
 	{
-		printf("Usage: VerifyCD [in_data.idx] [out_features.idx] [out_reconstruction.idx] [out_rbm.idx]\n");
+		printf("Usage: TrainRBM [in_data.idx] [out_features.idx] [out_reconstruction.idx] [out_rbm.idx]\n");
 		return false;
 	}
 
@@ -71,6 +71,8 @@ bool VerifyCD(int argc, char** argv)
 	// startup SiCKL
 	SiCKL::OpenGLRuntime::Initialize();
 
+	printf("Setting up model and training parameters\n");
+
 	// configure our model paramters
 	CD::ModelConfig model_config;
 	{
@@ -80,14 +82,6 @@ bool VerifyCD(int argc, char** argv)
 		model_config.HiddenType = ActivationFunction::Sigmoid;
 		model_config.MinibatchSize = 10;
 	}
-
-	printf("Constructing data atlas\n");
-
-	// construct our data atlas
-	DataAtlas atlas(in_data);
-	atlas.Build(model_config.MinibatchSize, 512);
-
-	SiCKL::OpenGLBuffer2D training_example;
 
 	const float base_rate = 0.1f;
 
@@ -102,7 +96,15 @@ bool VerifyCD(int argc, char** argv)
 		train_config.L2Regularization = 0.0f;
 	}
 
-	printf("Constructing CD algorithm\n");
+	printf("Constructing data atlas\n");
+
+	// construct our data atlas
+	DataAtlas atlas(in_data);
+	atlas.Build(model_config.MinibatchSize, 512);
+
+	SiCKL::OpenGLBuffer2D training_example;
+
+	printf("Constructing Contrastive Divergence algorithm\n");
 
 	ContrastiveDivergence cd(model_config);
 
@@ -123,7 +125,8 @@ bool VerifyCD(int argc, char** argv)
 			//error += cd.GetLastReconstructionError();
 		}
 		error /= atlas.GetTotalBatches();
-		printf("Epoch : %u, learning rate : %f, error : %f\n", e, train_config.LearningRate, error);
+		//printf("Epoch : %u, learning rate : %f, error : %f\n", e, train_config.LearningRate, error);
+		printf("Epoch : %u, learning rate : %f\n", e, train_config.LearningRate);
 	}
 
 	printf("Dumping RBM from GPU\n");
@@ -148,7 +151,7 @@ bool VerifyCD(int argc, char** argv)
 		out_features->AddRow(hidden_buffer);
 		out_recon->AddRow(visible_recon_buffer);
 
-		err += CalcSquareError(visible_buffer, visible_recon_buffer, rbm->visible_count);
+		err += calc_square_error(visible_buffer, visible_recon_buffer, rbm->visible_count);
 	}
 
 	err /= in_data->GetRowCount();
@@ -197,7 +200,10 @@ bool VerifyCD(int argc, char** argv)
 
 	delete out_recon;
 	delete out_features;
+	delete out_rbm;
 	delete in_data;
+
+	SiCKL::OpenGLRuntime::Finalize();
 
 	return true;
 }

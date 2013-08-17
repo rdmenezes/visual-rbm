@@ -13,32 +13,32 @@ using namespace SiCKL;
 
 namespace OMLT
 {
-	// config for a nn trainer
-	struct TrainerConfig
-	{
-		uint32_t MinibatchSize;
-		float LearningRate;
-		float Momentum;
-		float L1Regularization;
-		float L2Regularization;
-	};
-
-	// training configuration for a given unit
-	struct LayerConfig
-	{
-		// the number of neurons on this layer
-		uint32_t OutputUnits;
-		// activation function used
-		ActivationFunction_t Function;
-		// will we add noise to accumulation
-		bool Noisy;
-		// probability an input unit will be dropped out
-		float InputDropoutProbability;
-	};
-
 	class BackPropagation
 	{
 	public:
+		// config for a nn trainer
+		struct TrainerConfig
+		{
+			uint32_t MinibatchSize;
+			float LearningRate;
+			float Momentum;
+			float L1Regularization;
+			float L2Regularization;
+		};
+
+		// training configuration for a given unit
+		struct LayerConfig
+		{
+			// the number of neurons on this layer
+			uint32_t OutputUnits;
+			// activation function used
+			ActivationFunction_t Function;
+			// will we add noise to accumulation
+			bool Noisy;
+			// probability an input unit will be dropped out
+			float InputDropoutProbability;
+		};
+
 		BackPropagation(MultilayerPerceptron* in_mlp, TrainerConfig in_config);
 		BackPropagation(uint32_t in_input_units, TrainerConfig in_config);
 
@@ -122,4 +122,6 @@ namespace OMLT
 
 #		include "BackPropagationKernels.h"
 	};
+
+	typedef BackPropagation BP;
 }
