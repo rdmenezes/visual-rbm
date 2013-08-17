@@ -10,12 +10,16 @@ using std::swap;
 namespace OMLT
 {
 
-	BackPropagation::BackPropagation( uint32_t in_input_units, uint32_t in_minibatchsize )
-		: _input_units(in_input_units)
+	BackPropagation::BackPropagation( const ModelConfig in_config, uint32_t in_minibatchsize )
+		: _input_units(in_config.InputCount)
 		, _minibatch_size(in_minibatchsize)
 		, _recompile_required(true)
 	{
-
+		assert(in_config.LayerConfigs.size() > 0);
+		for(auto it = in_config.LayerConfigs.begin(); it < in_config.LayerConfigs.end(); ++it)
+		{
+			add_layer(*it);
+		}
 	}
 
 	BackPropagation::BackPropagation( MultilayerPerceptron* in_mlp, uint32_t in_minibatchsize )
@@ -49,7 +53,7 @@ namespace OMLT
 			}
 
 			// add layer and use weight buffer as initial weights
-			AddLayer(layer_config, weight_buffer);
+			add_layer(layer_config, weight_buffer);
 			delete[] weight_buffer;
 		}
 	}
@@ -59,12 +63,12 @@ namespace OMLT
 
 	}
 
-	void BackPropagation::AddLayer( LayerConfig config )
+	void BackPropagation::add_layer( LayerConfig config )
 	{
-		AddLayer(config, nullptr);
+		add_layer(config, nullptr);
 	}
 
-	void BackPropagation::AddLayer( LayerConfig config, float* weights )
+	void BackPropagation::add_layer( LayerConfig config, float* weights )
 	{
 		_layers.push_back(BuildLayer(config, weights));
 	}

@@ -17,6 +17,25 @@ namespace OMLT
 	{
 	public:
 
+		// training configuration for a given unit
+		struct LayerConfig
+		{
+			// the number of neurons on this layer
+			uint32_t OutputUnits;
+			// activation function used
+			ActivationFunction_t Function;
+			// will we add noise to accumulation
+			bool Noisy;
+			// probability an input unit will be dropped out
+			float InputDropoutProbability;
+		};
+
+		struct ModelConfig
+		{
+			uint32_t InputCount;
+			std::vector<LayerConfig> LayerConfigs;
+		};
+
 		// config for a nn trainer
 		struct TrainingConfig
 		{
@@ -33,26 +52,12 @@ namespace OMLT
 			{ }
 		};
 
-		// training configuration for a given unit
-		struct LayerConfig
-		{
-			// the number of neurons on this layer
-			uint32_t OutputUnits;
-			// activation function used
-			ActivationFunction_t Function;
-			// will we add noise to accumulation
-			bool Noisy;
-			// probability an input unit will be dropped out
-			float InputDropoutProbability;
-		};
-
-		BackPropagation(uint32_t in_input_units, uint32_t in_minibatchsize);
+		
+		BackPropagation(const ModelConfig, uint32_t in_minibatchsize);
 		BackPropagation(MultilayerPerceptron* in_mlp, uint32_t in_minibatchsize);
 
 		~BackPropagation();
 
-		void AddLayer(LayerConfig config);
-		void AddLayer(LayerConfig config, float* weights);
 
 		void SetTrainingConfig(const TrainingConfig&);
 
@@ -126,6 +131,8 @@ namespace OMLT
 		const uint32_t _input_units;
 		const uint32_t _minibatch_size;
 		TrainingConfig _training_config;
+		
+		// flag gets set when training config gets updated
 		bool _recompile_required;
 
 		vector<Layer*> _layers;
@@ -137,7 +144,9 @@ namespace OMLT
 		void free_kernels();
 		void build_kernels();
 
-
+		// layer building methods called in constructors
+		void add_layer(LayerConfig config);
+		void add_layer(LayerConfig config, float* weights);
 	};
 
 	typedef BackPropagation BP;
