@@ -60,14 +60,15 @@ namespace OMLT
 
 
 		void SetTrainingConfig(const TrainingConfig&);
+		void SetActivationFunction(uint32_t in_layer_index, ActivationFunction_t in_func);
+		void SetNoisy(uint32_t in_layer_index, bool in_noisy);
+		void SetInputDropoutProbability(uint32_t in_layer_index, float in_prob);
 
 		float Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
 
 		uint32_t LayerCount() const {return _layers.size();}
 
-		void SetActivationFunction(uint32_t in_layer_index, ActivationFunction_t in_func);
-		void SetNoisy(uint32_t in_layer_index, bool in_noisy);
-		void SetInputDropoutProbability(uint32_t in_layer_index, float in_prob);
+
 
 		MultilayerPerceptron* GetMultilayerPerceptron() const;
 		MultilayerPerceptron* GetMultilayerPerceptron(uint32_t begin_layer, uint32_t end_layer) const;
