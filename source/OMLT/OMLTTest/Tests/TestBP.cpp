@@ -108,7 +108,7 @@ bool TrainAutoEncoder(int argc, char** argv)
 	printf("Training\n");
 
 	// do actual training
-	const uint32_t epochs = 50;//20;
+	const uint32_t epochs = 50;
 	for(uint32_t e = 0; e < epochs; e++)
 	{
 		train_config.LearningRate = 1.0f / ( 1.0f + 0.005f * e) * base_rate;
