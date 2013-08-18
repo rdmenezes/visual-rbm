@@ -1,3 +1,6 @@
+// std
+#include <stdio.h>
+
 // SiCKL
 #include <SiCKL.h>
 
@@ -206,4 +209,119 @@ bool TrainRBM(int argc, char** argv)
 	SiCKL::OpenGLRuntime::Finalize();
 
 	return true;
+}
+
+// train an RBM, dump it to JSON, convert JSON back to RBM object,
+// create new CD with said RBM object, dump RBM to reserialized json
+bool SerializeRBM(int argc, char** argv)
+{
+	if(argc != 3)
+	{
+		printf("Usage: SerializeRBM [data.idx] [trained_rbm.json] [reserialized_rbm.json]\n");
+		return false;
+	}
+
+
+
+	printf("Loading Data\n");
+
+	IDX* data = IDX::Load(argv[0]);
+	if(data == nullptr)
+	{
+		printf("Could not load %s as IDX file\n", argv[0]);
+		return false;
+	}
+
+	FILE* rbm_json = fopen(argv[1], "wb");
+	if(rbm_json == nullptr)
+	{
+		printf("Could not create %s\n", argv[1]);
+		return false;
+	}
+
+	FILE* rbm_reserial_json = fopen(argv[2], "wb");
+	if(rbm_reserial_json == nullptr)
+	{
+		printf("Could not create %s\n", argv[2]);
+		return false;
+	}
+
+	printf("Initing SiCKL\n");
+	SiCKL::OpenGLRuntime::Initialize();
+
+	printf("Construction training params");
+
+	const uint32_t minibatch_size = 10;
+
+	CD::ModelConfig model_config;
+	{
+		model_config.VisibleUnits = data->GetRowLength();
+		model_config.VisibleType = ActivationFunction::Sigmoid;
+		model_config.HiddenUnits = 100;
+		model_config.HiddenType = ActivationFunction::Sigmoid;
+	}
+
+	CD::TrainingConfig train_config;
+	{
+		train_config.LearningRate = 0.1f;
+		train_config.Momentum = 0.5f;
+		train_config.L1Regularization = 0.0f;
+		train_config.L2Regularization = 0.0f;
+		train_config.VisibleDropout = 0.0f;
+		train_config.HiddenDropout = 0.0f;
+	}
+
+	printf("Constructing CD trainer\n");
+
+	ContrastiveDivergence cd1(model_config, minibatch_size);
+	cd1.SetTrainingConfig(train_config);
+
+	printf("Building data atlas\n");
+
+	DataAtlas atlas(data);
+	atlas.Build(minibatch_size, 512);
+
+	SiCKL::OpenGLBuffer2D training_example;
+
+	printf("Training...\n");
+
+	const uint32_t epochs = 20;
+	for(uint32_t e = 0; e < epochs; e++)
+	{
+		for(uint32_t k = 0; k < atlas.GetTotalBatches(); k++)
+		{
+			atlas.Next(training_example);
+			cd1.Train(training_example);
+		}
+		printf("Epoch: %u\n", e);
+	}
+
+	printf("Dumping RBM from texture memory\n");
+
+	RBM* rbm = cd1.GetRestrictedBoltzmannMachine();
+
+	printf("Serializing to disk\n");
+
+	fprintf(rbm_json, "%s\n", rbm->ToJSON().c_str());
+	fclose(rbm_json);
+	
+	printf("Creating new CD\n");
+
+	ContrastiveDivergence cd2(rbm, minibatch_size);
+
+	printf("Dumping re-serialized RBM from texture memory\n");
+
+	RBM* rbm_reserial = cd2.GetRestrictedBoltzmannMachine();
+	
+	printf("And Serializing that to disk\n");
+	
+	fprintf(rbm_reserial_json, "%s\n", rbm_reserial->ToJSON().c_str());
+	fclose(rbm_reserial_json);
+
+	printf("Cleanup\n");
+
+	delete rbm;
+	delete rbm_reserial;
+
+	SiCKL::OpenGLRuntime::Finalize();
 }

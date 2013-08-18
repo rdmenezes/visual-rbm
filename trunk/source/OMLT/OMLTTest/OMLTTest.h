@@ -13,6 +13,7 @@ EXTERN(VerifySigmoid);
 EXTERN(VerifyLn1PlusEx);
 EXTERN(TrainRBM);
 EXTERN(TrainAutoEncoder);
+EXTERN(SerializeRBM);
 // function list
 
 struct
@@ -25,4 +26,5 @@ struct
 	TEST(VerifyLn1PlusEx),
 	TEST(TrainRBM),
 	TEST(TrainAutoEncoder),
+	TEST(SerializeRBM),
 };

@@ -46,6 +46,7 @@ namespace OMLT
 		};
 
 		ContrastiveDivergence(const ModelConfig, uint32_t in_minibatch_size);
+		ContrastiveDivergence(RestrictedBoltzmannMachine* in_rbm, uint32_t in_minibatch_size);
 		~ContrastiveDivergence();
 
 		void SetTrainingConfig(const TrainingConfig&);
@@ -104,9 +105,9 @@ namespace OMLT
 		// kernel sources definitions
 #		include "ContrastiveDivergenceKernels.h"
 		// recompile kernel programs as necessary
-		void FreeKernels();
-		void BuildKernels();
-		void AllocateTextures(float* weight_buffer);
+		void free_kernels();
+		void build_kernels();
+		void allocate_textures(float* weight_buffer);
 
 		AlignedMemoryBlock<float> _error_buffer;
 	};

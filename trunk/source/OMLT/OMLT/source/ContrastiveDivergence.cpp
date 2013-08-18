@@ -1,9 +1,12 @@
-// stdlib
+// windows
+#include <windows.h>
+
+// std
 #include <string.h>
 #include <algorithm>
 using std::swap;
 #include <random>
-
+#include <assert.h>
 
 // OMLT
 #include "Common.h"
@@ -25,12 +28,51 @@ namespace OMLT
 		, _calc_error(nullptr)
 		, _recompile_required(true)
 	{
-		AllocateTextures(nullptr);
+		allocate_textures(nullptr);
+	}
+
+	ContrastiveDivergence::ContrastiveDivergence( RestrictedBoltzmannMachine* in_rbm, uint32_t in_minibatch_size )
+		: _minibatch_size(in_minibatch_size)
+		, _calc_enabled_visible(nullptr)
+		, _calc_enabled_hidden(nullptr)
+		, _copy_visible(nullptr)
+		, _calc_hidden(nullptr)
+		, _calc_hidden_states(nullptr)
+		, _calc_visible(nullptr)
+		, _update_weights(nullptr)
+		, _calc_error(nullptr)
+		, _recompile_required(true)
+	{
+		assert(in_rbm != nullptr);
+		_model_config.VisibleUnits = in_rbm->visible_count;
+		_model_config.VisibleType = in_rbm->visible_type;
+		_model_config.HiddenUnits = in_rbm->hidden_count;
+		_model_config.HiddenType = in_rbm->hidden_type;
+
+		// copy weights to a properly formatted buffer
+		float* weight_buffer = new float[(in_rbm->visible_count + 1) * (in_rbm->hidden_count + 1)];
+		weight_buffer[0] = 0.0f;
+
+		// copy in hidden biases
+		memcpy(weight_buffer + 1, in_rbm->hidden_biases, sizeof(float) * in_rbm->hidden_count);
+
+		// now copy in each visible feature (as well as visible bias)
+		for(uint32_t i = 1; i <= in_rbm->visible_count; i++)
+		{
+			const uint32_t offset = (in_rbm->hidden_count + 1) * i;
+			// bias
+			weight_buffer[offset] = in_rbm->visible_biases[i-1];
+			// weight vector
+			memcpy(weight_buffer + offset + 1, in_rbm->visible_features[i-1], sizeof(float) * in_rbm->hidden_count);
+		}
+
+		allocate_textures(weight_buffer);
+		delete[] weight_buffer;
 	}
 
 	ContrastiveDivergence::~ContrastiveDivergence()
 	{
-		FreeKernels();
+		free_kernels();
 	}
 
 	void ContrastiveDivergence::SetTrainingConfig( const TrainingConfig& in_config)
@@ -47,8 +89,8 @@ namespace OMLT
 	{
 		if(_recompile_required)
 		{
-			FreeKernels();
-			BuildKernels();
+			free_kernels();
+			build_kernels();
 
 			_recompile_required = false;
 		}
@@ -248,7 +290,7 @@ namespace OMLT
 		return false;
 	}
 
-	void ContrastiveDivergence::FreeKernels()
+	void ContrastiveDivergence::free_kernels()
 	{
 		// delete our kernels
 		SafeDelete(_calc_enabled_visible);
@@ -261,7 +303,7 @@ namespace OMLT
 		SafeDelete(_calc_error);
 	}
 
-	void ContrastiveDivergence::BuildKernels()
+	void ContrastiveDivergence::build_kernels()
 	{
 		OpenGLCompiler compiler;
 
@@ -373,7 +415,7 @@ namespace OMLT
 		return result;
 	}
 
-	void ContrastiveDivergence::AllocateTextures(float* weight_buffer)
+	void ContrastiveDivergence::allocate_textures(float* weight_buffer)
 	{	
 		std::mt19937_64 random;
 		random.seed(1);
