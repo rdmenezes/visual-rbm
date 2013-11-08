@@ -293,6 +293,7 @@ namespace OMLT
 		{
 			RestrictedBoltzmannMachine* rbm = nullptr;
 
+			cJSON* cj_type = cJSON_GetObjectItem(root, "Type");
 			cJSON* cj_visible_count = cJSON_GetObjectItem(root, "VisibleCount");
 			cJSON* cj_hidden_count = cJSON_GetObjectItem(root, "HiddenCount");
 			cJSON* cj_visible_type = cJSON_GetObjectItem(root, "VisibleType");
@@ -304,8 +305,13 @@ namespace OMLT
 			if(cj_visible_count && cj_hidden_count &&
 				cj_visible_type && cj_hidden_type &&
 				cj_visible_biases && cj_hidden_biases &&
-				cj_weights)
+				cj_weights && cj_type)
 			{
+				if(strcmp(cj_type->string, "RestrictedBoltzmannMachine") != 0)
+				{
+					goto Malformed;
+				}
+
 				uint32_t visible_count = cj_visible_count->valueint;
 				uint32_t hidden_count = cj_hidden_count->valueint;
 				ActivationFunction_t visible_type = (ActivationFunction_t)-1;
