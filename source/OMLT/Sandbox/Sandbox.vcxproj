@@ -54,7 +54,7 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)\..\..\extern\SiCKL\lib;$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>OMLT.lib;freeglut_static.lib;glew32s.lib;SiCKLD.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>OMLTD.lib;freeglut_static.lib;glew32s.lib;SiCKLD.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <IgnoreAllDefaultLibraries>
       </IgnoreAllDefaultLibraries>
     </Link>

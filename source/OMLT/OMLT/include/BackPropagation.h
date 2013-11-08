@@ -1,6 +1,7 @@
 // std
 #include <stdint.h>
 #include <vector>
+#include <assert.h>
 using std::vector;
 
 // sickl header

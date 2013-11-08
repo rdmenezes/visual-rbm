@@ -60,9 +60,9 @@ namespace OMLT
 		RestrictedBoltzmannMachine* GetRestrictedBoltzmannMachine() const;
 
 		/// these methods are used by VisualRBM for real-time visualization
-		bool DumpLastVisible(float* image, float* recon);
-		bool DumpLastHidden(float* activations);
-		bool DumpLastWeights(float* weights);
+		bool DumpLastVisible(float** image, float** recon);
+		bool DumpLastHidden(float** activations);
+		bool DumpLastWeights(float** weights);
 
 	private:
 		uint32_t _minibatch_size;

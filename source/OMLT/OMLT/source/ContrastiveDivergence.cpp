@@ -275,19 +275,33 @@ namespace OMLT
 		return rbm;
 	}
 
-	bool ContrastiveDivergence::DumpLastVisible( float* image, float* recon )
+	bool ContrastiveDivergence::DumpLastVisible( float** image, float** recon )
 	{
-		return false;
+		assert(image != nullptr);
+		assert(recon != nullptr);
+
+		_visible.GetData(*image);
+		_visible_prime.GetData(*recon);
+
+		return true;
 	}
 
-	bool ContrastiveDivergence::DumpLastHidden( float* activations )
+	bool ContrastiveDivergence::DumpLastHidden( float** activations )
 	{
-		return false;
+		assert(activations != nullptr);
+
+		_hidden.GetData(*activations);
+
+		return true;
 	}
 
-	bool ContrastiveDivergence::DumpLastWeights( float* weights )
+	bool ContrastiveDivergence::DumpLastWeights( float** weights )
 	{
-		return false;
+		assert(weights != nullptr);
+
+		_weights0.GetData(*weights);
+
+		return true;
 	}
 
 	void ContrastiveDivergence::free_kernels()
@@ -411,7 +425,6 @@ namespace OMLT
 			result[k] = uniform(random);
 		}
 
-
 		return result;
 	}
 
@@ -424,9 +437,9 @@ namespace OMLT
 		uint32_t* hidden_dropout_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits, 1, random);
 		uint32_t* hidden_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits, _minibatch_size, random);
 
-		_visible_dropout_random0 = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, nullptr);
+		_visible_dropout_random0 = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, visible_dropout_seed_buffer);
 		_visible_dropout_random1 = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, nullptr);
-		_hidden_dropout_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt, nullptr);
+		_hidden_dropout_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt, hidden_dropout_seed_buffer);
 		_hidden_dropout_random1 = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt, nullptr);
 
 		_enabled_visible = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, nullptr);
@@ -434,7 +447,7 @@ namespace OMLT
 
 		_visible = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
 		_hidden = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
-		_hidden_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt, nullptr);
+		_hidden_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt, hidden_seed_buffer);
 		_hidden_random1 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt, nullptr);
 		_hidden_states = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
 		_visible_prime = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
