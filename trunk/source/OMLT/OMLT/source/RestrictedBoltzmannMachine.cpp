@@ -307,7 +307,7 @@ namespace OMLT
 				cj_visible_biases && cj_hidden_biases &&
 				cj_weights && cj_type)
 			{
-				if(strcmp(cj_type->string, "RestrictedBoltzmannMachine") != 0)
+				if(strcmp(cj_type->valuestring, "RestrictedBoltzmannMachine") != 0)
 				{
 					goto Malformed;
 				}

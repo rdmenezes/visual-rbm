@@ -97,7 +97,7 @@ bool TrainAutoEncoder(int argc, char** argv)
 
 	// construct our data atlas
 	DataAtlas atlas(in_data);
-	atlas.Build(minibatch_size, 512);
+	atlas.Initialize(minibatch_size, 512);
 
 	SiCKL::OpenGLBuffer2D training_example;
 
