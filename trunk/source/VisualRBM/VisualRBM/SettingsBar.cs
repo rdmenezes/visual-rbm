@@ -243,10 +243,11 @@ namespace VisualRBM
 			InitializeComponent();
 			// fill in model types combobox
 			modelTypeComboBox.Items.Add(QuickBoltzmann.ModelType.RBM);
-			modelTypeComboBox.Items.Add(QuickBoltzmann.ModelType.SRBM);
+			modelTypeComboBox.Items.Add(QuickBoltzmann.ModelType.AutoEncoder);
 			// fill in visible type combobox
-			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Binary);
-			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Gaussian);
+			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Sigmoid);
+			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Linear);
+			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.RectifiedLinear);
 
 			// setup all our tooltips
 			SetToolTip("Load training dataset", this.selectTrainingIdxButton);
@@ -469,9 +470,9 @@ namespace VisualRBM
 			{
 				case QuickBoltzmann.ModelType.RBM:
 					break;
-				case QuickBoltzmann.ModelType.SRBM:
+				case QuickBoltzmann.ModelType.AutoEncoder:
 					cb.SelectedItem = QuickBoltzmann.ModelType.RBM;
-					MessageBox.Show("SRBM Training not yet implemented.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					MessageBox.Show("AutoEncoder Training not yet implemented.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
 					break;
 			}
 		}
@@ -840,6 +841,8 @@ namespace VisualRBM
 					RBMProcessor.Start(new Action(() =>
 					{
 						this.Invoke(new Action(() => _main_form.Cursor = Cursors.Default));
+						this.CurrentState = ProgramState.TrainerRunning;
+/*
 						if (RBMProcessor.IsInitialized == true)
 						{
 							this.CurrentState = ProgramState.TrainerRunning;
@@ -848,6 +851,7 @@ namespace VisualRBM
 						{
 							this.CurrentState = ProgramState.TrainerStopped;
 						}
+ */ 
 					}));
 				}
 				else if (CurrentState == ProgramState.TrainerPaused)
@@ -898,7 +902,7 @@ namespace VisualRBM
 
 			if (sfd.ShowDialog() == DialogResult.OK)
 			{
-				RBMProcessor.SaveRBM(sfd.FileName);
+				RBMProcessor.SaveModel(sfd.OpenFile());
 				_main_form.trainingLog.AddLog("Exported RBM to {0}", sfd.FileName);
 			}
 		}
@@ -910,17 +914,27 @@ namespace VisualRBM
 
 			if (ofd.ShowDialog() == DialogResult.OK)
 			{
-				uint hidden = 0;
-				bool linear_units = false;
+				_main_form.Cursor = Cursors.WaitCursor;
+				if (RBMProcessor.LoadModel(ofd.OpenFile()))
+				{
+					_main_form.trainingLog.AddLog("Imported RBM from {0}", ofd.FileName);
+					
+					visibleUnitsLabel.Text = RBMProcessor.VisibleUnits.ToString();
+					hiddenUnitsTextBox.Text = RBMProcessor.HiddenUnits.ToString();
+					visibleTypeComboBox.SelectedItem = RBMProcessor.VisibleType;
+					//hiddenTypeComboxBox.SelectedItem = RBMProcessor.HiddenType;
+					modelTypeComboBox.SelectedItem = RBMProcessor.Model;
 
-				RBMProcessor.LoadRBM(ofd.FileName, ref hidden, ref linear_units);
-				_main_form.trainingLog.AddLog("Imported RBM from {0}", ofd.FileName);
-
-				// set hidden unit count and visible unit type loaded
-				hiddenUnitsTextBox.Text = hidden.ToString();
-				visibleTypeComboBox.SelectedItem = linear_units == true ? QuickBoltzmann.UnitType.Gaussian : QuickBoltzmann.UnitType.Binary;
-
-
+					CurrentState = ProgramState.TrainerPaused;
+					_main_form.Cursor = Cursors.Default;
+				}
+				else
+				{
+					String error = String.Format("Error loading model from {0}", ofd.FileName);
+					_main_form.trainingLog.AddLog(error);
+					_main_form.Cursor = Cursors.Default;
+					MessageBox.Show(error);
+				}
 			}
 		}
 
@@ -997,19 +1011,19 @@ namespace VisualRBM
 
 								if (parameter_map.TryGetValue("visible_type", out val))
 								{
-									if (String.Compare(val, "binary", true) == 0)
+									if (String.Compare(val, "sigmoid", true) == 0)
 									{
-										visibleTypeComboBox.SelectedItem = UnitType.Binary;
-										RBMProcessor.VisibleType = UnitType.Binary;
+										visibleTypeComboBox.SelectedItem = UnitType.Sigmoid;
+										RBMProcessor.VisibleType = UnitType.Sigmoid;
 									}
-									else if (String.Compare(val, "gaussian", true) == 0)
+									else if (String.Compare(val, "linear", true) == 0)
 									{
-										visibleTypeComboBox.SelectedItem = UnitType.Gaussian;
-										RBMProcessor.VisibleType = UnitType.Gaussian;
+										visibleTypeComboBox.SelectedItem = UnitType.Linear;
+										RBMProcessor.VisibleType = UnitType.Linear;
 									}
 									else
 									{
-										MessageBox.Show(String.Format("Could not parse \"visible_type = {0};\" must be Binary or Gaussian", val));
+										MessageBox.Show(String.Format("Could not parse \"visible_type = {0};\" must be Sigmoid or Linear", val));
 										return;
 									}
 								}
