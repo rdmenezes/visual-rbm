@@ -136,17 +136,16 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\QuickBoltzmannInterop\QuickBoltzmannInterop.vcxproj">
-      <Project>{FDFEEE4A-AE92-4D22-BF7F-B2AB4F64B874}</Project>
-      <Name>QuickBoltzmannInterop</Name>
-      <EmbedInteropTypes>False</EmbedInteropTypes>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="icons\visualrbm.png" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="icons\visualrbm.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\VisualRBMInterop\VisualRBMInterop.vcxproj">
+      <Project>{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}</Project>
+      <Name>VisualRBMInterop</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

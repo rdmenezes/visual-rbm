@@ -236,7 +236,7 @@ namespace VisualRBM
 			}
 
 			// if the data is linear, we need to get it back to [0,1]
-			if (RBMProcessor.VisibleType == UnitType.Gaussian)
+			if (RBMProcessor.VisibleType == UnitType.Linear)
 			{
 				for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
 					for (int i = 0; i < RBMProcessor.VisibleUnits; i++)

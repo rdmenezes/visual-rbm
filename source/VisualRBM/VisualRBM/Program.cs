@@ -30,7 +30,6 @@ namespace VisualRBM
 			Application.SetCompatibleTextRenderingDefault(false);
 
 			Main m = new Main();
-
 			Application.Run(m);
 		}
 	}

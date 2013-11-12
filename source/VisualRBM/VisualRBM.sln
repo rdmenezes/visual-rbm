@@ -10,6 +10,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QuickBoltzmannNative", "Qui
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "QuickBoltzmannInterop", "QuickBoltzmannInterop\QuickBoltzmannInterop.vcxproj", "{FDFEEE4A-AE92-4D22-BF7F-B2AB4F64B874}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "VisualRBMInterop", "VisualRBMInterop\VisualRBMInterop.vcxproj", "{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -58,6 +60,18 @@ Global
 		{FDFEEE4A-AE92-4D22-BF7F-B2AB4F64B874}.Release|Win32.ActiveCfg = Release|Win32
 		{FDFEEE4A-AE92-4D22-BF7F-B2AB4F64B874}.Release|Win32.Build.0 = Release|Win32
 		{FDFEEE4A-AE92-4D22-BF7F-B2AB4F64B874}.Release|x86.ActiveCfg = Release|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Debug|Mixed Platforms.ActiveCfg = Debug|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Debug|Mixed Platforms.Build.0 = Debug|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Debug|Win32.ActiveCfg = Debug|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Debug|Win32.Build.0 = Debug|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Debug|x86.ActiveCfg = Debug|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Release|Any CPU.ActiveCfg = Release|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Release|Mixed Platforms.ActiveCfg = Release|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Release|Mixed Platforms.Build.0 = Release|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Release|Win32.ActiveCfg = Release|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Release|Win32.Build.0 = Release|Win32
+		{66A32F6D-F747-4ADC-9EE6-CE7AF97738CE}.Release|x86.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
