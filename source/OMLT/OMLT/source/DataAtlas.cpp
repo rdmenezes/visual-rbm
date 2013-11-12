@@ -21,6 +21,7 @@ OMLT::DataAtlas::DataAtlas( IDX* in_Data )
 	, _current_row(0)
 	, _texture_copy(nullptr)
 	, _idx(in_Data)
+	, _initialized(false)
 {
 	assert(_idx != nullptr);
 }
@@ -58,8 +59,10 @@ public:
 	END_SOURCE
 };
 
-void OMLT::DataAtlas::Build( uint32_t in_BatchSize, uint32_t in_MaxPageSize )
+void OMLT::DataAtlas::Initialize( uint32_t in_BatchSize, uint32_t in_MaxPageSize )
 {
+	assert(_initialized == false);
+
 	// dimension of each batch
 	_batch_width = _idx->GetRowLength();
 	_batch_height = in_BatchSize;
@@ -163,6 +166,35 @@ void OMLT::DataAtlas::Build( uint32_t in_BatchSize, uint32_t in_MaxPageSize )
 	delete source;
 	
 	_current_batch = 0;	
+
+	_initialized = true;
+}
+
+void OMLT::DataAtlas::Reset()
+{
+	// can't reset if we're not initialized
+	assert(_initialized == true);
+
+	// when streaming, we need to load the first page, and reset index within page
+	if(_streaming)
+	{
+		// reset us to head of IDX
+		_current_row = 0;
+		
+		// fill in our CPU side buffer
+		PopulateAtlasBuffer();
+		// send it over to GPU
+		_atlas.SetData(_atlas_buffer);
+
+		// reset index within atlas
+		_current_batch = 0;
+	}
+	// if we're not streaming, all data is in memory, so just reset batch index to 0
+	else
+	{
+		// reset index within atlas
+		_current_batch = 0;
+	}
 }
 
 bool OMLT::DataAtlas::Next( SiCKL::OpenGLBuffer2D& inout_Buffer )

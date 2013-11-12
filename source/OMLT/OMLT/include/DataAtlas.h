@@ -14,16 +14,23 @@ namespace OMLT
 		// constructs internal texture page used to store the data
 		// in_BatchSize -> number of rows in buffer returned by next
 		// in_MaxPageSize -> maximum size of _atlas in megabytes
-		void Build(uint32_t in_BatchSize, uint32_t in_MaxPageSize);
+		void Initialize(uint32_t in_BatchSize, uint32_t in_MaxPageSize);
 		
+		// resets data atlas to read from beginning of backing IDX
+		void Reset();
+		
+
 		bool Next(SiCKL::OpenGLBuffer2D& inout_Buffer);
 		inline uint32_t GetTotalBatches() const {return _total_batches;}
+		inline bool GetIsInitialized() const {return _initialized;}
 	private:
 		void PopulateAtlasBuffer();
 
 		SiCKL::OpenGLBuffer2D _atlas;
 		SiCKL::OpenGLBuffer2D _batch;
 		
+		bool _initialized;
+
 		// flag is set when we need to stream in
 		// more data at the end of the page
 		bool _streaming;
