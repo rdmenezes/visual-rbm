@@ -78,6 +78,57 @@ namespace VisualRBM
 			}
 		}
 
+		public unsafe void SetImage(int which, uint length, float* image_data)
+		{
+			if (image_data == null)
+				return;
+
+			lock (raw_bmp[which])
+			{
+				byte alpha = 255;
+
+				if (Format == PixelFormat.Lightness)
+				{
+					for (int k = 0; k < length; k++)
+					{
+						if ((4 * k + 3) >= raw_bmp[which].Length)
+							break;
+
+						byte red, green, blue;
+
+						byte brightness = (byte)(image_data[k] * 255.0f);
+						red = green = blue = brightness;
+
+
+
+						raw_bmp[which][4 * k + 3] = alpha;
+						raw_bmp[which][4 * k + 2] = red;
+						raw_bmp[which][4 * k + 1] = green;
+						raw_bmp[which][4 * k + 0] = blue;
+					}
+				}
+				else if (Format == PixelFormat.RGB)
+				{
+					int index = 0;
+					for (int k = 0; k + 3 <= length; )
+					{
+						if (index + 4 > raw_bmp[which].Length)
+							break;
+
+						byte red, green, blue;
+						red = (byte)(image_data[k++] * 255.0f);
+						green = (byte)(image_data[k++] * 255.0f);
+						blue = (byte)(image_data[k++] * 255.0f);
+
+						raw_bmp[which][index++] = blue;
+						raw_bmp[which][index++] = green;
+						raw_bmp[which][index++] = red;
+						raw_bmp[which][index++] = alpha;
+					}
+				}
+			}
+		}
+
 		public void SetImage(int which, float[] image_data)
 		{
 			if (image_data == null)

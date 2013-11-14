@@ -32,7 +32,7 @@ namespace OMLT
 	class AlignedMemoryBlock
 	{
 	public:
-		AlignedMemoryBlock() : _pointer(0), _head(0), _block_count(0), _user_size(0)
+		AlignedMemoryBlock() : _pointer(0), _head(0), _block_count(0), _user_size(0), _total_size(0)
 		{ }
 		~AlignedMemoryBlock()
 		{
@@ -41,13 +41,21 @@ namespace OMLT
 
 		void Acquire(uint32_t in_count)
 		{
-			Release();
+			
 
 			uint32_t alignment_offset = Alignment;
 			uint32_t byte_count = in_count * sizeof(T);
 			uint32_t back_padding = byte_count % Alignment == 0 ? 0 : Alignment;
 
-			_total_size = alignment_offset + byte_count + back_padding;
+			const uint32_t total_size = alignment_offset + byte_count + back_padding;
+			if(total_size == _total_size)
+			{
+				return;
+			}
+			
+			Release();
+
+			_total_size = total_size;
 			_user_size = byte_count + back_padding;
 
 			_head = malloc(_total_size);
