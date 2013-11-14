@@ -43,21 +43,16 @@ namespace VisualRBM
 			}
 		}
 
-		protected override void Drawing()
+		protected override unsafe void Drawing()
 		{
-			List<float[]> hidden = null;
+			List<IntPtr> hidden = new List<IntPtr>();
 
-			RBMProcessor.GetCurrentHidden(ref hidden);
-
-			// rbm trainer was shutdown before thsi draw call made it in
-			if (hidden == null)
-			{
-				return;
-			}
+			RBMProcessor.GetCurrentHidden(hidden);
 
 			for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
 			{
-				UpdateImageControlContents(k, PixelFormat.Lightness, hidden[k]);
+				float* raw_hidden = (float*)hidden[k].ToPointer();
+				UpdateImageControlContents(k, PixelFormat.Lightness, (uint)RBMProcessor.HiddenUnits, raw_hidden);
 			}
 		}
 	}

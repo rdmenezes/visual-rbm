@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using System.Threading;
 
 using QuickBoltzmann;
+using System.Diagnostics;
 
 namespace VisualRBM
 {
@@ -222,48 +223,41 @@ namespace VisualRBM
 			}
 		}
 
-		protected virtual void Drawing()
+		protected virtual unsafe void Drawing()
 		{
-			List<float[]> visible = null;
-			List<float[]> visible_prime = null;
+			List<IntPtr> visible  = new List<IntPtr>();
+			List<IntPtr> recon = new List<IntPtr>();
+			List<IntPtr> diffs = new List<IntPtr>();
 
-			RBMProcessor.GetCurrentVisible(ref visible, ref visible_prime);
-
-			// rbm trainer shutdown before this draw call made it in
-			if (visible == null && visible_prime == null)
-			{
-				return;
-			}
-
-			// if the data is linear, we need to get it back to [0,1]
-			if (RBMProcessor.VisibleType == UnitType.Linear)
-			{
-				for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
-					for (int i = 0; i < RBMProcessor.VisibleUnits; i++)
-						visible[k][i] = RBMProcessor.Sigmoid(visible[k][i]);
-				for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
-					for (int i = 0; i < RBMProcessor.VisibleUnits; i++)
-						visible_prime[k][i] = RBMProcessor.Sigmoid(visible_prime[k][i]);
-			}
+			RBMProcessor.GetCurrentVisible(visible, recon, diffs);
 
 			PixelFormat pf = _main_form.settingsBar.Format;
 
+			Debug.Assert(visible.Count == recon.Count && visible.Count == RBMProcessor.MinibatchSize);
+
 			for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
 			{
-				float[] raw_image = visible[k];
-				float[] raw_recon = visible_prime[k];
-				float[] diff = new float[RBMProcessor.VisibleUnits];
-
-				for (int i = 0; i < RBMProcessor.VisibleUnits; i++)
-				{
-					diff[i] = (raw_recon[i] - raw_image[i]);
-					diff[i] = (float)((1.0 / (1 + Math.Exp(-2.75f * diff[i]))));
-
-				}
-
+				float* raw_image = (float*)visible[k].ToPointer();
+				float* raw_recon = (float*)recon[k].ToPointer();
+				float* raw_diffs = (float*)diffs[k].ToPointer();
 				// post the data to the image control
-				UpdateImageControlContents(k, pf, raw_image, raw_recon, diff);
+				UpdateImageControlContents(k, pf, (uint)RBMProcessor.VisibleUnits, raw_image, raw_recon, raw_diffs);
 			}
+		}
+
+		public unsafe void UpdateImageControlContents(int index, PixelFormat pf, uint length, params float*[] buffers)
+		{
+			this.Invoke(new Action(() =>
+			{
+				if (imageFlowPanel.Controls.Count > index)
+				{
+					ImageControl ic = imageFlowPanel.Controls[index] as ImageControl;
+					ic.Format = pf;
+					for (int k = 0; k < buffers.Length; k++)
+						ic.SetImage(k, length, buffers[k]);
+					ic.Invalidate();
+				}
+			}));
 		}
 
 		// sets the raw data for the given control, invokes on main thread

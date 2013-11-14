@@ -20,6 +20,9 @@
 // msft
 using namespace System::IO;
 
+#define SAFE_DELETE(X) delete X; X = nullptr;
+#define SAFE_ARRAY_DELETE(X) delete[] X; X = nullptr;
+
 
 namespace QuickBoltzmann
 {
@@ -53,10 +56,11 @@ namespace QuickBoltzmann
 	static uint32_t minibatch_size = 10;
 
 	// buffers we dump visible, hiddden and weights to for visualization
-	static float* visible_buffer = nullptr;
-	static float* visible_recon_buffer = nullptr;
-	static float* hidden_buffer = nullptr;
-	static float* weight_buffer = nullptr;
+	OMLT::AlignedMemoryBlock<float> visible_buffer;
+	OMLT::AlignedMemoryBlock<float> visible_recon_buffer;
+	OMLT::AlignedMemoryBlock<float> visible_diff_buffer;
+	OMLT::AlignedMemoryBlock<float> hidden_buffer;
+
 
 	// brings up a message box with an error message
 	static inline void ShowError(String^ error)
@@ -175,8 +179,7 @@ namespace QuickBoltzmann
 					{
 					case ModelType::RBM:
 						{
-							delete cd;
-							cd = nullptr;
+							SAFE_DELETE(cd);
 						}
 						break;
 					case ModelType::AutoEncoder:
@@ -192,95 +195,92 @@ namespace QuickBoltzmann
 					
 					break;
 				case MessageType::GetVisible:
-					switch(model_type)
 					{
-					case ModelType::RBM:
+						// allocate space for buffers if necessary
+						const uint32_t visible_size = visible_count * minibatch_size;
+						visible_buffer.Acquire(visible_size);
+						visible_recon_buffer.Acquire(visible_size);
+						visible_diff_buffer.Acquire(visible_size);
+
+						switch(model_type)
 						{
-							if(cd != nullptr)
+						case ModelType::RBM:
 							{
-								float* image_buff = nullptr;
-								float* recon_buff = nullptr;
-
-								cd->DumpLastVisible(&image_buff, &recon_buff);
-
-								List<array<float>^>^ images = gcnew List<array<float>^>();
-								List<array<float>^>^ recons = gcnew List<array<float>^>();
-
-								// hacky lambda function
-								struct 
-								{
-									void operator() (float* RawBuff, List<array<float>^>^ ImageList)
-									{
-										for(uint32_t k = 0; k < minibatch_size; k++)
-										{
-											array<float>^ img = gcnew array<float>(visible_count);
-											ImageList->Add(img);
-
-											System::Runtime::InteropServices::Marshal::Copy(IntPtr(RawBuff), img, 0, visible_count);
-
-											RawBuff += visible_count;
-										}
-									}
-								} interop_copy;
-
-								interop_copy(image_buff, images);
-								interop_copy(recon_buff, recons);
-
-
-								msg["image"] = images;
-								msg["reconstruction"] = recons;
-								msg["done"] = true;
-
-
-								free(image_buff);
-								free(recon_buff);
+								float* visible_ptr = (float*)visible_buffer;
+								float* recon_ptr = (float*)visible_recon_buffer;
+								cd->DumpLastVisible(&visible_ptr, &recon_ptr);
 							}
-						}
-						break;
-					case ModelType::AutoEncoder:
-						{
+							break;
+						case ModelType::AutoEncoder:
 							assert(false);
+							break;
 						}
-						break;
+
+						switch(visible_type)
+						{
+						case UnitType::Sigmoid:
+							for(uint32_t k = 0; k < visible_size; k++)
+							{
+								visible_diff_buffer[k] = abs(visible_buffer[k] - visible_recon_buffer[k]);
+							}
+							break;
+						case UnitType::Linear:
+							break;
+						case UnitType::RectifiedLinear:
+							break;
+						}
+
+						List<IntPtr>^ visible_list = dynamic_cast<List<IntPtr>^>(msg["visible"]);
+						List<IntPtr>^ recon_list = dynamic_cast<List<IntPtr>^>(msg["reconstruction"]);
+						List<IntPtr>^ diff_list = dynamic_cast<List<IntPtr>^>(msg["diffs"]);
+
+						for(uint32_t k = 0; k < minibatch_size; k++)
+						{
+							visible_list->Add(IntPtr((float*)visible_buffer + k * visible_count));
+							recon_list->Add(IntPtr((float*)visible_recon_buffer + k * visible_count));
+							diff_list->Add(IntPtr((float*)visible_diff_buffer + k * visible_count));
+						}
+
+						msg["done"] = true;
 					}
 					break;
 				case MessageType::GetHidden:
-					switch(model_type)
 					{
-					case ModelType::RBM:
+						const uint32_t hidden_size = hidden_count * minibatch_size;
+						hidden_buffer.Acquire(hidden_size);
+
+						switch(model_type)
 						{
-							if(cd != nullptr)
+						case ModelType::RBM:
 							{
-								float* hidden_buff = nullptr;
-
-								cd->DumpLastHidden(&hidden_buff);
-
-								List<array<float>^>^ hidden = gcnew List<array<float>^>();
-
-								float* raw_buff = hidden_buff;
-								for(uint32_t k = 0; k < minibatch_size; k++)
-								{
-									array<float>^ img = gcnew array<float>(hidden_count);
-									hidden->Add(img);
-
-									System::Runtime::InteropServices::Marshal::Copy(IntPtr(raw_buff), img, 0, hidden_count);
-
-									raw_buff += hidden_count;
-								}
-
-								msg["hidden"] = hidden;
-								msg["done"] = true;
-
-								free(hidden_buff);
+								float* hidden_ptr = (float*)hidden_buffer;
+								cd->DumpLastHidden(&hidden_ptr);
 							}
+							break;
+						case ModelType::AutoEncoder:
+							{
+								assert(false);
+							}
+							break;
+						}
 
-						}
-						break;
-					case ModelType::AutoEncoder:
+						switch(hidden_type)
 						{
-							assert(false);
+						case UnitType::Sigmoid:
+							break;
+						case UnitType::Linear:
+							break;
+						case UnitType::RectifiedLinear:
+							break;
 						}
-						break;
+
+						List<IntPtr>^ hidden_list = dynamic_cast<List<IntPtr>^>(msg["hidden"]);
+						for(uint32_t k = 0; k < minibatch_size; k++)
+						{
+							hidden_list->Add(IntPtr((float*)hidden_buffer + k * hidden_count));
+						}
+
+						msg["done"] = true;
 					}
 					break;
 				case MessageType::GetWeights:
@@ -382,8 +382,6 @@ namespace QuickBoltzmann
 					}
 					break;
 				case MessageType::Shutdown:
-#define SAFE_DELETE(X) delete X; X = nullptr;
-#define SAFE_ARRAY_DELETE(X) delete[] X; X = nullptr;
 					{
 						// free objects
 						SAFE_DELETE(cd)
@@ -391,12 +389,6 @@ namespace QuickBoltzmann
 						SAFE_DELETE(training_data)
 						SAFE_DELETE(validation_data)
 					
-						// free buffers
-						SAFE_ARRAY_DELETE(visible_buffer)
-						SAFE_ARRAY_DELETE(visible_recon_buffer)
-						SAFE_ARRAY_DELETE(hidden_buffer)
-						SAFE_ARRAY_DELETE(weight_buffer)
-
 						// shutdown opengl
 						SiCKL::OpenGLRuntime::Finalize();
 
@@ -410,8 +402,6 @@ namespace QuickBoltzmann
 						// and exit
 						return;
 					}
-#undef SAFE_DELETE
-#undef SAFE_ARRAY_DELETE
 					break;
 				}
 			}
@@ -599,33 +589,32 @@ namespace QuickBoltzmann
 		}
 	}
 
-	void RBMProcessor::GetCurrentVisible( List<array<float>^>^% visible_data, List<array<float>^>^% visible_reconstruction )
+	void RBMProcessor::GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs)
 	{
 		Message^ msg = gcnew Message(MessageType::GetVisible);
 		msg["done"] = false;
-
+		msg["visible"] = visible;
+		msg["reconstruction"] = reconstruction;
+		msg["diffs"] = diffs;
 
 		_message_queue->Enqueue(msg);
 		while((bool)msg["done"] == false)
 		{
 			Thread::Sleep(16);
 		}
-
-		visible_data = dynamic_cast<List<array<float>^>^>(msg["image"]);
-		visible_reconstruction = dynamic_cast<List<array<float>^>^>(msg["reconstruction"]);
 	}
 
-	void RBMProcessor::GetCurrentHidden( List<array<float>^>^% hidden_prob )
+	void RBMProcessor::GetCurrentHidden( List<IntPtr>^ hidden_prob )
 	{
 		Message^ msg = gcnew Message(MessageType::GetHidden);
 		msg["done"] = false;
+		msg["hidden"] = hidden_prob;
+
 		_message_queue->Enqueue(msg);
 		while((bool)msg["done"] == false)
 		{
 			Thread::Sleep(16);
 		}
-
-		hidden_prob = dynamic_cast<List<array<float>^>^>(msg["hidden"]);
 	}
 
 	void RBMProcessor::GetCurrentWeights( array<float>^% weights )

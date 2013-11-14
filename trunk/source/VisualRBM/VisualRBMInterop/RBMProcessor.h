@@ -163,9 +163,11 @@ namespace QuickBoltzmann
 		static void Stop();
 		static void Shutdown();	// for application exit
 
-		static void GetCurrentVisible(List<array<float>^>^% visible_data, List<array<float>^>^% visible_reconstruction);
-		static void GetCurrentHidden(List<array<float>^>^% hidden_prob);
+		static void GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs);
+		static void GetCurrentHidden(List<IntPtr>^ hidden);
 		static void GetCurrentWeights(array<float>^% weights);
+
+		
 
 	private:
 
