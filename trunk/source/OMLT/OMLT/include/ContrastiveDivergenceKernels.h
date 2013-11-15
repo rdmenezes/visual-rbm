@@ -88,13 +88,13 @@ struct SourceCalcHiddenAndStates : public SiCKL::Source
 
 				ForInRange(i, 0, VISIBLE_UNITS)
 					Float v_i = in_visible(i, m);
-					Float w_ij = in_weights(j+1, i+1);
+					Float w_ij = in_weights(i+1, j+1);
 					accumulation = accumulation +  (v_i * w_ij);
 				EndFor
 				// take input dropout into account
 				accumulation = accumulation  * (1.0f / (1.0f - VISIBLE_DROPOUT_PROB));
 				// add bias
-				accumulation = accumulation + in_weights(j+1, 0);
+				accumulation = accumulation + in_weights(0, j+1);
 
 				switch(FUNCTION)
 				{
@@ -165,13 +165,13 @@ struct SourceCalcVisible : public SiCKL::Source
 
 				ForInRange(j, 0, HIDDEN_UNITS)
 					Float h_j = in_hidden(j, m);
-					Float w_ij = in_weights(j+1, i+1);
+					Float w_ij = in_weights(i+1, j+1);
 					accumulation = accumulation + (h_j * w_ij);
 				EndFor
 				// take input dropout into account
 				accumulation = accumulation  * (1.0f / (1.0f - HIDDEN_DROPOUT_PROB));
 				// add bias
-				accumulation = accumulation + in_weights(0, i+1);
+				accumulation = accumulation + in_weights(i+1, 0);
 
 				switch(FUNCTION)
 				{
@@ -226,13 +226,13 @@ struct SourceCalcHidden : public SiCKL::Source
 
 				ForInRange(i, 0, VISIBLE_UNITS)
 					Float v_i = in_visible(i, m);
-					Float w_ij = in_weights(j+1, i+1);
+					Float w_ij = in_weights(i+1, j+1);
 					accumulation = accumulation +  (v_i * w_ij);
 				EndFor
 				// take input dropout into account
 				accumulation = accumulation  * (1.0f / (1.0f - VISIBLE_DROPOUT_PROB));
 				// add bias
-				accumulation = accumulation + in_weights(j+1, 0);
+				accumulation = accumulation + in_weights(0, j+1);
 
 				switch(FUNCTION)
 				{
@@ -284,12 +284,12 @@ struct SourceCalcWeightUpdates : public SiCKL::Source
 		END_OUT_DATA
 
 		BEGIN_MAIN
-			const Int i = Index().Y;
-			const Int j = Index().X;
+			const Int i = Index().X;
+			const Int j = Index().Y;
 
 
-			const Float prev_delta = in_delta(Index().X, Index().Y);
-			const Float prev_weight = in_weight(Index().X, Index().Y);
+			const Float prev_delta = in_delta(i, j);
+			const Float prev_weight = in_weight(i, j);
 
 			If(i == 0 && j == 0)
 				// top left corner, not a weight

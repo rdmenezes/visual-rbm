@@ -50,20 +50,20 @@ namespace OMLT
 		_model_config.HiddenType = in_rbm->hidden_type;
 
 		// copy weights to a properly formatted buffer
-		float* weight_buffer = new float[(in_rbm->visible_count + 1) * (in_rbm->hidden_count + 1)];
+		float* weight_buffer = new float[(in_rbm->hidden_count + 1) * (in_rbm->visible_count + 1)];
 		weight_buffer[0] = 0.0f;
 
-		// copy in hidden biases
-		memcpy(weight_buffer + 1, in_rbm->hidden_biases, sizeof(float) * in_rbm->hidden_count);
+		// copy in visible biases
+		memcpy(weight_buffer + 1, in_rbm->visible_biases, sizeof(float) * in_rbm->visible_count);
 
-		// now copy in each visible feature (as well as visible bias)
-		for(uint32_t i = 1; i <= in_rbm->visible_count; i++)
+		// now copy in each hidden feature (as well as hidden bias)
+		for(uint32_t j = 1; j <= in_rbm->hidden_count; j++)
 		{
-			const uint32_t offset = (in_rbm->hidden_count + 1) * i;
+			const uint32_t offset = (in_rbm->visible_count + 1) * j;
 			// bias
-			weight_buffer[offset] = in_rbm->visible_biases[i-1];
+			weight_buffer[offset] = in_rbm->hidden_biases[j-1];
 			// weight vector
-			memcpy(weight_buffer + offset + 1, in_rbm->visible_features[i-1], sizeof(float) * in_rbm->hidden_count);
+			memcpy(weight_buffer + offset + 1, in_rbm->hidden_features[j-1], sizeof(float) * in_rbm->visible_count);
 		}
 
 		allocate_textures(weight_buffer);
@@ -243,12 +243,12 @@ namespace OMLT
 		_weights0.GetData(raw_weights);
 
 		// fill in our RBM object
-		for(uint32_t i = 0; i <= _model_config.VisibleUnits; i++)
+		uint32_t index = 0;
+		for(uint32_t j = 0; j <= _model_config.HiddenUnits; j++)
 		{
-			for(uint32_t j = 0; j <= _model_config.HiddenUnits; j++)
+			for(uint32_t i = 0; i <= _model_config.VisibleUnits; i++)
 			{
-				uint32_t index = i * (_model_config.HiddenUnits + 1) + j;
-				float& val = raw_weights[index];
+				float& val = raw_weights[index++];
 				if(i == 0 && j == 0)
 				{
 					continue;
@@ -261,7 +261,7 @@ namespace OMLT
 				else if(j == 0)
 				{
 					// visible bias
-					rbm->visible_biases[i-1] = val;
+					rbm->visible_biases[i - 1] = val;
 				}
 				else
 				{
@@ -396,7 +396,7 @@ namespace OMLT
 		src_update_weights.Parse();
 
 		_update_weights = compiler.Build(src_update_weights);
-		_update_weights->Initialize(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1);
+		_update_weights->Initialize(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1);
 
 		//printf("%s\n", _update_weights->GetSource().c_str());
 
@@ -463,11 +463,11 @@ namespace OMLT
 			float weight_stdev = float(1.0 / std::sqrtf((float)(_model_config.VisibleUnits + _model_config.HiddenUnits)));
 			std::normal_distribution<float> normal(0.0f, weight_stdev);
 
-			for(uint32_t i = 0; i <= _model_config.VisibleUnits; i++)
+			uint32_t index = 0;
+			for(uint32_t j = 0; j <= _model_config.HiddenUnits; j++)
 			{
-				for(uint32_t j = 0; j <= _model_config.HiddenUnits; j++)
+				for(uint32_t i = 0; i <= _model_config.VisibleUnits; i++)				
 				{
-					uint32_t index = i * (_model_config.HiddenUnits + 1) + j;
 					if(i == 0 || j == 0)
 					{
 						weight_buffer[ index ] = 0.0f;
@@ -476,19 +476,21 @@ namespace OMLT
 					{
 						weight_buffer[ index ] = normal(random);
 					}
+
+					index++;
 				}
 			}
-			_weights0 = OpenGLBuffer2D(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1, ReturnType::Float, weight_buffer);
+			_weights0 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float, weight_buffer);
 			free(weight_buffer);
 		}
 		else
 		{
 			// just use weights received from model
-			_weights0 = OpenGLBuffer2D(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1, ReturnType::Float, weight_buffer);
+			_weights0 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float, weight_buffer);
 		}
-		_weights1 = OpenGLBuffer2D(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1, ReturnType::Float, nullptr);
-		_delta_weights0 = OpenGLBuffer2D(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1, ReturnType::Float, nullptr);
-		_delta_weights1 = OpenGLBuffer2D(_model_config.HiddenUnits + 1, _model_config.VisibleUnits + 1, ReturnType::Float, nullptr);
+		_weights1 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float, nullptr);
+		_delta_weights0 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float, nullptr);
+		_delta_weights1 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float, nullptr);
 
 		_error = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::Float, nullptr);
 
