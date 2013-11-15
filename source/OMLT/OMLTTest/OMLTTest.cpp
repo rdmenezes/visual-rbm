@@ -46,7 +46,5 @@ int main(int argc, char** argv)
 			printf("Could not parse \"%s\" as index\n", argv[1]);
 		}
 	}
-
-	getc(stdin);
 	return 0;
 }
