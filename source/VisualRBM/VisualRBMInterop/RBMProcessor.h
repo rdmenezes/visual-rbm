@@ -165,9 +165,7 @@ namespace QuickBoltzmann
 
 		static void GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs);
 		static void GetCurrentHidden(List<IntPtr>^ hidden);
-		static void GetCurrentWeights(array<float>^% weights);
-
-		
+		static void GetCurrentWeights(List<IntPtr>^ weights);
 
 	private:
 

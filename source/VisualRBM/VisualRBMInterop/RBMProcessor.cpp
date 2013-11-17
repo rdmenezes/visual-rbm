@@ -23,6 +23,10 @@ using namespace System::IO;
 #define SAFE_DELETE(X) delete X; X = nullptr;
 #define SAFE_ARRAY_DELETE(X) delete[] X; X = nullptr;
 
+inline float sigmoid(float x)
+{
+	return 1.0f / (1.0f + exp(-x));
+}
 
 namespace QuickBoltzmann
 {
@@ -60,7 +64,7 @@ namespace QuickBoltzmann
 	OMLT::AlignedMemoryBlock<float> visible_recon_buffer;
 	OMLT::AlignedMemoryBlock<float> visible_diff_buffer;
 	OMLT::AlignedMemoryBlock<float> hidden_buffer;
-
+	OMLT::AlignedMemoryBlock<float> weight_buffer;
 
 	// brings up a message box with an error message
 	static inline void ShowError(String^ error)
@@ -288,16 +292,25 @@ namespace QuickBoltzmann
 					{
 					case ModelType::RBM:
 						{
-							array<float>^ weights = gcnew array<float>((visible_count + 1) * (hidden_count + 1));
-							pin_ptr<float> pptr = &weights[0];
-							float* ptr = pptr;
+							const uint32_t weight_size = (hidden_count + 1) * (visible_count + 1);
+							weight_buffer.Acquire(weight_size);
 
+							float* weight_ptr = (float*)weight_buffer;
 
-							cd->DumpLastWeights(&ptr);
+							cd->DumpLastWeights(&weight_ptr);
+							
+							for(uint32_t k = 0; k < weight_size; k++)
+							{
+								weight_ptr[k] = Sigmoid(weight_ptr[k] / (1.0f - hidden_dropout));
+							}
 
-							msg["weights"] = weights;
-							msg["done"] = true;
+							List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
+							for(uint32_t j = 0; j <= hidden_count; j++)
+							{
+								weight_list->Add(IntPtr((float*)weight_buffer + 1 + (visible_count + 1) * j));
+							}
 						}
+						msg["done"] = true;
 						break;
 					case ModelType::AutoEncoder:
 						{
@@ -617,17 +630,17 @@ namespace QuickBoltzmann
 		}
 	}
 
-	void RBMProcessor::GetCurrentWeights( array<float>^% weights )
+	void RBMProcessor::GetCurrentWeights( List<IntPtr>^ weights )
 	{
 		Message^ msg = gcnew Message(MessageType::GetWeights);
 		msg["done"] = false;
+		msg["weights"] = weights;
+
 		_message_queue->Enqueue(msg);
 		while((bool)msg["done"] == false)
 		{
 			Thread::Sleep(16);
 		}
-
-		weights = dynamic_cast<array<float>^>(msg["weights"]);	
 	}
 
 #pragma region Properties
