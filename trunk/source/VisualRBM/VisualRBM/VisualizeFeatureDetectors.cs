@@ -32,27 +32,18 @@ namespace VisualRBM
 			return (float)((1.0 / (1 + Math.Exp(-2.75 * x))));
 		}
 
-		protected override void Drawing()
+		protected override unsafe void Drawing()
 		{
-			float[] weights = null;
-			RBMProcessor.GetCurrentWeights(ref weights);
-
-			// trainer shutdown before thsi draw call made it in
-			if (weights == null)
-			{
-				return;
-			}
+			List<IntPtr> weights = new List<IntPtr>();
+			RBMProcessor.GetCurrentWeights(weights);
 
 			PixelFormat pf = _main_form.settingsBar.Format;
 
 
 			for (int j = 0; j <= RBMProcessor.HiddenUnits; j++)
 			{
-				float[] pixels = new float[RBMProcessor.VisibleUnits];
-				for (int i = 0; i < RBMProcessor.VisibleUnits; i++)
-					pixels[i] = sigmoid(weights[(RBMProcessor.HiddenUnits + 1) * (i + 1) + j]);
-
-				UpdateImageControlContents(j, pf, pixels);
+				float* raw_weights = (float*)weights[j].ToPointer();
+				UpdateImageControlContents(j, pf, (uint)RBMProcessor.VisibleUnits, raw_weights);
 			}
 
 			foreach (ImageControl ic in imageFlowPanel.Controls)
