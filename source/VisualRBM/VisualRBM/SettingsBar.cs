@@ -47,6 +47,7 @@ namespace VisualRBM
 
 							modelTypeComboBox.Enabled = false;
 							visibleTypeComboBox.Enabled = false;
+							hiddenTypeComboBox.Enabled = false;
 							hiddenUnitsTextBox.Enabled = false;
 							
 							learningRateTextBox.Enabled = false;
@@ -78,6 +79,7 @@ namespace VisualRBM
 
 							modelTypeComboBox.Enabled = false;
 							visibleTypeComboBox.Enabled = false;
+							hiddenTypeComboBox.Enabled = false;
 							hiddenUnitsTextBox.Enabled = false;
 							
 							learningRateTextBox.Enabled = false;
@@ -108,6 +110,7 @@ namespace VisualRBM
 
 							modelTypeComboBox.Enabled = false;
 							visibleTypeComboBox.Enabled = false;
+							hiddenTypeComboBox.Enabled = false;
 							hiddenUnitsTextBox.Enabled = false;
 							
 							learningRateTextBox.Enabled = true;
@@ -138,6 +141,7 @@ namespace VisualRBM
 
 							modelTypeComboBox.Enabled = true;
 							visibleTypeComboBox.Enabled = true;
+							hiddenTypeComboBox.Enabled = true;
 							hiddenUnitsTextBox.Enabled = true;
 							
 							learningRateTextBox.Enabled = true;
@@ -187,6 +191,7 @@ namespace VisualRBM
 				// model
 				modelTypeComboBox.SelectedItem = RBMProcessor.Model;
 				visibleTypeComboBox.SelectedItem = RBMProcessor.VisibleType;
+				hiddenTypeComboBox.SelectedItem = RBMProcessor.HiddenType;
 				hiddenUnitsTextBox.Text = RBMProcessor.HiddenUnits.ToString();
 				// parameters
 				learningRateTextBox.Text = RBMProcessor.LearningRate.ToString();
@@ -248,6 +253,10 @@ namespace VisualRBM
 			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Sigmoid);
 			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Linear);
 			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.RectifiedLinear);
+			// fill in hidden type combobox
+			hiddenTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Sigmoid);
+			hiddenTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Linear);
+			hiddenTypeComboBox.Items.Add(QuickBoltzmann.UnitType.RectifiedLinear);
 
 			// setup all our tooltips
 			SetToolTip("Load training dataset", this.selectTrainingIdxButton);
@@ -257,7 +266,8 @@ namespace VisualRBM
 			SetToolTip("Width of training image in pixels (for visualization)", this.widthTextBox);
 			SetToolTip("Height of training image in pixels (for visualization)", this.heightTextBox);
 			SetToolTip("Model type to train", this.modelTypeComboBox);
-			SetToolTip("Activation of function of visible units: Binary (Sigmoid) or Linear", this.visibleTypeComboBox);
+			SetToolTip("Activation function for visible units", this.visibleTypeComboBox);
+			SetToolTip("Activation function for hidden units", this.hiddenTypeComboBox);
 			SetToolTip("Number of visible units in each training vector of loaded training data", this.visibleUnitsLabel);
 			SetToolTip("Number of hidden units to use in trained model", this.hiddenUnitsTextBox);
 			SetToolTip("Load saved parameters file", this.loadParametersButton);
@@ -489,7 +499,20 @@ namespace VisualRBM
 			}
 		}
 		#endregion
+		
+		#region Hidden Unit Select
+		private void hiddenTypeComboBox_SelectionChangeCommitted(object sender, EventArgs e)
+		{
+			ComboBox cb = sender as ComboBox;
+			if (RBMProcessor.HiddenType != (QuickBoltzmann.UnitType)cb.SelectedItem)
+			{
+				RBMProcessor.HiddenType = (QuickBoltzmann.UnitType)cb.SelectedItem;
+				_main_form.trainingLog.AddLog("Hidden Type = {0}", RBMProcessor.HiddenType);
+			}
+		}
+		#endregion
 
+		
 		#region Set Hidden Units
 		private bool updateHiddenUnits(TextBox tb)
 		{
@@ -898,7 +921,7 @@ namespace VisualRBM
 		private void exportButton_Click(object sender, EventArgs e)
 		{
 			SaveFileDialog sfd = new SaveFileDialog();
-			sfd.Filter = "RBM|*.rbm";
+			sfd.Filter = "RBM,AutoEncoder|*.json";
 
 			if (sfd.ShowDialog() == DialogResult.OK)
 			{
@@ -910,7 +933,7 @@ namespace VisualRBM
 		private void importButton_Click(object sender, EventArgs e)
 		{
 			OpenFileDialog ofd = new OpenFileDialog();
-			ofd.Filter = "RBM|*.rbm";
+			ofd.Filter = "RBM,AutoEncoder|*.json";
 
 			if (ofd.ShowDialog() == DialogResult.OK)
 			{
@@ -922,7 +945,7 @@ namespace VisualRBM
 					visibleUnitsLabel.Text = RBMProcessor.VisibleUnits.ToString();
 					hiddenUnitsTextBox.Text = RBMProcessor.HiddenUnits.ToString();
 					visibleTypeComboBox.SelectedItem = RBMProcessor.VisibleType;
-					//hiddenTypeComboxBox.SelectedItem = RBMProcessor.HiddenType;
+					hiddenTypeComboBox.SelectedItem = RBMProcessor.HiddenType;
 					modelTypeComboBox.SelectedItem = RBMProcessor.Model;
 
 					CurrentState = ProgramState.TrainerPaused;
