@@ -4,6 +4,7 @@
 // stdc
 #include <sstream>
 #include <cstring>
+#include <cmath>
 
 // VisualRBM Interop
 #include "RBMProcessor.h"
@@ -16,6 +17,7 @@
 #include <RestrictedBoltzmannMachine.h>
 #include <MultilayerPerceptron.h>
 #include <IDX.hpp>
+
 
 // msft
 using namespace System::IO;
@@ -70,6 +72,47 @@ namespace QuickBoltzmann
 	static inline void ShowError(String^ error)
 	{
 		System::Windows::Forms::MessageBox::Show(error, "Error", System::Windows::Forms::MessageBoxButtons::OK, System::Windows::Forms::MessageBoxIcon::Error);
+	}
+
+	void RescaleActivations(float* buffer, uint32_t count, UnitType type)
+	{
+		switch(type)
+		{
+		case UnitType::Sigmoid:
+			break;
+		case UnitType::Linear:
+			{
+				const float factor = logf(127.0f) + logf(2.0f);
+				for(uint32_t k = 0; k < count; k++)
+				{
+					buffer[k] = sigmoid(factor / 3.0f * buffer[k]);
+				}
+			}
+			break;
+		case UnitType::RectifiedLinear:
+			for(uint32_t k = 0; k < count; k++)
+			{
+				buffer[k] = std::min(buffer[k] / 5.0f, 1.0f);
+			}
+			break;
+		}
+	}
+
+	void RescaleWeights(float* buffer, uint32_t count)
+	{
+		float stddev = 0.0f;
+		for(uint32_t k = 0; k < count; k++)
+		{
+			const float val = buffer[k];
+			stddev += val * val;
+		}
+		stddev /= count;
+		stddev = std::sqrtf(stddev);
+
+		for(uint32_t k = 0; k < count; k++)
+		{
+			buffer[k] = sigmoid(buffer[k] / (3.0f * stddev));
+		}
 	}
 
 	void RBMProcessor::Run()
@@ -220,19 +263,36 @@ namespace QuickBoltzmann
 							break;
 						}
 
-						switch(visible_type)
+
+						
+						/// visible diff vis
 						{
-						case UnitType::Sigmoid:
+							// this constant will have sigmoid range from 0 to 1
+							const float diff_scale_factor = logf(127.0f) + logf(2.0f);
+
+							float max_val;
+							switch(visible_type)
+							{
+							case UnitType::Sigmoid:
+								max_val = 1.0f;
+								break;
+							case UnitType::Linear:
+								max_val = 6.0f;
+								break;
+							case UnitType::RectifiedLinear:
+								max_val = 3.0f;
+								break;
+							}
+						
 							for(uint32_t k = 0; k < visible_size; k++)
 							{
-								visible_diff_buffer[k] = abs(visible_buffer[k] - visible_recon_buffer[k]);
+								visible_diff_buffer[k] = sigmoid( diff_scale_factor / max_val *  (visible_recon_buffer[k] - visible_buffer[k]));
 							}
-							break;
-						case UnitType::Linear:
-							break;
-						case UnitType::RectifiedLinear:
-							break;
 						}
+						
+						/// visible and recon vis
+						RescaleActivations(visible_buffer, visible_count * minibatch_size, visible_type);
+						RescaleActivations(visible_recon_buffer, visible_count * minibatch_size, visible_type);
 
 						List<IntPtr>^ visible_list = dynamic_cast<List<IntPtr>^>(msg["visible"]);
 						List<IntPtr>^ recon_list = dynamic_cast<List<IntPtr>^>(msg["reconstruction"]);
@@ -268,15 +328,7 @@ namespace QuickBoltzmann
 							break;
 						}
 
-						switch(hidden_type)
-						{
-						case UnitType::Sigmoid:
-							break;
-						case UnitType::Linear:
-							break;
-						case UnitType::RectifiedLinear:
-							break;
-						}
+						RescaleActivations(hidden_buffer, hidden_count * minibatch_size, hidden_type);
 
 						List<IntPtr>^ hidden_list = dynamic_cast<List<IntPtr>^>(msg["hidden"]);
 						for(uint32_t k = 0; k < minibatch_size; k++)
@@ -299,10 +351,7 @@ namespace QuickBoltzmann
 
 							cd->DumpLastWeights(&weight_ptr);
 							
-							for(uint32_t k = 0; k < weight_size; k++)
-							{
-								weight_ptr[k] = Sigmoid(weight_ptr[k] / (1.0f - hidden_dropout));
-							}
+							RescaleWeights(weight_buffer, weight_size);
 
 							List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
 							for(uint32_t j = 0; j <= hidden_count; j++)

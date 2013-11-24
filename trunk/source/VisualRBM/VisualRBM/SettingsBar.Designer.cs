@@ -36,6 +36,8 @@
 			this.panel6 = new System.Windows.Forms.Panel();
 			this.visibleTypeComboBox = new System.Windows.Forms.ComboBox();
 			this.labelVisibleType = new System.Windows.Forms.Label();
+			this.hiddenTypeComboBox = new System.Windows.Forms.ComboBox();
+			this.labelHiddenType = new System.Windows.Forms.Label();
 			this.panel14 = new System.Windows.Forms.Panel();
 			this.hiddenUnitsTextBox = new System.Windows.Forms.TextBox();
 			this.labelHiddenUnits = new System.Windows.Forms.Label();
@@ -116,7 +118,7 @@
 			this.modelPanel.Dock = System.Windows.Forms.DockStyle.Left;
 			this.modelPanel.Location = new System.Drawing.Point(313, 0);
 			this.modelPanel.Name = "modelPanel";
-			this.modelPanel.Size = new System.Drawing.Size(235, 102);
+			this.modelPanel.Size = new System.Drawing.Size(271, 102);
 			this.modelPanel.TabIndex = 25;
 			// 
 			// panel7
@@ -136,7 +138,7 @@
 			this.modelTypeComboBox.FormattingEnabled = true;
 			this.modelTypeComboBox.Location = new System.Drawing.Point(68, 3);
 			this.modelTypeComboBox.Name = "modelTypeComboBox";
-			this.modelTypeComboBox.Size = new System.Drawing.Size(161, 21);
+			this.modelTypeComboBox.Size = new System.Drawing.Size(198, 21);
 			this.modelTypeComboBox.TabIndex = 7;
 			this.modelTypeComboBox.SelectionChangeCommitted += new System.EventHandler(this.modelTypeComboBox_SelectionChangeCommitted);
 			// 
@@ -152,6 +154,8 @@
 			// 
 			// panel6
 			// 
+			this.panel6.Controls.Add(this.hiddenTypeComboBox);
+			this.panel6.Controls.Add(this.labelHiddenType);
 			this.panel6.Controls.Add(this.visibleTypeComboBox);
 			this.panel6.Controls.Add(this.labelVisibleType);
 			this.panel6.Dock = System.Windows.Forms.DockStyle.Top;
@@ -167,7 +171,7 @@
 			this.visibleTypeComboBox.FormattingEnabled = true;
 			this.visibleTypeComboBox.Location = new System.Drawing.Point(68, 3);
 			this.visibleTypeComboBox.Name = "visibleTypeComboBox";
-			this.visibleTypeComboBox.Size = new System.Drawing.Size(161, 21);
+			this.visibleTypeComboBox.Size = new System.Drawing.Size(65, 21);
 			this.visibleTypeComboBox.TabIndex = 5;
 			this.visibleTypeComboBox.SelectionChangeCommitted += new System.EventHandler(this.visibleTypeComboBox_SelectionChangeCommitted);
 			// 
@@ -180,6 +184,26 @@
 			this.labelVisibleType.TabIndex = 4;
 			this.labelVisibleType.Text = "Visible Type";
 			this.labelVisibleType.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
+			// hiddenTypeComboBox
+			// 
+			this.hiddenTypeComboBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.hiddenTypeComboBox.FormattingEnabled = true;
+			this.hiddenTypeComboBox.Location = new System.Drawing.Point(68, 3);
+			this.hiddenTypeComboBox.Name = "hiddenTypeComboBox";
+			this.hiddenTypeComboBox.Size = new System.Drawing.Size(65, 21);
+			this.hiddenTypeComboBox.TabIndex = 5;
+			this.hiddenTypeComboBox.SelectionChangeCommitted += new System.EventHandler(this.hiddenTypeComboBox_SelectionChangeCommitted);
+			// 
+			// labelHiddenType
+			// 
+			this.labelHiddenType.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelHiddenType.Location = new System.Drawing.Point(3, 3);
+			this.labelHiddenType.Name = "labelHiddenType";
+			this.labelHiddenType.Size = new System.Drawing.Size(68, 20);
+			this.labelHiddenType.TabIndex = 4;
+			this.labelHiddenType.Text = "Hidden Type";
+			this.labelHiddenType.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// panel14
 			// 
@@ -199,7 +223,7 @@
 			this.hiddenUnitsTextBox.Dock = System.Windows.Forms.DockStyle.Left;
 			this.hiddenUnitsTextBox.Location = new System.Drawing.Point(184, 3);
 			this.hiddenUnitsTextBox.Name = "hiddenUnitsTextBox";
-			this.hiddenUnitsTextBox.Size = new System.Drawing.Size(45, 20);
+			this.hiddenUnitsTextBox.Size = new System.Drawing.Size(63, 20);
 			this.hiddenUnitsTextBox.TabIndex = 15;
 			this.hiddenUnitsTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.hiddenUnitsTextBox_KeyPress);
 			this.hiddenUnitsTextBox.Leave += new System.EventHandler(this.hiddenUnitsTextBox_Leave);
@@ -222,7 +246,7 @@
 			this.visibleUnitsLabel.Location = new System.Drawing.Point(68, 3);
 			this.visibleUnitsLabel.Name = "visibleUnitsLabel";
 			this.visibleUnitsLabel.Padding = new System.Windows.Forms.Padding(3, 0, 0, 0);
-			this.visibleUnitsLabel.Size = new System.Drawing.Size(45, 20);
+			this.visibleUnitsLabel.Size = new System.Drawing.Size(63, 20);
 			this.visibleUnitsLabel.TabIndex = 13;
 			this.visibleUnitsLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
@@ -882,6 +906,8 @@
 		private System.Windows.Forms.Panel panel6;
 		private System.Windows.Forms.ComboBox visibleTypeComboBox;
 		private System.Windows.Forms.Label labelVisibleType;
+		private System.Windows.Forms.ComboBox hiddenTypeComboBox;
+		private System.Windows.Forms.Label labelHiddenType;
 		private System.Windows.Forms.TextBox hiddenUnitsTextBox;
 		private System.Windows.Forms.Label labelHiddenUnits;
 		private System.Windows.Forms.Label visibleUnitsLabel;
