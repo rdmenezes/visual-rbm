@@ -118,7 +118,8 @@ bool TrainAutoEncoder(int argc, char** argv)
 		for(uint32_t k = 0; k < atlas.GetTotalBatches(); k++)
 		{
 			atlas.Next(training_example);
-			error += bp.Train(training_example, training_example);
+			bp.Train(training_example, training_example);
+			error += bp.GetLastOutputError();
 		}
 		error /= atlas.GetTotalBatches();
 		printf("Epoch : %u, learning rate : %f, error : %f\n", e, train_config.LearningRate, error);

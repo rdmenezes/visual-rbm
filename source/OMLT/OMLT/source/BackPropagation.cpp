@@ -14,6 +14,7 @@ namespace OMLT
 		: _input_units(in_config.InputCount)
 		, _minibatch_size(in_minibatchsize)
 		, _recompile_required(true)
+		, _last_label(nullptr)
 	{
 		assert(in_config.LayerConfigs.size() > 0);
 		for(auto it = in_config.LayerConfigs.begin(); it < in_config.LayerConfigs.end(); ++it)
@@ -26,6 +27,7 @@ namespace OMLT
 		: _input_units(in_mlp->InputLayer()->inputs)
 		, _minibatch_size(in_minibatchsize)
 		, _recompile_required(true)
+		, _last_label(nullptr)
 	{
 		for(uint32_t k = 0; k < in_mlp->LayerCount(); k++)
 		{
@@ -113,7 +115,7 @@ namespace OMLT
 		}
 	}
 
-	float BackPropagation::Train( OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label )
+	void BackPropagation::Train( OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label )
 	{
 		if(_recompile_required)
 		{
@@ -127,6 +129,8 @@ namespace OMLT
 		assert(example_input.Height == _minibatch_size);
 		assert(example_label.Width == _layers.back()->OutputUnits);
 		assert(example_label.Height == _minibatch_size);
+
+		_last_label = &example_label;
 
 		// feed forward
 		_layers.front()->Input = &example_input;
@@ -178,25 +182,6 @@ namespace OMLT
 			}
 		}
 
-		// error calculation
-		float err = 0.0f;
-		{
-			static float* calculate_output = nullptr;
-			static float* desired_output = nullptr;
-
-			_layers.back()->Activation.GetData(calculate_output);
-			example_label.GetData(desired_output);
-
-			uint32_t pixels = example_label.Width * example_label.Height;
-
-			for(uint32_t i = 0; i < pixels; i++)
-			{
-				float diff = calculate_output[i] - desired_output[i];
-				err += diff*diff;
-			}
-
-			err /= pixels;
-		}
 		// calc sensitivities, feed backward
 		{
 			auto it = _layers.rbegin();
@@ -204,7 +189,7 @@ namespace OMLT
 			OpenGLProgram* calc_sensitivities = lay->CalcSensitivity;
 			{
 				// fill out calc_top_sensitivities (and set the training examples the labels!
-				calc_sensitivities->SetInput(0, example_label);
+				calc_sensitivities->SetInput(0, *_last_label);
 				calc_sensitivities->SetInput(1, lay->Activation);
 				assert(example_label.Width == lay->OutputUnits);
 				assert(example_label.Height == _minibatch_size);
@@ -277,16 +262,90 @@ namespace OMLT
 
 			update_weights->Run();
 
-			//float* delta_weights = nullptr;
-			//float* weights = nullptr;
-			//lay->DeltaWeights1.GetData(delta_weights);
-			//lay->Weights1.GetData(weights);
-
 			swap(lay->Weights0, lay->Weights1);
 			swap(lay->DeltaWeights0, lay->DeltaWeights1);
 		}
+	}
+
+	float BackPropagation::GetLastOutputError()
+	{
+		uint32_t count = _minibatch_size * _input_units;
+		_output_buffer0.Acquire(count);
+		_output_buffer1.Acquire(count);
+
+		float* out0 = (float*)_output_buffer0;
+		float* out1 = (float*)_output_buffer1;
+
+		_last_label->GetData(out0);
+		_layers.back()->Activation.GetData(out1);
+
+		float err = 0.0f;
+		for(uint32_t k = 0; k < count; k++)
+		{
+			float val = out0[k] - out1[k];
+			err += val * val;
+		}
+		err /= count;
 
 		return err;
+	}
+
+	float BackPropagation::GetOutputError(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_output)
+	{
+		// set out output label texture for error calculation
+		_last_label  = &example_output;
+
+		// feed forward
+		_layers.front()->Input = &example_input;
+		for(auto it = _layers.begin(); it != _layers.end(); ++it)
+		{
+			Layer* lay = *it;
+
+			OpenGLProgram* calc_enabled = lay->CalcEnabledInputs;
+			{
+				calc_enabled->SetInput(0, lay->InputRandom0);
+				assert(lay->InputRandom0.Width == lay->InputUnits);
+				assert(lay->InputRandom0.Height == 1);
+
+				calc_enabled->BindOutput(0, lay->InputRandom1);
+				calc_enabled->BindOutput(1, lay->InputEnabled);
+				assert(lay->InputRandom1.Width == lay->InputUnits);
+				assert(lay->InputRandom1.Height == 1);
+				assert(lay->InputEnabled.Width == lay->InputUnits);
+				assert(lay->InputEnabled.Height == 1);
+
+				calc_enabled->Run();
+
+				swap(lay->InputRandom0, lay->InputRandom1);
+			}
+
+			OpenGLProgram* feed_forward = lay->FeedForward;
+			{
+				feed_forward->SetInput(0, *lay->Input);
+				feed_forward->SetInput(1, lay->InputEnabled);
+				feed_forward->SetInput(2, lay->Weights0);
+				feed_forward->SetInput(3, lay->OutputRandom0);
+				assert(lay->Input->Width == lay->InputUnits);
+				assert(lay->Input->Height == _minibatch_size);
+				assert(lay->Weights0.Width == (lay->InputUnits + 1));
+				assert(lay->Weights0.Height == lay->OutputUnits);
+				assert(lay->OutputRandom0.Width == lay->OutputUnits);
+				assert(lay->OutputRandom0.Height == _minibatch_size);
+
+				feed_forward->BindOutput(0, lay->Activation);
+				feed_forward->BindOutput(1, lay->OutputRandom1);
+				assert(lay->Activation.Width == lay->OutputUnits);
+				assert(lay->Activation.Height == _minibatch_size);
+				assert(lay->OutputRandom1.Width == lay->OutputRandom0.Width);
+				assert(lay->OutputRandom1.Height == lay->OutputRandom0.Height);
+
+				feed_forward->Run();
+
+				swap(lay->OutputRandom0, lay->OutputRandom1);
+			}
+		}
+
+		return GetLastOutputError();
 	}
 
 	void BackPropagation::build_layer( LayerConfig in_Config, float* in_weights )
@@ -449,6 +508,28 @@ namespace OMLT
 		}
 
 		return result;
+	}
+
+	bool BackPropagation::DumpInput(uint32_t layer, float** input)
+	{
+		assert(layer < _layers.size());
+
+		_layers[layer]->Input->GetData(*input);
+		return true;
+	}
+	bool BackPropagation::DumpActivation(uint32_t layer, float** output)
+	{
+		assert(layer < _layers.size());	
+	
+		_layers[layer]->Activation.GetData(*output);
+		return true;
+	}
+	bool BackPropagation::DumpWeightMatrix(uint32_t layer, float** weights)
+	{
+		assert(layer < _layers.size());	
+	
+		_layers[layer]->Weights0.GetData(*weights);
+		return true;
 	}
 
 	void BackPropagation::free_kernels()
