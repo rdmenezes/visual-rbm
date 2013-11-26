@@ -59,20 +59,24 @@ namespace OMLT
 
 		~BackPropagation();
 
-
 		void SetTrainingConfig(const TrainingConfig&);
 		void SetActivationFunction(uint32_t in_layer_index, ActivationFunction_t in_func);
 		void SetNoisy(uint32_t in_layer_index, bool in_noisy);
 		void SetInputDropoutProbability(uint32_t in_layer_index, float in_prob);
 
-		float Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
+		void Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
+
+		float GetLastOutputError();
+		float GetOutputError(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_output);
 
 		uint32_t LayerCount() const {return _layers.size();}
 
-
-
 		MultilayerPerceptron* GetMultilayerPerceptron() const;
 		MultilayerPerceptron* GetMultilayerPerceptron(uint32_t begin_layer, uint32_t end_layer) const;
+
+		bool DumpInput(uint32_t layer, float** input);
+		bool DumpActivation(uint32_t layer, float** output);
+		bool DumpWeightMatrix(uint32_t layer, float** weights);
 
 	private:
 
@@ -124,8 +128,11 @@ namespace OMLT
 			OpenGLProgram* CalcSensitivity;
 			OpenGLProgram* UpdateWeights;
 		};
+		OpenGLBuffer2D* _last_label;
 
-		
+		// used for error calculations
+		AlignedMemoryBlock<float> _output_buffer0;
+		AlignedMemoryBlock<float> _output_buffer1;
 
 		const uint32_t _input_units;
 		const uint32_t _minibatch_size;
