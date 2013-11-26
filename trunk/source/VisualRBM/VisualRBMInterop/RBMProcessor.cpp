@@ -123,7 +123,7 @@ namespace QuickBoltzmann
 			System::Windows::Forms::Application::Exit();
 		}
 
-		SiCKL::OpenGLBuffer2D training_exmaple;
+		SiCKL::OpenGLBuffer2D training_example;
 		SiCKL::OpenGLBuffer2D validation_example;
 
 		_message_queue = gcnew MessageQueue();
@@ -145,34 +145,35 @@ namespace QuickBoltzmann
 						assert(model_type == ModelType::RBM ||
 						       model_type == ModelType::AutoEncoder);
 
+						assert(training_data != nullptr);
+
+						if(training_data->GetIsInitialized())
+						{
+							training_data->Reset();
+						}
+						else
+						{
+							// construct data atlas
+							training_data->Initialize(minibatch_size, 512);
+						}
+
+						if(validation_data)
+						{
+							if(validation_data->GetIsInitialized())
+							{
+								validation_data->Reset();
+							}
+							else
+							{
+								validation_data->Initialize(minibatch_size, 512);
+							}
+						}
+
 						switch(model_type)
 						{
 						case ModelType::RBM:
 							{
-								assert(training_data != nullptr);
-
-								if(training_data->GetIsInitialized())
-								{
-									training_data->Reset();
-								}
-								else
-								{
-									// construct data atlas
-									training_data->Initialize(minibatch_size, 512);
-								}
-
-								if(validation_data)
-								{
-									if(validation_data->GetIsInitialized())
-									{
-										validation_data->Reset();
-									}
-									else
-									{
-										validation_data->Initialize(minibatch_size, 512);
-									}
-								}
-
+								// cd will be null if this is our first 'start' request (ie not coming back from pause)
 								if(cd == nullptr)
 								{
 									// setup model config
@@ -197,13 +198,48 @@ namespace QuickBoltzmann
 									t_config.HiddenDropout = hidden_dropout;
 								}
 								cd->SetTrainingConfig(t_config);
-
-
 							}
 							break;
 						case ModelType::AutoEncoder:
 							{
-								assert(false);
+								if(bp == nullptr)
+								{
+									OMLT::BP::ModelConfig model_config;
+									{
+										model_config.InputCount = visible_count;
+									}
+
+									OMLT::BP::LayerConfig hidden_config;
+									{
+										hidden_config.OutputUnits = hidden_count;
+										hidden_config.Function = (OMLT::ActivationFunction_t)hidden_type;
+										hidden_config.Noisy = false;
+										hidden_config.InputDropoutProbability = visible_dropout;
+									}
+									OMLT::BP::LayerConfig output_config;
+									{
+										output_config.OutputUnits = visible_count;
+										output_config.Function = (OMLT::ActivationFunction_t)visible_type;
+										output_config.Noisy = false;
+										output_config.InputDropoutProbability = hidden_dropout;
+									}
+
+									model_config.LayerConfigs.push_back(hidden_config);
+									model_config.LayerConfigs.push_back(output_config);
+
+									bp = new OMLT::BP(model_config, minibatch_size);
+								}
+
+								OMLT::BP::TrainingConfig train_config;
+								{
+									train_config.LearningRate = learning_rate;
+									train_config.Momentum = momentum;
+									train_config.L1Regularization = l1;
+									train_config.L2Regularization = l2;
+								}
+								bp->SetTrainingConfig(train_config);
+								bp->SetInputDropoutProbability(0, visible_dropout);
+								bp->SetInputDropoutProbability(1, hidden_dropout);
 							}
 							break;
 						}
@@ -231,7 +267,7 @@ namespace QuickBoltzmann
 						break;
 					case ModelType::AutoEncoder:
 						{
-							assert(false);
+							SAFE_DELETE(bp);
 						}
 						break;
 					}
@@ -249,21 +285,23 @@ namespace QuickBoltzmann
 						visible_recon_buffer.Acquire(visible_size);
 						visible_diff_buffer.Acquire(visible_size);
 
+						float* visible_ptr = (float*)visible_buffer;
+						float* recon_ptr = (float*)visible_recon_buffer;
+
 						switch(model_type)
 						{
 						case ModelType::RBM:
 							{
-								float* visible_ptr = (float*)visible_buffer;
-								float* recon_ptr = (float*)visible_recon_buffer;
 								cd->DumpLastVisible(&visible_ptr, &recon_ptr);
 							}
 							break;
 						case ModelType::AutoEncoder:
-							assert(false);
+							{
+								bp->DumpInput(0, &visible_ptr);
+								bp->DumpActivation(1, &recon_ptr);
+							}
 							break;
 						}
-
-
 						
 						/// visible diff vis
 						{
@@ -312,18 +350,18 @@ namespace QuickBoltzmann
 					{
 						const uint32_t hidden_size = hidden_count * minibatch_size;
 						hidden_buffer.Acquire(hidden_size);
+						float* hidden_ptr = (float*)hidden_buffer;
 
 						switch(model_type)
 						{
 						case ModelType::RBM:
 							{
-								float* hidden_ptr = (float*)hidden_buffer;
 								cd->DumpLastHidden(&hidden_ptr);
 							}
 							break;
 						case ModelType::AutoEncoder:
 							{
-								assert(false);
+								bp->DumpActivation(0, &hidden_ptr);
 							}
 							break;
 						}
@@ -363,7 +401,7 @@ namespace QuickBoltzmann
 						break;
 					case ModelType::AutoEncoder:
 						{
-							assert(false);
+
 						}
 						break;
 					}
@@ -389,7 +427,7 @@ namespace QuickBoltzmann
 						break;
 					case ModelType::AutoEncoder:
 						{
-							assert(false);
+
 						}
 						break;
 					}
@@ -479,11 +517,18 @@ namespace QuickBoltzmann
 					assert(training_data != nullptr);
 
 					// get next training example
-					training_data->Next(training_exmaple);
+					training_data->Next(training_example);
 					if(validation_data != nullptr)
 					{
 						validation_data->Next(validation_example);
 					}
+
+					float training_error = -1.0f;
+					float validation_error = -1.0f;
+
+					// increment counters
+					iterations++;
+					total_iterations++;
 
 					switch(model_type)
 					{
@@ -491,37 +536,37 @@ namespace QuickBoltzmann
 						{
 							assert(cd != nullptr);
 
-							// increment counters
-							iterations++;
-							total_iterations++;
-
-							cd->Train(training_exmaple);
-							float training_error = cd->GetLastReconstructionError();
-							float validation_error = -1.0f;
+							cd->Train(training_example);
+							training_error = cd->GetLastReconstructionError();
 
 							// calculate validation error we have a validation set
 							if(validation_data != nullptr)
 							{
 								validation_error = cd->GetReconstructionError(validation_example);
 							}
-
-							IterationCompleted(total_iterations, training_error, validation_error);
-
-							if(iterations == training_data->GetTotalBatches())
-							{
-								iterations = 0;
-								EpochCompleted(epochs--);
-
-								if(epochs == 0)
-								{
-									TrainingCompleted();
-									Pause();
-								}
-							}
 						}
 						break;
 					case ModelType::AutoEncoder:
-						assert(false);
+						{
+							assert(bp != nullptr);
+							bp->Train(training_example, training_example);
+							training_error = bp->GetLastOutputError();
+
+						}
+					}
+
+					IterationCompleted(total_iterations, training_error, validation_error);
+
+					if(iterations == training_data->GetTotalBatches())
+					{
+						iterations = 0;
+						EpochCompleted(epochs--);
+
+						if(epochs == 0)
+						{
+							TrainingCompleted();
+							Pause();
+						}
 					}
 				}
 				break;
