@@ -476,15 +476,8 @@ namespace VisualRBM
 		private void modelTypeComboBox_SelectionChangeCommitted(object sender, EventArgs e)
 		{
 			ComboBox cb = sender as ComboBox;
-			switch((QuickBoltzmann.ModelType)cb.SelectedItem)
-			{
-				case QuickBoltzmann.ModelType.RBM:
-					break;
-				case QuickBoltzmann.ModelType.AutoEncoder:
-					cb.SelectedItem = QuickBoltzmann.ModelType.RBM;
-					MessageBox.Show("AutoEncoder Training not yet implemented.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-					break;
-			}
+
+			RBMProcessor.Model = (QuickBoltzmann.ModelType)cb.SelectedItem;
 		}
 		#endregion
 
