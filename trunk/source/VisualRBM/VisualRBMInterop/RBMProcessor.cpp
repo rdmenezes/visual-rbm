@@ -257,20 +257,9 @@ namespace QuickBoltzmann
 					_currentState = RBMProcessorState::Paused;
 					break;
 				case MessageType::Stop:
+					SAFE_DELETE(cd);
+					SAFE_DELETE(bp);
 
-					switch(model_type)
-					{
-					case ModelType::RBM:
-						{
-							SAFE_DELETE(cd);
-						}
-						break;
-					case ModelType::AutoEncoder:
-						{
-							SAFE_DELETE(bp);
-						}
-						break;
-					}
 					epochs = 100;
 					iterations = 0;
 					total_iterations = 0;
@@ -297,7 +286,7 @@ namespace QuickBoltzmann
 							break;
 						case ModelType::AutoEncoder:
 							{
-								bp->DumpInput(0, &visible_ptr);
+								bp->DumpLastLabel(&visible_ptr);
 								bp->DumpActivation(1, &recon_ptr);
 							}
 							break;
@@ -328,6 +317,11 @@ namespace QuickBoltzmann
 							}
 						}
 						
+						if(model_type == ModelType::AutoEncoder)
+						{
+							bp->DumpInput(0, &visible_ptr);
+						}
+
 						/// visible and recon vis
 						RescaleActivations(visible_buffer, visible_count * minibatch_size, visible_type);
 						RescaleActivations(visible_recon_buffer, visible_count * minibatch_size, visible_type);
@@ -378,58 +372,76 @@ namespace QuickBoltzmann
 					}
 					break;
 				case MessageType::GetWeights:
-					switch(model_type)
 					{
-					case ModelType::RBM:
+						List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
+						switch(model_type)
 						{
-							const uint32_t weight_size = (hidden_count + 1) * (visible_count + 1);
-							weight_buffer.Acquire(weight_size);
-
-							float* weight_ptr = (float*)weight_buffer;
-
-							cd->DumpLastWeights(&weight_ptr);
-							
-							RescaleWeights(weight_buffer, weight_size);
-
-							List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
-							for(uint32_t j = 0; j <= hidden_count; j++)
+						case ModelType::RBM:
 							{
-								weight_list->Add(IntPtr((float*)weight_buffer + 1 + (visible_count + 1) * j));
-							}
-						}
-						msg["done"] = true;
-						break;
-					case ModelType::AutoEncoder:
-						{
+								const uint32_t weight_size = (hidden_count + 1) * (visible_count + 1);
+								weight_buffer.Acquire(weight_size);
 
+								float* weight_ptr = (float*)weight_buffer;
+
+								cd->DumpLastWeights(&weight_ptr);
+							
+								for(uint32_t j = 0; j <= hidden_count; j++)
+								{
+									weight_list->Add(IntPtr((float*)weight_buffer + 1 + (visible_count + 1) * j));
+								}
+
+								RescaleWeights(weight_buffer, weight_size);
+							}
+							break;
+						case ModelType::AutoEncoder:
+							{
+								const uint32_t weight_size = (hidden_count) * (visible_count + 1);
+								weight_buffer.Acquire(weight_size);
+
+								float* weight_ptr = (float*)weight_buffer;
+								bp->DumpWeightMatrix(0, &weight_ptr);
+
+								for(uint32_t j = 0; j < hidden_count; j++)
+								{
+									weight_list->Add(IntPtr((float*)(weight_buffer + 1 + (visible_count + 1) * j)));
+								}
+
+								RescaleWeights(weight_buffer, weight_size);
+							}
+							break;
 						}
-						break;
 					}
+					msg["done"] = true;
 					break;
 				case MessageType::ExportModel:
-					switch(model_type)
 					{
-					case ModelType::RBM:
+						Stream^ fs = (Stream^)msg["output_stream"];
+
+						std::string model_json;
+
+						switch(model_type)
 						{
-							OMLT::RBM* rbm =  cd->GetRestrictedBoltzmannMachine();
-							const std::string& rbm_json = rbm->ToJSON();
-
-							Stream^ fs = (Stream^)msg["output_stream"];
-
-							for(size_t k = 0; k < rbm_json.size(); k++)
+						case ModelType::RBM:
 							{
-								fs->WriteByte(rbm_json[k]);
+								OMLT::RBM* rbm =  cd->GetRestrictedBoltzmannMachine();
+								model_json = rbm->ToJSON();
 							}
-
-							fs->Flush();
-							fs->Close();
+							break;
+						case ModelType::AutoEncoder:
+							{
+								OMLT::MLP* mlp = bp->GetMultilayerPerceptron(0, 1);
+								model_json = mlp->ToJSON();
+							}
+							break;
 						}
-						break;
-					case ModelType::AutoEncoder:
+
+						for(size_t k = 0; k < model_json.size(); k++)
 						{
-
+							fs->WriteByte(model_json[k]);
 						}
-						break;
+
+						fs->Flush();
+						fs->Close();
 					}
 					break;
 				case MessageType::ImportModel:
@@ -444,10 +456,12 @@ namespace QuickBoltzmann
 						}
 						fs->Close();
 
-						const std::string& rbm_json = ss.str();
+						const std::string& model_json = ss.str();
+
+						msg["loaded"] = false;
 
 						// try parsing an RBM
-						OMLT::RBM* rbm = OMLT::RBM::FromJSON(rbm_json);
+						OMLT::RBM* rbm = OMLT::RBM::FromJSON(model_json);
 
 						// success?
 						if(rbm)
@@ -467,14 +481,32 @@ namespace QuickBoltzmann
 								delete cd;
 								cd = new OMLT::ContrastiveDivergence(rbm, minibatch_size);
 							}
-							else
-							{
-								msg["loaded"] = false;
-							}
 						}
 						else
 						{
-							msg["loaded"] = false;
+							OMLT::MLP* mlp = OMLT::MLP::FromJSON(model_json);
+							if(mlp)
+							{
+								if(mlp->LayerCount() == 2)
+								{
+									const OMLT::MLP::Layer* hidden_layer = mlp->GetLayer(0);
+									const OMLT::MLP::Layer* output_layer = mlp->GetLayer(1);
+
+									if(hidden_layer->inputs == visible_count)
+									{
+										visible_count = hidden_layer->inputs;
+										hidden_count = hidden_layer->outputs;
+										visible_type = (UnitType)output_layer->function;
+										hidden_type = (UnitType)hidden_layer->function;
+										model_type = ModelType::AutoEncoder;
+
+										msg["loaded"] = true;
+
+										delete bp;
+										bp = new OMLT::BackPropagation(mlp, minibatch_size);
+									}
+								}
+							}
 						}
 
 						// message we're done
