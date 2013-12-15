@@ -865,9 +865,9 @@
 			this.Controls.Add(this.modelPanel);
 			this.Controls.Add(this.dataPanel);
 			this.Margin = new System.Windows.Forms.Padding(0);
-			this.MinimumSize = new System.Drawing.Size(1190, 102);
+			this.MinimumSize = new System.Drawing.Size(1228, 102);
 			this.Name = "SettingsBar";
-			this.Size = new System.Drawing.Size(1190, 102);
+			this.Size = new System.Drawing.Size(1228, 102);
 			this.modelPanel.ResumeLayout(false);
 			this.panel7.ResumeLayout(false);
 			this.panel6.ResumeLayout(false);

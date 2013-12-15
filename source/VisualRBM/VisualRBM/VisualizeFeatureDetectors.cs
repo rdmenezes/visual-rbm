@@ -40,7 +40,7 @@ namespace VisualRBM
 			PixelFormat pf = _main_form.settingsBar.Format;
 
 
-			for (int j = 0; j <= RBMProcessor.HiddenUnits; j++)
+			for(int j = 0; j < weights.Count; j++)
 			{
 				float* raw_weights = (float*)weights[j].ToPointer();
 				UpdateImageControlContents(j, pf, (uint)RBMProcessor.VisibleUnits, raw_weights);
