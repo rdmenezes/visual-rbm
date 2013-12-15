@@ -36,7 +36,8 @@ extern "C"
 #define cJSON_String 4
 #define cJSON_Array 5
 #define cJSON_Object 6
-	
+#define cJSON_ArrayIterator 7
+
 #define cJSON_IsReference 256
 
 /* The cJSON structure: */
@@ -47,7 +48,11 @@ typedef struct cJSON {
 	int type;					/* The type of the item, as above. */
 
 	char *valuestring;			/* The item's string, if type==cJSON_String */
-	int valueint;				/* The item's number, if type==cJSON_Number */
+	union
+	{
+		int valueint;				/* The item's number, if type==cJSON_Number */
+		int arrayLength;
+	};
 	double valuedouble;			/* The item's number, if type==cJSON_Number */
 
 	char *string;				/* The item's name string, if this item is the child of, or is in the list of subitems of an object. */
@@ -78,6 +83,10 @@ extern cJSON *cJSON_GetArrayItem(cJSON *array,int item);
 /* Get item "string" from object. Case insensitive. */
 extern cJSON *cJSON_GetObjectItem(cJSON *object,const char *string);
 
+extern int    cJSON_ArrayIteratorMoveNext(cJSON* array_iterator);
+extern int    cJSON_ArrayIteratorMovePrev(cJSON* array_iterator);
+extern cJSON *cJSON_ArrayIteratorCurrent(cJSON* array_iterator);
+
 /* For analysing failed parses. This returns a pointer to the parse error. You'll probably need to look a few chars back to make sense of it. Defined when cJSON_Parse() returns 0. 0 when cJSON_Parse() succeeds. */
 extern const char *cJSON_GetErrorPtr(void);
 	
@@ -90,6 +99,7 @@ extern cJSON *cJSON_CreateNumber(double num);
 extern cJSON *cJSON_CreateString(const char *string);
 extern cJSON *cJSON_CreateArray(void);
 extern cJSON *cJSON_CreateObject(void);
+extern cJSON *cJSON_CreateArrayIterator(cJSON* array);
 
 /* These utilities create an Array of count items. */
 extern cJSON *cJSON_CreateIntArray(int *numbers,int count);
