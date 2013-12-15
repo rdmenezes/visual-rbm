@@ -74,6 +74,7 @@ namespace OMLT
 		MultilayerPerceptron* GetMultilayerPerceptron() const;
 		MultilayerPerceptron* GetMultilayerPerceptron(uint32_t begin_layer, uint32_t end_layer) const;
 
+		bool DumpLastLabel(float** label);
 		bool DumpInput(uint32_t layer, float** input);
 		bool DumpActivation(uint32_t layer, float** output);
 		bool DumpWeightMatrix(uint32_t layer, float** weights);
@@ -129,6 +130,10 @@ namespace OMLT
 			OpenGLProgram* UpdateWeights;
 		};
 		OpenGLBuffer2D* _last_label;
+
+		// buffer and program for dropping out input units
+		OpenGLBuffer2D _input_buffer;
+		OpenGLProgram* _copy_visible;
 
 		// used for error calculations
 		AlignedMemoryBlock<float> _output_buffer0;

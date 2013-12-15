@@ -26,6 +26,28 @@ struct SourceCalcEnabledUnits : public SiCKL::Source
 	END_SOURCE
 };
 
+struct SourceCopyVisible : public SiCKL::Source
+{
+	BEGIN_SOURCE
+		BEGIN_CONST_DATA
+			CONST_DATA(Buffer2D<Float>, in_enabled)
+			CONST_DATA(Buffer2D<Float>, in_visible)
+		END_CONST_DATA
+
+		BEGIN_OUT_DATA
+			OUT_DATA(Float, out_visible)
+		END_OUT_DATA
+
+		BEGIN_MAIN
+			If(in_enabled(Index().X, 0) == 1.0f)
+				out_visible = in_visible(Index());
+			Else
+				out_visible = 0.0f;
+			EndIf
+		END_MAIN
+	END_SOURCE
+};
+
 struct SourceFeedForward : public SiCKL::Source
 {
 	ActivationFunction_t FUNC;
@@ -36,7 +58,7 @@ struct SourceFeedForward : public SiCKL::Source
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
 			CONST_DATA(Buffer2D<Float>, in_inputs)
-			CONST_DATA(Buffer2D<Float>, in_enabled)
+			CONST_DATA(Buffer2D<Float>, in_enabled_outputs)
 			CONST_DATA(Buffer2D<Float>, in_weights);
 			CONST_DATA(Buffer2D<UInt>, in_seeds)
 		END_CONST_DATA
@@ -53,45 +75,49 @@ struct SourceFeedForward : public SiCKL::Source
 			// output vector we're calculating
 			Int m = Index().Y;
 
-			// bias
-			Float accumulation = 0.0f;
-			// calculate dot product between feature and input vector
-			ForInRange(i, 0, INPUT_COUNT)
-				Float enabled = in_enabled(i, 0);
-				Float input = in_inputs(i, m) * enabled;
-				// offset i by 1 because of bias column
-				Float w_ij = in_weights(i + 1, j);
+			If(in_enabled_outputs(j, 0) == 1.0f)
+				// bias
+				Float accumulation = 0.0f;
+				// calculate dot product between feature and input vector
+				ForInRange(i, 0, INPUT_COUNT)
+					Float input = in_inputs(i, m);
+					// offset i by 1 because of bias column
+					Float w_ij = in_weights(i + 1, j);
 
-				accumulation = accumulation + (input * w_ij);
-			EndFor
-			// take input dropout into account
-			accumulation = accumulation * (1.0f / (1.0f - INPUT_DROPOUT_PROB));
-			// finally add bias
-			accumulation = accumulation + in_weights(0, j);
+					accumulation = accumulation + (input * w_ij);
+				EndFor
+				// take input dropout into account
+				accumulation = accumulation * (1.0f / (1.0f - INPUT_DROPOUT_PROB));
+				// finally add bias
+				accumulation = accumulation + in_weights(0, j);
 
 
-			// add noise if required
-			if(NOISY)
-			{
-				Float noise;
-				NextGaussian(in_seeds(Index().X, Index().Y), out_seed, noise);
+				// add noise if required
+				if(NOISY)
+				{
+					Float noise;
+					NextGaussian(in_seeds(j, m), out_seed, noise);
 
-				accumulation = accumulation + noise;
-			}
+					accumulation = accumulation + noise;
+				}
 
-			// activation function
-			switch(FUNC)
-			{
-			case ActivationFunction::Linear:
-				out_activation = accumulation;
-				break;
-			case ActivationFunction::RectifiedLinear:
-				out_activation = Max(0.0f, accumulation);
-				break;
-			case ActivationFunction::Sigmoid:
-				out_activation = Sigmoid(accumulation);
-				break;
-			}
+				// activation function
+				switch(FUNC)
+				{
+				case ActivationFunction::Linear:
+					out_activation = accumulation;
+					break;
+				case ActivationFunction::RectifiedLinear:
+					out_activation = Max(0.0f, accumulation);
+					break;
+				case ActivationFunction::Sigmoid:
+					out_activation = Sigmoid(accumulation);
+					break;
+				}
+			Else
+				out_activation = 0.0f;
+				out_seed = in_seeds(j, m);
+			EndIf
 		END_MAIN
 	END_SOURCE
 };
@@ -165,6 +191,7 @@ struct SourceCalcSensitivities : public SiCKL::Source
 			CONST_DATA(Buffer2D<Float>, in_weights)
 			CONST_DATA(Buffer2D<Float>, in_sensitivities)
 			CONST_DATA(Buffer2D<Float>, in_activations)
+			CONST_DATA(Buffer2D<Float>, in_enabled)
 		END_CONST_DATA
 			
 		BEGIN_OUT_DATA
@@ -175,18 +202,25 @@ struct SourceCalcSensitivities : public SiCKL::Source
 			Int j = Index().X;
 			Int m = Index().Y;
 
-			Float dp = 0.0f;
-			ForInRange(k, 0, NEXT_OUTPUT_COUNT)
-				Float w_jk = in_weights(j + 1, k);
-				Float d_k = in_sensitivities(k, m);
+			If(in_enabled(j, 0) == 1.0f)
+				Float dp = 0.0f;
+				ForInRange(k, 0, NEXT_OUTPUT_COUNT)
+					// no need to check for enabled outputs, since 
+					// in_sensitivities(k, m) will be 0.0f
+					Float w_jk = in_weights(j + 1, k);
+					Float d_k = in_sensitivities(k, m);
 
-				dp = dp + (w_jk * d_k);
-			EndFor
+					dp = dp + (w_jk * d_k);
+				EndFor
 
 				
-			Float partial;
-			PartialDerivative(in_activations(j, m), FUNC, partial);
-			out_sensitivity = dp * partial;
+				Float partial;
+				PartialDerivative(in_activations(j, m), FUNC, partial);
+				out_sensitivity = dp * partial;
+			Else
+				out_sensitivity = 0.0f;
+			EndIf
+
 		END_MAIN
 	END_SOURCE
 };

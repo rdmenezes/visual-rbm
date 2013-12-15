@@ -296,25 +296,37 @@ namespace OMLT
 						Layer* n_layer = new Layer(inputs->valueint, outputs->valueint, n_function);
 						mlp->AddLayer(n_layer);
 
+						cJSON* biases_it = cJSON_CreateArrayIterator(biases);
+						cJSON* weights_it = cJSON_CreateArrayIterator(weights);
+
 						for(uint32_t j = 0; j < n_layer->outputs; j++)
 						{
 							// set this bias
-							n_layer->biases[j] = (float)cJSON_GetArrayItem(biases, j)->valuedouble;
-							// and the weights
-							cJSON* weights_j = cJSON_GetArrayItem(weights, j);
-							if(cJSON_GetArraySize(weights_j) == n_layer->inputs)
+							cJSON_ArrayIteratorMoveNext(biases_it);
+							n_layer->biases[j] = (float)cJSON_ArrayIteratorCurrent(biases_it)->valuedouble;
+							// and the weight vectors
+							cJSON_ArrayIteratorMoveNext(weights_it);
+							cJSON* w_j = cJSON_ArrayIteratorCurrent(weights_it);
+							if(cJSON_GetArraySize(w_j) == n_layer->inputs)
 							{
+								cJSON* w_j_it = cJSON_CreateArrayIterator(w_j);
 								for(uint32_t i = 0; i < n_layer->inputs; i++)
 								{
-									n_layer->weights[j][i] = (float)cJSON_GetArrayItem(weights_j, i)->valuedouble;
+									cJSON_ArrayIteratorMoveNext(w_j_it);
+									n_layer->weights[j][i] = (float)cJSON_ArrayIteratorCurrent(w_j_it)->valuedouble;
 								}
+								cJSON_Delete(w_j_it);
 							}
 							else
 							{
+								cJSON_Delete(biases_it);
+								cJSON_Delete(biases_it);
+								cJSON_Delete(weights_it);
 								goto Malformed;
 							}
-
 						}
+						cJSON_Delete(biases_it);
+						cJSON_Delete(weights_it);
 					}
 				}
 				else
