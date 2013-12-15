@@ -114,4 +114,12 @@ START_BUFFER_TYPE(Buffer2D)
 		sample->add_child(create_data_node(B));
 		return Temp<TYPE>(sample);
 	}
+
+	Temp<TYPE> operator()(const Int2& VEC) const
+	{
+		ASTNode* sample  = new ASTNode(NodeType::Sample2D, get_return_type<TYPE>());
+		sample->add_child(new ASTNode(NodeType::ConstVar, get_return_type<Buffer2D<TYPE>>(), _id));
+		sample->add_child(create_data_node(VEC));
+		return Temp<TYPE>(sample);
+	}
 END_TYPE
