@@ -15,6 +15,7 @@ namespace OMLT
 		, _minibatch_size(in_minibatchsize)
 		, _recompile_required(true)
 		, _last_label(nullptr)
+		, _copy_visible(nullptr)
 	{
 		assert(in_config.LayerConfigs.size() > 0);
 		for(auto it = in_config.LayerConfigs.begin(); it < in_config.LayerConfigs.end(); ++it)
@@ -28,6 +29,7 @@ namespace OMLT
 		, _minibatch_size(in_minibatchsize)
 		, _recompile_required(true)
 		, _last_label(nullptr)
+		, _copy_visible(nullptr)
 	{
 		for(uint32_t k = 0; k < in_mlp->LayerCount(); k++)
 		{
@@ -47,11 +49,11 @@ namespace OMLT
 			// copy weights from this layer in the MLP to the buffer
 			for(uint32_t j = 0; j < layer->outputs; j++)
 			{
-				weight_buffer[j * (layer->inputs + 1)] = layer->biases[j];
-				for(uint32_t i = 1; i <= layer->inputs; i++)
-				{
-					weight_buffer[j * (layer->inputs + 1) + i] = layer->weights[j][i];
-				}
+				// copy in biases
+				uint32_t offset = j * (layer->inputs + 1);
+				weight_buffer[offset] = layer->biases[j];
+				// and copy in weights
+				std::memcpy(weight_buffer + (offset + 1), layer->weights[j], layer->inputs * sizeof(float));
 			}
 
 			// add layer and use weight buffer as initial weights
@@ -73,6 +75,9 @@ namespace OMLT
 		{
 			delete *it;
 		}
+
+		// and delete the orphaned compute programs
+		delete _copy_visible;
 	}
 
 	void BackPropagation::SetTrainingConfig( const TrainingConfig& in_config)
@@ -130,10 +135,10 @@ namespace OMLT
 		assert(example_label.Width == _layers.back()->OutputUnits);
 		assert(example_label.Height == _minibatch_size);
 
+		// save off label for future error calculation
 		_last_label = &example_label;
 
-		// feed forward
-		_layers.front()->Input = &example_input;
+		// first calculate enabled units
 		for(auto it = _layers.begin(); it != _layers.end(); ++it)
 		{
 			Layer* lay = *it;
@@ -155,11 +160,27 @@ namespace OMLT
 
 				swap(lay->InputRandom0, lay->InputRandom1);
 			}
+		}
+
+		// copy in example input (with dropout) to our buffer
+		{
+			_copy_visible->SetInput(0, _layers.front()->InputEnabled);
+			_copy_visible->SetInput(1, example_input);
+			_copy_visible->BindOutput(0, _input_buffer);
+
+			_copy_visible->Run();
+			_layers.front()->Input = &_input_buffer;
+		}
+
+		// feed forward
+		for(auto it = _layers.begin(); it != _layers.end(); ++it)
+		{
+			Layer* lay = *it;
 
 			OpenGLProgram* feed_forward = lay->FeedForward;
 			{
 				feed_forward->SetInput(0, *lay->Input);
-				feed_forward->SetInput(1, lay->InputEnabled);
+				feed_forward->SetInput(1, *lay->OutputEnabled);
 				feed_forward->SetInput(2, lay->Weights0);
 				feed_forward->SetInput(3, lay->OutputRandom0);
 				assert(lay->Input->Width == lay->InputUnits);
@@ -216,6 +237,7 @@ namespace OMLT
 				calc_sensitivities->SetInput(0, lay->NextLayer->Weights0);
 				calc_sensitivities->SetInput(1, lay->NextLayer->Sensitivities);
 				calc_sensitivities->SetInput(2, lay->Activation);
+				calc_sensitivities->SetInput(3, lay->InputEnabled);
 				assert(lay->NextLayer->Weights0.Width == (lay->OutputUnits + 1));
 
 				calc_sensitivities->BindOutput(0, lay->Sensitivities);
@@ -297,6 +319,8 @@ namespace OMLT
 
 		// feed forward
 		_layers.front()->Input = &example_input;
+		
+		// first calculate enabled units
 		for(auto it = _layers.begin(); it != _layers.end(); ++it)
 		{
 			Layer* lay = *it;
@@ -318,11 +342,27 @@ namespace OMLT
 
 				swap(lay->InputRandom0, lay->InputRandom1);
 			}
+		}
+
+		// copy in example input (with dropout) to our buffer
+		{
+			_copy_visible->SetInput(0, _layers.front()->InputEnabled);
+			_copy_visible->SetInput(1, example_input);
+			_copy_visible->BindOutput(0, _input_buffer);
+
+			_copy_visible->Run();
+			_layers.front()->Input = &_input_buffer;
+		}
+
+		// feed forward
+		for(auto it = _layers.begin(); it != _layers.end(); ++it)
+		{
+			Layer* lay = *it;
 
 			OpenGLProgram* feed_forward = lay->FeedForward;
 			{
 				feed_forward->SetInput(0, *lay->Input);
-				feed_forward->SetInput(1, lay->InputEnabled);
+				feed_forward->SetInput(1, *lay->OutputEnabled);
 				feed_forward->SetInput(2, lay->Weights0);
 				feed_forward->SetInput(3, lay->OutputRandom0);
 				assert(lay->Input->Width == lay->InputUnits);
@@ -412,7 +452,7 @@ namespace OMLT
 				for(uint32_t j = 0; j < height; j++)
 				{
 					// bias is first value in a row
-					int i = 0;
+					uint32_t i = 0;
 					// always init bias to 0
 					weight_buffer[j * width + 0] = 0.0f;
 					for(i = 1; i < width; i++)
@@ -468,6 +508,14 @@ namespace OMLT
 			_layers.back()->NextLayer = result;
 		}
 
+		if(_layers.size() == 0)
+		{
+			width = result->InputUnits;
+			height = _minibatch_size;
+
+			_input_buffer = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
+		}
+
 		// finally, append our newly created layer to the list
 		_layers.push_back(result);
 	}
@@ -510,6 +558,14 @@ namespace OMLT
 		return result;
 	}
 
+	bool BackPropagation::DumpLastLabel(float** label)
+	{
+		assert(_last_label != nullptr);
+
+		_last_label->GetData(*label);
+		return true;
+	}
+
 	bool BackPropagation::DumpInput(uint32_t layer, float** input)
 	{
 		assert(layer < _layers.size());
@@ -542,11 +598,21 @@ namespace OMLT
 			SafeDelete(layer->CalcSensitivity);
 			SafeDelete(layer->UpdateWeights);
 		}
+		SafeDelete(_copy_visible);
 	}
 
 	void BackPropagation::build_kernels()
 	{
 		OpenGLCompiler comp;
+
+		// copy example unit to separate buffer
+		{
+			SourceCopyVisible source;
+			source.Parse();
+
+			_copy_visible = comp.Build(source);
+			_copy_visible->Initialize(_layers.front()->InputUnits, _minibatch_size);
+		}
 
 		for(auto it = _layers.begin(); it != _layers.end(); ++it)
 		{

@@ -343,37 +343,53 @@ namespace OMLT
 				{
 					rbm = new RestrictedBoltzmannMachine(visible_count, hidden_count, visible_type, hidden_type);
 					
+					cJSON* vb_it = cJSON_CreateArrayIterator(cj_visible_biases);
+
 					// copy in visible biases
 					for(uint32_t i = 0; i < visible_count; i++)
 					{
-						rbm->visible_biases[i] = (float)cJSON_GetArrayItem(cj_visible_biases, i)->valuedouble;
+						cJSON_ArrayIteratorMoveNext(vb_it);
+						rbm->visible_biases[i] = (float)cJSON_ArrayIteratorCurrent(vb_it)->valuedouble;
 					}
+					cJSON_Delete(vb_it);
+
+					cJSON* hb_it = cJSON_CreateArrayIterator(cj_hidden_biases);
 
 					// copy in hidden biases
 					for(uint32_t j = 0; j < hidden_count; j++)
 					{
-						rbm->hidden_biases[j] = (float)cJSON_GetArrayItem(cj_hidden_biases, j)->valuedouble;
+						cJSON_ArrayIteratorMoveNext(hb_it);
+						rbm->hidden_biases[j] = (float)cJSON_ArrayIteratorCurrent(hb_it)->valuedouble;
 					}
+					cJSON_Delete(hb_it);
+
+					cJSON* w_it = cJSON_CreateArrayIterator(cj_weights);
 
 					// copy in weights
 					for(uint32_t j = 0; j < hidden_count; j++)
 					{
-						cJSON* cj_feature_vector = cJSON_GetArrayItem(cj_weights, j);
+						cJSON_ArrayIteratorMoveNext(w_it);
+						cJSON* cj_feature_vector = cJSON_ArrayIteratorCurrent(w_it);
 						if(cJSON_GetArraySize(cj_feature_vector) != visible_count)
 						{
 							delete rbm;
+							cJSON_Delete(w_it);
 							goto Malformed;
 						}
 						else
 						{
+							cJSON* wj_it = cJSON_CreateArrayIterator(cj_feature_vector);
 							for(uint32_t i = 0; i < visible_count; i++)
 							{
-								float w_ij = (float)cJSON_GetArrayItem(cj_feature_vector, i)->valuedouble;
+								cJSON_ArrayIteratorMoveNext(wj_it);
+								float w_ij = (float)cJSON_ArrayIteratorCurrent(wj_it)->valuedouble;
 								rbm->hidden_features[j][i] = w_ij;
 								rbm->visible_features[i][j] = w_ij;
 							}
+							cJSON_Delete(wj_it);
 						}
 					}
+					cJSON_Delete(w_it);
 				}
 				else
 				{
