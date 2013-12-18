@@ -115,6 +115,18 @@ namespace QuickBoltzmann
 		}
 	}
 
+	static float CapError(float error)
+	{
+		const float max_val = (float)7.9E+27;
+
+		if(error != error)
+		{
+			return max_val;
+		}
+
+		return Math::Min(error, max_val);
+	}
+
 	void RBMProcessor::Run()
 	{
 		if(SiCKL::OpenGLRuntime::Initialize() == false)
@@ -586,6 +598,9 @@ namespace QuickBoltzmann
 
 						}
 					}
+
+					training_error = CapError(training_error);
+					validation_error = CapError(validation_error);
 
 					IterationCompleted(total_iterations, training_error, validation_error);
 
