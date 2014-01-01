@@ -447,6 +447,7 @@ namespace OMLT
 			
 			if(in_weights == nullptr)
 			{
+				std::uniform_real_distribution<float> funiform(0.0f, 1.0f);
 				float* weight_buffer = new float[width * height];
 		
 				for(uint32_t j = 0; j < height; j++)
@@ -454,12 +455,11 @@ namespace OMLT
 					// bias is first value in a row
 					uint32_t i = 0;
 					// always init bias to 0
-					weight_buffer[j * width + 0] = 0.0f;
+					weight_buffer[j * width + i] = 0.0f;
 					for(i = 1; i < width; i++)
 					{
-						weight_buffer[j * width + i] = normal(random) * 0.1f;
-
-						//printf("From %i to %i: %f\n", i, j, weight_buffer[j * width + i]);
+						// creates roughly 15 connections from each visible unit to hidden layer
+						weight_buffer[j * width + i] = funiform(random) < (15.0f / result->OutputUnits)? normal(random): 0.0f;
 					}
 				}
 

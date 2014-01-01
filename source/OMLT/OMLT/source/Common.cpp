@@ -1,12 +1,61 @@
+// stdlib
+#include <cstring>
+
 // windows
 #include <intrin.h>
 
 // extern
 #include <SiCKL.h>
 using namespace SiCKL;
+#include <cJSON.h>
+
+// OMLT
+#include "Common.h"
+#include "RestrictedBoltzmannMachine.h"
+#include "MultilayerPerceptron.h"
 
 namespace OMLT
 {
+	/// Parse Methods
+
+	bool FromJSON(const std::string& in_json, Model& out_model)
+	{
+		bool result = false;
+		out_model.type = MT_Invalid;
+		out_model.ptr = nullptr;
+
+		cJSON* cj_root = cJSON_Parse(in_json.c_str());
+		if(cj_root)
+		{
+			cJSON* cj_type = cJSON_GetObjectItem(cj_root, "Type");
+			if(cj_type && strcmp(cj_type->valuestring, "RestrictedBoltzmannMachine") == 0)
+			{
+				RBM* rbm = RBM::FromJSON(cj_root);
+				if(rbm)
+				{
+					out_model.type = MT_RBM;
+					out_model.rbm = rbm;
+					result = true;
+				}
+			}
+			else if(cj_type && strcmp(cj_type->valuestring, "MultilayerPerceptron") == 0)
+			{
+				MLP* mlp = MLP::FromJSON(cj_root);
+				if(mlp)
+				{
+					out_model.type = MT_MLP;
+					out_model.mlp = mlp;
+					result = true;
+				}
+			}
+		}
+
+		cJSON_Delete(cj_root);
+		return result;
+	}
+
+	/// SiCKL Kernel Methods
+
 	void NextSeed(const SiCKL::UInt& in_seed, SiCKL::UInt& out_seed)
 	{
 		// calculate next values using Numerical recipes LCRG:  

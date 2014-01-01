@@ -8,6 +8,33 @@
 
 namespace OMLT
 {
+	// a general parsing method
+	enum ModelType
+	{
+		MT_Invalid = -1,
+		MT_NotSet = 0,
+		MT_MultilayerPerceptron,
+		MT_RestrictedBoltzmannMachine,
+
+		MT_MLP = MT_MultilayerPerceptron,
+		MT_RBM = MT_RestrictedBoltzmannMachine,
+	};
+
+	struct Model
+	{
+		ModelType type;
+		union
+		{
+			void* ptr;
+			class MultilayerPerceptron* mlp;
+			class RestrictedBoltzmannMachine* rbm;
+		};
+		Model() : type(MT_NotSet), ptr(nullptr) {}
+	};
+
+	// true on successful parse, false on failure
+	bool FromJSON(const std::string& in_json, Model& out_model);
+
 	/// Util Methods
 	template<typename T, size_t N>
 	size_t ArraySize(const T (&)[N])

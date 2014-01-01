@@ -39,6 +39,9 @@ namespace OMLT
 		// properly aligned scratch buffers
 		float* _visible_buffer;
 		float* _hidden_buffer;
+		// private parse method
+		static RestrictedBoltzmannMachine* FromJSON(struct cJSON* root);
+		friend bool FromJSON(const std::string& in_json, struct Model& out_model);
 	};
 	typedef RestrictedBoltzmannMachine RBM;
 }

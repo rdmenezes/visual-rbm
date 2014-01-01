@@ -286,21 +286,20 @@ namespace OMLT
 		return result;
 	}
 
-	RestrictedBoltzmannMachine* RestrictedBoltzmannMachine::FromJSON( const std::string& in_JSON )
+	RestrictedBoltzmannMachine* RestrictedBoltzmannMachine::FromJSON( cJSON* in_root )
 	{
-		cJSON* root = cJSON_Parse(in_JSON.c_str());
-		if(root)
+		if(in_root)
 		{
 			RestrictedBoltzmannMachine* rbm = nullptr;
 
-			cJSON* cj_type = cJSON_GetObjectItem(root, "Type");
-			cJSON* cj_visible_count = cJSON_GetObjectItem(root, "VisibleCount");
-			cJSON* cj_hidden_count = cJSON_GetObjectItem(root, "HiddenCount");
-			cJSON* cj_visible_type = cJSON_GetObjectItem(root, "VisibleType");
-			cJSON* cj_hidden_type = cJSON_GetObjectItem(root, "HiddenType");
-			cJSON* cj_visible_biases = cJSON_GetObjectItem(root, "VisibleBiases");
-			cJSON* cj_hidden_biases = cJSON_GetObjectItem(root, "HiddenBiases");
-			cJSON* cj_weights = cJSON_GetObjectItem(root, "Weights");
+			cJSON* cj_type = cJSON_GetObjectItem(in_root, "Type");
+			cJSON* cj_visible_count = cJSON_GetObjectItem(in_root, "VisibleCount");
+			cJSON* cj_hidden_count = cJSON_GetObjectItem(in_root, "HiddenCount");
+			cJSON* cj_visible_type = cJSON_GetObjectItem(in_root, "VisibleType");
+			cJSON* cj_hidden_type = cJSON_GetObjectItem(in_root, "HiddenType");
+			cJSON* cj_visible_biases = cJSON_GetObjectItem(in_root, "VisibleBiases");
+			cJSON* cj_hidden_biases = cJSON_GetObjectItem(in_root, "HiddenBiases");
+			cJSON* cj_weights = cJSON_GetObjectItem(in_root, "Weights");
 
 			if(cj_visible_count && cj_hidden_count &&
 				cj_visible_type && cj_hidden_type &&
@@ -401,14 +400,18 @@ namespace OMLT
 				goto Malformed;
 			}
 
-			cJSON_Delete(root);
 			return rbm;
 Malformed:
-			cJSON_Delete(root);
 			return nullptr;
 		}
 		return nullptr;
 	}
 
-
+	RestrictedBoltzmannMachine* RestrictedBoltzmannMachine::FromJSON(const std::string& in_json)
+	{
+		cJSON* root = cJSON_Parse(in_json.c_str());
+		RBM* rbm = FromJSON(root);
+		cJSON_Delete(root);
+		return rbm;
+	}
 }
