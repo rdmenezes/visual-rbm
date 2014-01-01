@@ -243,18 +243,17 @@ namespace OMLT
 		return result;
 	}
 
-	MultilayerPerceptron* MultilayerPerceptron::FromJSON( const std::string& in_JSON )
+	MultilayerPerceptron* MultilayerPerceptron::FromJSON( cJSON* in_root)
 	{
-		cJSON* root = cJSON_Parse(in_JSON.c_str());
-		if(root)
+		if(in_root)
 		{
 			MultilayerPerceptron* mlp = new MultilayerPerceptron();
-			cJSON* type =  cJSON_GetObjectItem(root, "Type");
+			cJSON* type =  cJSON_GetObjectItem(in_root, "Type");
 			if(strcmp(type->valuestring, "MultilayerPerceptron") != 0)
 			{
 				goto Malformed;
 			}
-			cJSON* layers = cJSON_GetObjectItem(root, "Layers");
+			cJSON* layers = cJSON_GetObjectItem(in_root, "Layers");
 			if(layers == nullptr)
 			{
 				goto Malformed;
@@ -335,15 +334,23 @@ namespace OMLT
 				}
 			}
 
-			cJSON_Delete(root);
 			return mlp;
 Malformed:
 			delete mlp;
-			cJSON_Delete(root);
 			return nullptr;
 		}
 
 		return nullptr;
+	}
+
+	MultilayerPerceptron* MultilayerPerceptron::FromJSON(const std::string& in_json)
+	{
+		cJSON* root = cJSON_Parse(in_json.c_str());
+
+		MLP* mlp = FromJSON(root);
+		cJSON_Delete(root);
+
+		return mlp;		
 	}
 
 	MultilayerPerceptron::Layer::Layer( uint32_t in_inputs, uint32_t in_outputs, ActivationFunction_t in_function )
