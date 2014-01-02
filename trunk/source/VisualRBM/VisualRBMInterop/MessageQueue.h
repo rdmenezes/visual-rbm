@@ -46,7 +46,7 @@ namespace QuickBoltzmann
 				_data[s] = o;
 			}
 		}
-
+		bool Handled;
 	private:
 		MessageType _type;
 		ConcurrentDictionary<String^, Object^>^ _data;

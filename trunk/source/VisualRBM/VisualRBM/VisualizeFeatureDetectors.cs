@@ -35,19 +35,20 @@ namespace VisualRBM
 		protected override unsafe void Drawing()
 		{
 			List<IntPtr> weights = new List<IntPtr>();
-			RBMProcessor.GetCurrentWeights(weights);
-
-			PixelFormat pf = _main_form.settingsBar.Format;
-
-
-			for(int j = 0; j < weights.Count; j++)
+			if (RBMProcessor.GetCurrentWeights(weights))
 			{
-				float* raw_weights = (float*)weights[j].ToPointer();
-				UpdateImageControlContents(j, pf, (uint)RBMProcessor.VisibleUnits, raw_weights);
-			}
 
-			foreach (ImageControl ic in imageFlowPanel.Controls)
-				ic.Invalidate();
+				PixelFormat pf = _main_form.settingsBar.Format;
+
+				for (int j = 0; j < weights.Count; j++)
+				{
+					float* raw_weights = (float*)weights[j].ToPointer();
+					UpdateImageControlContents(j, pf, (uint)RBMProcessor.VisibleUnits, raw_weights);
+				}
+
+				foreach (ImageControl ic in imageFlowPanel.Controls)
+					ic.Invalidate();
+			}
 		}
 	}
 }

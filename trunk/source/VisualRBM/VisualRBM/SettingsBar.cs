@@ -918,8 +918,29 @@ namespace VisualRBM
 
 			if (sfd.ShowDialog() == DialogResult.OK)
 			{
-				RBMProcessor.SaveModel(sfd.OpenFile());
-				_main_form.trainingLog.AddLog("Exported RBM to {0}", sfd.FileName);
+				_main_form.Cursor = Cursors.WaitCursor;
+				bool saved;
+				try
+				{
+					saved = RBMProcessor.SaveModel(sfd.OpenFile());
+				}
+				catch (Exception)
+				{
+					saved = false;
+				}
+
+				if (saved)
+				{
+					_main_form.trainingLog.AddLog("Exported RBM to {0}", sfd.FileName);
+					_main_form.Cursor = Cursors.Default;
+				}
+				else
+				{
+					String error = String.Format("Error saving model to {0}", sfd.FileName);
+					_main_form.trainingLog.AddLog(error);
+					_main_form.Cursor = Cursors.Default;
+					MessageBox.Show(error);
+				}
 			}
 		}
 
@@ -931,7 +952,17 @@ namespace VisualRBM
 			if (ofd.ShowDialog() == DialogResult.OK)
 			{
 				_main_form.Cursor = Cursors.WaitCursor;
-				if (RBMProcessor.LoadModel(ofd.OpenFile()))
+				bool loaded;
+				try
+				{
+					loaded = RBMProcessor.LoadModel(ofd.OpenFile());
+				}
+				catch(Exception)
+				{
+					loaded = false;
+				}
+
+				if(loaded)
 				{
 					_main_form.trainingLog.AddLog("Imported RBM from {0}", ofd.FileName);
 					

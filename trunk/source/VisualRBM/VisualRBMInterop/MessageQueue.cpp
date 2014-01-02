@@ -7,6 +7,7 @@ namespace QuickBoltzmann
 	{
 		_type = in_type;
 		_data = gcnew ConcurrentDictionary<String^, Object^>();
+		Handled = false;
 	}
 
 	MessageQueue::MessageQueue()
