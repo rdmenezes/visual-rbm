@@ -47,12 +47,14 @@ namespace VisualRBM
 		{
 			List<IntPtr> hidden = new List<IntPtr>();
 
-			RBMProcessor.GetCurrentHidden(hidden);
+			if (RBMProcessor.GetCurrentHidden(hidden))
+			{ 
 
-			for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
-			{
-				float* raw_hidden = (float*)hidden[k].ToPointer();
-				UpdateImageControlContents(k, PixelFormat.Lightness, (uint)RBMProcessor.HiddenUnits, raw_hidden);
+				for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
+				{
+					float* raw_hidden = (float*)hidden[k].ToPointer();
+					UpdateImageControlContents(k, PixelFormat.Lightness, (uint)RBMProcessor.HiddenUnits, raw_hidden);
+				}
 			}
 		}
 	}

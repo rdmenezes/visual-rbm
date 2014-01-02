@@ -229,19 +229,20 @@ namespace VisualRBM
 			List<IntPtr> recon = new List<IntPtr>();
 			List<IntPtr> diffs = new List<IntPtr>();
 
-			RBMProcessor.GetCurrentVisible(visible, recon, diffs);
-
-			PixelFormat pf = _main_form.settingsBar.Format;
-
-			Debug.Assert(visible.Count == recon.Count && visible.Count == RBMProcessor.MinibatchSize);
-
-			for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
+			if (RBMProcessor.GetCurrentVisible(visible, recon, diffs))
 			{
-				float* raw_image = (float*)visible[k].ToPointer();
-				float* raw_recon = (float*)recon[k].ToPointer();
-				float* raw_diffs = (float*)diffs[k].ToPointer();
-				// post the data to the image control
-				UpdateImageControlContents(k, pf, (uint)RBMProcessor.VisibleUnits, raw_image, raw_recon, raw_diffs);
+				PixelFormat pf = _main_form.settingsBar.Format;
+
+				Debug.Assert(visible.Count == recon.Count && visible.Count == RBMProcessor.MinibatchSize);
+
+				for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
+				{
+					float* raw_image = (float*)visible[k].ToPointer();
+					float* raw_recon = (float*)recon[k].ToPointer();
+					float* raw_diffs = (float*)diffs[k].ToPointer();
+					// post the data to the image control
+					UpdateImageControlContents(k, pf, (uint)RBMProcessor.VisibleUnits, raw_image, raw_recon, raw_diffs);
+				}
 			}
 		}
 

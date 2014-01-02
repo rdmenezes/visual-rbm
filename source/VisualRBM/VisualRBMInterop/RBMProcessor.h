@@ -152,7 +152,7 @@ namespace QuickBoltzmann
 		static bool SetTrainingData(String^ filename);
 		static bool SetValidationData(String^ filename);
 
-		static void SaveModel(Stream^ stream);
+		static bool SaveModel(Stream^ stream);
 		static bool LoadModel(Stream^ stream);
 
 		// public command methods
@@ -163,9 +163,9 @@ namespace QuickBoltzmann
 		static void Stop();
 		static void Shutdown();	// for application exit
 
-		static void GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs);
-		static void GetCurrentHidden(List<IntPtr>^ hidden);
-		static void GetCurrentWeights(List<IntPtr>^ weights);
+		static bool GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs);
+		static bool GetCurrentHidden(List<IntPtr>^ hidden);
+		static bool GetCurrentWeights(List<IntPtr>^ weights);
 
 	private:
 

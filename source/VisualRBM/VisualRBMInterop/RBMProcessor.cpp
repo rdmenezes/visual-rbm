@@ -16,6 +16,7 @@
 #include <BackPropagation.h>
 #include <RestrictedBoltzmannMachine.h>
 #include <MultilayerPerceptron.h>
+#include <Common.h>
 #include <IDX.hpp>
 
 
@@ -155,7 +156,7 @@ namespace QuickBoltzmann
 						assert(epochs > 0);
 						assert(training_data != nullptr);
 						assert(model_type == ModelType::RBM ||
-						       model_type == ModelType::AutoEncoder);
+							   model_type == ModelType::AutoEncoder);
 
 						assert(training_data != nullptr);
 
@@ -279,6 +280,7 @@ namespace QuickBoltzmann
 					
 					break;
 				case MessageType::GetVisible:
+					if(cd || bp)
 					{
 						// allocate space for buffers if necessary
 						const uint32_t visible_size = visible_count * minibatch_size;
@@ -348,11 +350,10 @@ namespace QuickBoltzmann
 							recon_list->Add(IntPtr((float*)visible_recon_buffer + k * visible_count));
 							diff_list->Add(IntPtr((float*)visible_diff_buffer + k * visible_count));
 						}
-
-						msg["done"] = true;
 					}
 					break;
 				case MessageType::GetHidden:
+					if(cd || bp)
 					{
 						const uint32_t hidden_size = hidden_count * minibatch_size;
 						hidden_buffer.Acquire(hidden_size);
@@ -379,11 +380,10 @@ namespace QuickBoltzmann
 						{
 							hidden_list->Add(IntPtr((float*)hidden_buffer + k * hidden_count));
 						}
-
-						msg["done"] = true;
 					}
 					break;
 				case MessageType::GetWeights:
+					if(cd || bp)
 					{
 						List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
 						switch(model_type)
@@ -397,7 +397,8 @@ namespace QuickBoltzmann
 
 								cd->DumpLastWeights(&weight_ptr);
 							
-								for(uint32_t j = 0; j <= hidden_count; j++)
+								// skip over the visible bias, we're only visualizing the learned hidden features
+								for(uint32_t j = 1; j <= hidden_count; j++)
 								{
 									weight_list->Add(IntPtr((float*)weight_buffer + 1 + (visible_count + 1) * j));
 								}
@@ -423,13 +424,14 @@ namespace QuickBoltzmann
 							break;
 						}
 					}
-					msg["done"] = true;
 					break;
 				case MessageType::ExportModel:
 					{
 						Stream^ fs = (Stream^)msg["output_stream"];
 
 						std::string model_json;
+
+						msg["saved"] = false;
 
 						switch(model_type)
 						{
@@ -454,6 +456,7 @@ namespace QuickBoltzmann
 
 						fs->Flush();
 						fs->Close();
+						msg["saved"] = true;
 					}
 					break;
 				case MessageType::ImportModel:
@@ -472,57 +475,61 @@ namespace QuickBoltzmann
 
 						msg["loaded"] = false;
 
-						// try parsing an RBM
-						OMLT::RBM* rbm = OMLT::RBM::FromJSON(model_json);
-
-						// success?
-						if(rbm)
+						OMLT::Model model;
+						if(OMLT::FromJSON(model_json ,model))
 						{
-							// ensure it has same dimensions as our loaded data
-							if(rbm->visible_count == visible_count)
+							switch(model.type)
 							{
-								visible_count = rbm->visible_count;
-								hidden_count = rbm->hidden_count;
-								visible_type = (UnitType)rbm->visible_type;
-								hidden_type = (UnitType)rbm->hidden_type;
-								model_type = ModelType::RBM;
-								
-								msg["loaded"] = true;
-
-								// create new CD from RBM
-								delete cd;
-								cd = new OMLT::ContrastiveDivergence(rbm, minibatch_size);
-							}
-						}
-						else
-						{
-							OMLT::MLP* mlp = OMLT::MLP::FromJSON(model_json);
-							if(mlp)
-							{
-								if(mlp->LayerCount() == 2)
+							case OMLT::MT_RBM:
 								{
-									const OMLT::MLP::Layer* hidden_layer = mlp->GetLayer(0);
-									const OMLT::MLP::Layer* output_layer = mlp->GetLayer(1);
+									OMLT::RBM* rbm = model.rbm;
+									assert(rbm != nullptr);
 
-									if(hidden_layer->inputs == visible_count)
+									// ensure it has same dimensions as our loaded data
+									if(rbm->visible_count == visible_count)
 									{
-										visible_count = hidden_layer->inputs;
-										hidden_count = hidden_layer->outputs;
-										visible_type = (UnitType)output_layer->function;
-										hidden_type = (UnitType)hidden_layer->function;
-										model_type = ModelType::AutoEncoder;
+										visible_count = rbm->visible_count;
+										hidden_count = rbm->hidden_count;
+										visible_type = (UnitType)rbm->visible_type;
+										hidden_type = (UnitType)rbm->hidden_type;
+										model_type = ModelType::RBM;
 
 										msg["loaded"] = true;
 
-										delete bp;
-										bp = new OMLT::BackPropagation(mlp, minibatch_size);
+										// create new CD from RBM
+										delete cd;
+										cd = new OMLT::ContrastiveDivergence(rbm, minibatch_size);
 									}
+									delete rbm;
 								}
+								break;
+							case OMLT::MT_MLP:
+								{
+									OMLT::MLP* mlp = model.mlp;
+									if(mlp->LayerCount() == 2)
+									{
+										const OMLT::MLP::Layer* hidden_layer = mlp->GetLayer(0);
+										const OMLT::MLP::Layer* output_layer = mlp->GetLayer(1);
+
+										if(hidden_layer->inputs == visible_count)
+										{
+											visible_count = hidden_layer->inputs;
+											hidden_count = hidden_layer->outputs;
+											visible_type = (UnitType)output_layer->function;
+											hidden_type = (UnitType)hidden_layer->function;
+											model_type = ModelType::AutoEncoder;
+
+											msg["loaded"] = true;
+
+											delete bp;
+											bp = new OMLT::BackPropagation(mlp, minibatch_size);
+										}
+									}
+									delete mlp;
+								}
+								break;
 							}
 						}
-
-						// message we're done
-						msg["done"] = true;
 					}
 					break;
 				case MessageType::Shutdown:
@@ -540,14 +547,15 @@ namespace QuickBoltzmann
 						_message_queue->Clear();
 						_message_queue = nullptr;
 
-						// alert caller that we're done
-						msg["done"] = true;
+						// alert caller we're finished
+						msg->Handled = true;
 
 						// and exit
 						return;
 					}
 					break;
 				}
+				msg->Handled = true;
 			}
 		
 			switch(_currentState)
@@ -595,7 +603,6 @@ namespace QuickBoltzmann
 							assert(bp != nullptr);
 							bp->Train(training_example, training_example);
 							training_error = bp->GetLastOutputError();
-
 						}
 					}
 
@@ -692,21 +699,27 @@ namespace QuickBoltzmann
 		}
 	}
 
-	void RBMProcessor::SaveModel(Stream^ in_stream)
+	bool RBMProcessor::SaveModel(Stream^ in_stream)
 	{
 		Message^ msg = gcnew Message(MessageType::ExportModel);
 		msg["output_stream"] = in_stream;
+
 		_message_queue->Enqueue(msg);
+		while(!msg->Handled)
+		{
+			Thread::Sleep(16);
+		}
+
+		return (bool)msg["saved"];
 	}
 
 	bool RBMProcessor::LoadModel(Stream^ in_stream)
 	{
 		Message^ msg = gcnew Message(MessageType::ImportModel);
 		msg["input_stream"] = in_stream;
-		msg["done"] = false;
 
 		_message_queue->Enqueue(msg);
-		while((bool)msg["done"] == false)
+		while(!msg->Handled)
 		{
 			Thread::Sleep(16);
 		}
@@ -734,54 +747,65 @@ namespace QuickBoltzmann
 	void RBMProcessor::Shutdown()
 	{
 		Message^ msg = gcnew Message(MessageType::Shutdown);
-		msg["done"] = false;
 
 		_message_queue->Enqueue(msg);
-		while((bool)msg["done"] == false)
+		while(!msg->Handled)
 		{
 			Thread::Sleep(16);
 		}
 	}
 
-	void RBMProcessor::GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs)
+	bool RBMProcessor::GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs)
 	{
 		Message^ msg = gcnew Message(MessageType::GetVisible);
-		msg["done"] = false;
 		msg["visible"] = visible;
 		msg["reconstruction"] = reconstruction;
 		msg["diffs"] = diffs;
 
 		_message_queue->Enqueue(msg);
-		while((bool)msg["done"] == false)
+		while(!msg->Handled)
 		{
 			Thread::Sleep(16);
 		}
+
+		assert((visible->Count == minibatch_size &&
+			reconstruction->Count == minibatch_size &&
+			diffs->Count == minibatch_size) || 
+			(visible->Count == 0 && reconstruction->Count == 0 && diffs->Count == 0));
+
+		return visible->Count == minibatch_size;
 	}
 
-	void RBMProcessor::GetCurrentHidden( List<IntPtr>^ hidden_prob )
+	bool RBMProcessor::GetCurrentHidden( List<IntPtr>^ hidden_prob )
 	{
 		Message^ msg = gcnew Message(MessageType::GetHidden);
-		msg["done"] = false;
 		msg["hidden"] = hidden_prob;
 
 		_message_queue->Enqueue(msg);
-		while((bool)msg["done"] == false)
+		while(!msg->Handled)
 		{
 			Thread::Sleep(16);
 		}
+
+		assert(hidden_prob->Count == minibatch_size || hidden_prob->Count == 0);
+
+		return hidden_prob->Count == minibatch_size;
 	}
 
-	void RBMProcessor::GetCurrentWeights( List<IntPtr>^ weights )
+	bool RBMProcessor::GetCurrentWeights( List<IntPtr>^ weights )
 	{
 		Message^ msg = gcnew Message(MessageType::GetWeights);
-		msg["done"] = false;
 		msg["weights"] = weights;
 
 		_message_queue->Enqueue(msg);
-		while((bool)msg["done"] == false)
+		while(!msg->Handled)
 		{
 			Thread::Sleep(16);
 		}
+
+		assert(weights->Count == hidden_count || weights->Count == 0);
+
+		return weights->Count == hidden_count;
 	}
 
 #pragma region Properties
