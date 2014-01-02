@@ -16,7 +16,15 @@ namespace VisualRBM
 		{
 			get
 			{
-				return RBMProcessor.HiddenUnits + 1;
+				switch (RBMProcessor.Model)
+				{
+					case ModelType.AutoEncoder:
+						return RBMProcessor.HiddenUnits;
+					case ModelType.RBM:
+						return RBMProcessor.HiddenUnits + 1;
+					default:
+						return 0;
+				}
 			}
 		}
 	

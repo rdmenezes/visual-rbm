@@ -397,8 +397,7 @@ namespace QuickBoltzmann
 
 								cd->DumpLastWeights(&weight_ptr);
 							
-								// skip over the visible bias, we're only visualizing the learned hidden features
-								for(uint32_t j = 1; j <= hidden_count; j++)
+								for(uint32_t j = 0; j <= hidden_count; j++)
 								{
 									weight_list->Add(IntPtr((float*)weight_buffer + 1 + (visible_count + 1) * j));
 								}
