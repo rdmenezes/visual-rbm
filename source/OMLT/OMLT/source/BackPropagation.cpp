@@ -317,9 +317,6 @@ namespace OMLT
 		// set out output label texture for error calculation
 		_last_label  = &example_output;
 
-		// feed forward
-		_layers.front()->Input = &example_input;
-		
 		// first calculate enabled units
 		for(auto it = _layers.begin(); it != _layers.end(); ++it)
 		{

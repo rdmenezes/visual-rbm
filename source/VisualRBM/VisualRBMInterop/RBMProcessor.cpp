@@ -603,6 +603,11 @@ namespace QuickBoltzmann
 							assert(bp != nullptr);
 							bp->Train(training_example, training_example);
 							training_error = bp->GetLastOutputError();
+
+							if(validation_data != nullptr)
+							{
+								validation_error = bp->GetOutputError(validation_example, validation_example);
+							}
 						}
 					}
 
