@@ -1,4 +1,5 @@
-#include "IDX.hpp"
+#include <IDX.hpp>
+using namespace OMLT;
 
 #include <cstdint>
 

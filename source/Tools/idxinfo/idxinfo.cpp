@@ -1,6 +1,7 @@
 #include <stdio.h>
 
-#include "IDX.hpp"
+#include <IDX.hpp>
+using namespace OMLT;
 
 const char* Usage =
 	"Prints the header info of the given IDX files.\n"

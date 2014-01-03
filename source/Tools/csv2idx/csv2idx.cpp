@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include <IDX.hpp>
+using namespace OMLT;
 
 const char Usage[] = 
 	"Parses the given CSV file as single precision floats into an IDX file.\n"

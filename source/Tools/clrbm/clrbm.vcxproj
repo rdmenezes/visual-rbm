@@ -52,12 +52,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\VisualRBM\QuickBoltzmannNative\;$(SolutionDir)\..\..\helpers;$(SolutionDir)\..\..\extern\SiCKL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\OMLT\OMLT\include;$(SolutionDir)\..\..\extern\SiCKL\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(SolutionDir)../../bin/$(Configuration)/;$(SolutionDir)../../extern/SiCKL/lib/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>freeglut_static.lib;glew32s.lib;SiCKLD.lib;QuickBoltzmannNative.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)/../../extern/SiCKL/lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freeglut_static.lib;glew32s.lib;SiCKLD.lib;OMLTD.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -66,14 +66,14 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>$(SolutionDir)\..\VisualRBM\QuickBoltzmannNative\;$(SolutionDir)\..\..\helpers;$(SolutionDir)\..\..\extern\SiCKL\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\..\OMLT\OMLT\include;$(SolutionDir)\..\..\extern\SiCKL\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(SolutionDir)../../bin/$(Configuration)/;$(SolutionDir)../../extern/SiCKL/lib/</AdditionalLibraryDirectories>
-      <AdditionalDependencies>freeglut_static.lib;glew32s.lib;SiCKL.lib;QuickBoltzmannNative.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)/../../extern/SiCKL/lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>freeglut_static.lib;glew32s.lib;SiCKL.lib;OMLT.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

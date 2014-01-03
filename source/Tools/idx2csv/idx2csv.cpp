@@ -2,6 +2,7 @@
 #include <stdint.h>
 
 #include <IDX.hpp>
+using namespace OMLT;
 
 const char* Usage = 
 	"Prints the given IDX data file to a CSV file.\n"
