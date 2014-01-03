@@ -807,9 +807,18 @@ namespace QuickBoltzmann
 			Thread::Sleep(16);
 		}
 
-		assert(weights->Count == hidden_count || weights->Count == 0);
-
-		return weights->Count == hidden_count;
+		if(cd)
+		{
+			assert(weights->Count == (hidden_count+1) || weights->Count == 0);
+			return weights->Count == (hidden_count+1);
+		}
+		else if(bp)
+		{
+			// no bias for auto encoder currently
+			assert(weights->Count == hidden_count || weights->Count == 0);
+			return weights->Count == hidden_count;
+		}
+		
 	}
 
 #pragma region Properties
