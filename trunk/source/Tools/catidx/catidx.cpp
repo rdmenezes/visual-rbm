@@ -1,4 +1,5 @@
-#include "IDX.hpp"
+#include <IDX.hpp>
+using namespace OMLT;
 
 const char* Usage = 
 	"Concatenates together multiple IDX files with identical row dimensions\n"

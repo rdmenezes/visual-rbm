@@ -1,11 +1,14 @@
-#include "RBMTrainer.h"
-#include "IDX.hpp"
-#include "RBM.hpp"
-
-
 #include <stdint.h>
 #include <stdio.h>
 #include <vector>
+
+// OMLT
+#include <IDX.hpp>
+#include <DataAtlas.h>
+#include <RestrictedBoltzmannMachine.h>
+#include <ContrastiveDivergence.h>
+using namespace OMLT;
+
 // idx file to train on
 IDX* training_data = NULL;
 // idx file to validate with (optional)
@@ -14,8 +17,8 @@ IDX* validation_data = NULL;
 // training parameters
 struct
 {
-	Model model;
-	UnitType visible_type;
+	ModelType model;
+	ActivationFunction_t visible_type;
 	uint32_t hiddden_units;
 	float learning_rate;
 	float momentum;
@@ -31,7 +34,7 @@ struct
 // imported rbm to start with (optional)
 RBM* imported = NULL;
 // file to save rbm to
-char* export_file = NULL;
+FILE* export_file = NULL;
 // in quiet mode, reconstruction error and free energy are not calculated
 bool quiet = false;
 
@@ -195,18 +198,18 @@ bool load_parameters(const char* filename)
 	}
 	else
 	{
-		parameters.model = Model_RBM;
+		parameters.model = MT_RBM;
 	}
 
 	if(values[VisibleType])
 	{
 		if(strcmp(values[VisibleType], "binary") == 0)
 		{
-			parameters.visible_type = Binary;
+			parameters.visible_type = ActivationFunction::Sigmoid;
 		}
 		else if(strcmp(values[VisibleType], "gaussian") == 0)
 		{
-			parameters.visible_type = Gaussian;
+			parameters.visible_type = ActivationFunction::Linear;
 		}
 		else
 		{
@@ -216,7 +219,7 @@ bool load_parameters(const char* filename)
 	}
 	else
 	{
-		parameters.visible_type = Binary;
+		parameters.visible_type = ActivationFunction::Sigmoid;
 	}
 
 	if(values[HiddenUnits])
@@ -521,19 +524,42 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	// get rbm to start from
 	if(arguments[Import])
 	{
-		imported = RBM::Load(arguments[Import]);
-		if(imported == NULL)
+		FILE* f = fopen(arguments[Import], "rb");
+		if(f)
 		{
-			printf("Problem loading RBM file:\n  \"%s\"\n", arguments[Import]);
+			std::stringstream ss;
+			for(int32_t b = fgetc(f); b >= 0; b = fgetc(f))
+			{
+				ss << (uint8_t)b;
+			}
+			std::string json = ss.str();
+			fclose(f);
+			
+			imported = RBM::FromJSON(json);
+			if(imported == nullptr)
+			{
+				printf("Problem parsing RBM JSON in:\n  \"%s\"\n", arguments[Import]);
+				return Error;
+			}
+		}
+		else
+		{
+			printf("Problem opening file:\n  \"%s\"\n", arguments[Import]);
 			return Error;
 		}
 	}
 
 	// filename to export to
-	export_file = arguments[Export];
-	if(export_file == NULL)
+	if(arguments[Export] == NULL)
 	{
 		printf("No export filename given for RBM\n");
+		return Error;
+	}
+
+	export_file = fopen(arguments[Export], "wb");
+	if(export_file == nullptr)
+	{
+		printf("Could not open \"%s\" for writing\n", arguments[Export]);
 		return Error;
 	}
 
@@ -544,7 +570,10 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	return Success;
 }
 
-RBMTrainer* trainer = NULL;
+ContrastiveDivergence* trainer = nullptr;
+
+DataAtlas* training_atlas = nullptr;
+DataAtlas* validation_atlas = nullptr;
 
 int main(int argc, char** argv)
 {
@@ -559,8 +588,8 @@ int main(int argc, char** argv)
 		{		
 			// print out the used training parameters
 			printf("Training Parameters:\n");
-			printf(" Model = %s\n", parameters.model == Model_RBM ? "RBM" : "SRBM");
-			printf(" Visible Type = %s\n", parameters.visible_type== Binary ? "Binary" : "Gaussian");
+			printf(" Model = %s\n", parameters.model == MT_RBM ? "RBM" : "AutoEncoder");
+			printf(" Visible Type = %s\n", ActivationFunctionNames[parameters.visible_type]);
 			printf(" Hidden Units = %u\n", parameters.hiddden_units);
 			printf(" Learning Rate = %f\n", parameters.learning_rate);
 			printf(" Momentum = %f\n", parameters.momentum);
@@ -572,62 +601,52 @@ int main(int argc, char** argv)
 			printf(" Training Epochs = %u\n", parameters.epochs);
 			
 			fflush(stdout);
-			
-			trainer = new RBMTrainer();
-			if(trainer->GetLastErrorCode() == RequiredOpenGLVersionUnsupported)
+
+			if(!SiCKL::OpenGLRuntime::Initialize())
 			{
-				printf("OpenGL version 3.3 is required to run this program\n");
+				printf("Could not initialize OpenGL runtime; support for OpenGL 3.3 required\n");
 				goto ERROR;
 			}
 
-				trainer->SetVisibleType(parameters.visible_type);
-				trainer->SetHiddenCount(parameters.hiddden_units);
-				trainer->SetLearningRate(parameters.learning_rate);
-				trainer->SetMomentum(parameters.momentum);
-				trainer->SetL1Regularization(parameters.l1_regularization);
-				trainer->SetL2Regularization(parameters.l2_regularization);
-				trainer->SetVisibleDropout(parameters.visible_dropout_probability);
-				trainer->SetHiddenDropout(parameters.hidden_dropout_probability);
-				trainer->SetMinibatchSize(parameters.minibatch_size);
-			
-			// load the training data
-			trainer->SetTrainingData(training_data);
-
-			if(validation_data && validation_data->GetRowLength() != training_data->GetRowLength())
+			training_atlas = new DataAtlas(training_data);
+			training_atlas->Initialize(parameters.minibatch_size, 512);
+			if(validation_data)
 			{
-				printf("Validation data has different number of visible inputs as training data");
-				goto ERROR;
+				validation_atlas = new DataAtlas(validation_data);
+				validation_atlas->Initialize(parameters.minibatch_size, 512);
 			}
 
-			// load the validation data
-			trainer->SetValidationData(validation_data);
 
-			// load rbm
-			if(imported != NULL)
+
+			if(imported)
 			{
-				trainer->SetRBM(imported);
-				if(trainer->GetLastErrorCode() == ImportedRBMHasIncorrectNumberOfVisibleInputs)
+				trainer = new CD(imported, parameters.minibatch_size);
+			}
+			else
+			{
+				CD::ModelConfig model_config;
 				{
-					printf("Imported RBM has different number of visible inputs as training data");
-					goto ERROR;
+					model_config.VisibleUnits = training_data->GetRowLength();
+					model_config.VisibleType = parameters.visible_type;
+					model_config.HiddenUnits = parameters.hiddden_units;
+					// hard coded for now
+					model_config.HiddenType = ActivationFunction::Sigmoid;
 				}
+				trainer = new CD(model_config, parameters.minibatch_size);
 			}
+
+			CD::TrainingConfig train_config;
+			{
+				train_config.LearningRate = parameters.learning_rate;
+				train_config.Momentum = parameters.momentum;
+				train_config.L1Regularization = parameters.l1_regularization;
+				train_config.L2Regularization = parameters.l2_regularization;
+				train_config.VisibleDropout = parameters.visible_dropout_probability;
+				train_config.HiddenDropout = parameters.hidden_dropout_probability;
+			}
+			trainer->SetTrainingConfig(train_config);
 
 			uint64_t total_iterations = 0;
-		
-
-			if(!trainer->Initialize())
-			{
-				if(trainer->GetLastErrorCode() == BinaryDataOutsideZeroOne)
-				{
-					printf("Training data has average values outside the range [0,1] when visible units are set to binary\n");
-				}
-				else
-				{
-					printf("Other initialization error\n");
-				}
-				goto ERROR;
-			}
 
 			if (!quiet)
 			{
@@ -641,15 +660,19 @@ int main(int argc, char** argv)
 				}
 			}
 
+			SiCKL::OpenGLBuffer2D train_example;
+			SiCKL::OpenGLBuffer2D validation_example;
 
 			while(parameters.epochs)
 			{
-				trainer->Train();
+				training_atlas->Next(train_example);
+
+				trainer->Train(train_example);
 
 				total_iterations++;
 
 				// decrement
-				if((total_iterations % trainer->GetMinibatches()) == 0)
+				if((total_iterations % training_atlas->GetTotalBatches()) == 0)
 				{
 					--parameters.epochs;
 				}
@@ -659,10 +682,12 @@ int main(int argc, char** argv)
 				{
 					if((total_iterations % parameters.print_interval) == 0)
 					{
-						float train_error = trainer->GetReconstructionError();
-						if(validation_data)
+						float train_error = trainer->GetLastReconstructionError();
+						if(validation_atlas)
 						{
-							float valid_error = trainer->GetValidationReconstructionError();
+							validation_atlas->Next(validation_example);
+							
+							float valid_error = trainer->GetReconstructionError(validation_example);
 
 							printf("%llu; %f; %f\n", total_iterations, train_error, valid_error);
 						}
@@ -678,8 +703,13 @@ int main(int argc, char** argv)
 		
 			printf("Exporting trained RBM to \"%s\"\n", export_file);
 			fflush(stdout);
-			RBM* rbm = trainer->GetRBM();
-			rbm->Save(export_file);
+
+			RBM* rbm = trainer->GetRestrictedBoltzmannMachine();
+			std::string rbm_json = rbm->ToJSON();
+			fwrite(rbm_json.c_str(), rbm_json.size(), sizeof(uint8_t), export_file);
+			fflush(export_file);
+			fclose(export_file);
+
 			delete rbm;
 			goto FINISHED;
 		}
