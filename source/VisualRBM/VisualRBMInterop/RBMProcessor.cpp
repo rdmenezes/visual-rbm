@@ -479,7 +479,7 @@ namespace QuickBoltzmann
 						{
 							switch(model.type)
 							{
-							case OMLT::MT_RBM:
+							case OMLT::ModelType::RBM:
 								{
 									OMLT::RBM* rbm = model.rbm;
 									assert(rbm != nullptr);
@@ -502,7 +502,7 @@ namespace QuickBoltzmann
 									delete rbm;
 								}
 								break;
-							case OMLT::MT_MLP:
+							case OMLT::ModelType::MLP:
 								{
 									OMLT::MLP* mlp = model.mlp;
 									if(mlp->LayerCount() == 2)

@@ -17,7 +17,7 @@ IDX* validation_data = NULL;
 // training parameters
 struct
 {
-	ModelType model;
+	ModelType_t model;
 	ActivationFunction_t visible_type;
 	uint32_t hiddden_units;
 	float learning_rate;
@@ -198,7 +198,7 @@ bool load_parameters(const char* filename)
 	}
 	else
 	{
-		parameters.model = MT_RBM;
+		parameters.model = ModelType::RBM;
 	}
 
 	if(values[VisibleType])
@@ -588,7 +588,7 @@ int main(int argc, char** argv)
 		{		
 			// print out the used training parameters
 			printf("Training Parameters:\n");
-			printf(" Model = %s\n", parameters.model == MT_RBM ? "RBM" : "AutoEncoder");
+			printf(" Model = %s\n", parameters.model == ModelType::RBM ? "RBM" : "AutoEncoder");
 			printf(" Visible Type = %s\n", ActivationFunctionNames[parameters.visible_type]);
 			printf(" Hidden Units = %u\n", parameters.hiddden_units);
 			printf(" Learning Rate = %f\n", parameters.learning_rate);
