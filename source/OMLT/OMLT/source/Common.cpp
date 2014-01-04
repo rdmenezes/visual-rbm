@@ -21,7 +21,7 @@ namespace OMLT
 	bool FromJSON(const std::string& in_json, Model& out_model)
 	{
 		bool result = false;
-		out_model.type = MT_Invalid;
+		out_model.type = ModelType::Invalid;
 		out_model.ptr = nullptr;
 
 		cJSON* cj_root = cJSON_Parse(in_json.c_str());
@@ -33,7 +33,7 @@ namespace OMLT
 				RBM* rbm = RBM::FromJSON(cj_root);
 				if(rbm)
 				{
-					out_model.type = MT_RBM;
+					out_model.type = ModelType::RBM;
 					out_model.rbm = rbm;
 					result = true;
 				}
@@ -43,7 +43,7 @@ namespace OMLT
 				MLP* mlp = MLP::FromJSON(cj_root);
 				if(mlp)
 				{
-					out_model.type = MT_MLP;
+					out_model.type = ModelType::MLP;
 					out_model.mlp = mlp;
 					result = true;
 				}

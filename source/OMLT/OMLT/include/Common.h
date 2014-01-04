@@ -6,30 +6,21 @@
 // extern
 #include <SiCKL.h>
 
+
+#include "Enums.h"
+
 namespace OMLT
 {
-	// a general parsing method
-	enum ModelType
-	{
-		MT_Invalid = -1,
-		MT_NotSet = 0,
-		MT_MultilayerPerceptron,
-		MT_RestrictedBoltzmannMachine,
-
-		MT_MLP = MT_MultilayerPerceptron,
-		MT_RBM = MT_RestrictedBoltzmannMachine,
-	};
-
 	struct Model
 	{
-		ModelType type;
+		ModelType_t type;
 		union
 		{
 			void* ptr;
 			class MultilayerPerceptron* mlp;
 			class RestrictedBoltzmannMachine* rbm;
 		};
-		Model() : type(MT_NotSet), ptr(nullptr) {}
+		Model() : type(ModelType::NotSet), ptr(nullptr) {}
 	};
 
 	// true on successful parse, false on failure
