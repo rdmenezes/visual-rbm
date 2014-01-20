@@ -44,6 +44,8 @@ namespace QuickBoltzmann
 	static TrainingSchedule<ContrastiveDivergence>* cd_schedule = nullptr;
 	static RBM* loaded_rbm = nullptr;
 
+	static class BaseTrainer* trainer = nullptr;
+
 	// various model parameters
 	static ModelType model_type = ModelType::RBM;
 	static uint32_t visible_count = 0;
@@ -91,6 +93,7 @@ namespace QuickBoltzmann
 		return ss.str();
 	}
 
+#if 0
 	// returns true if training is finished
 	template<typename T>
 	static bool UpdateSchedule(OMLT::TrainingSchedule<T>* schedule, T* trainer)
@@ -109,6 +112,7 @@ namespace QuickBoltzmann
 		}
 		return false;
 	}
+
 
 	void LogConfig(const CD::TrainingConfig& train_config)
 	{
@@ -177,8 +181,33 @@ namespace QuickBoltzmann
 		bool training_complete = UpdateSchedule(cd_schedule, cd);
 		assert(training_complete == false);
 	}
+#endif
+	void RBMProcessor::RescaleDiffs(float* buffer, uint32_t count, UnitType func)
+	{
+		// this constant will have sigmoid range from 0 to 1
+		const float diff_scale_factor = logf(127.0f) + logf(2.0f);
 
-	void RescaleActivations(float* buffer, uint32_t count, UnitType type)
+		float max_val;
+		switch(visible_type)
+		{
+		case UnitType::Sigmoid:
+			max_val = 1.0f;
+			break;
+		case UnitType::Linear:
+			max_val = 6.0f;
+			break;
+		case UnitType::RectifiedLinear:
+			max_val = 3.0f;
+			break;
+		}
+
+		for(uint32_t k = 0; k < count; k++)
+		{
+			buffer[k] = sigmoid( diff_scale_factor / max_val *  (buffer[k]));
+		}
+	}
+
+	void RBMProcessor::RescaleActivations(float* buffer, uint32_t count, UnitType type)
 	{
 		switch(type)
 		{
@@ -202,17 +231,8 @@ namespace QuickBoltzmann
 		}
 	}
 
-	void RescaleWeights(float* buffer, uint32_t count)
+	void RBMProcessor::RescaleWeights(float* buffer, float stddev, uint32_t count)
 	{
-		float stddev = 0.0f;
-		for(uint32_t k = 0; k < count; k++)
-		{
-			const float val = buffer[k];
-			stddev += val * val;
-		}
-		stddev /= count;
-		stddev = std::sqrtf(stddev);
-
 		for(uint32_t k = 0; k < count; k++)
 		{
 			buffer[k] = sigmoid(buffer[k] / (3.0f * stddev));
@@ -231,6 +251,361 @@ namespace QuickBoltzmann
 		return Math::Min(error, max_val);
 	}
 
+	class BaseTrainer
+	{
+	public:
+		virtual ~BaseTrainer() {};
+		virtual void HandleStartMsg(Message^ msg) = 0;
+		virtual void HandleStopMsg(Message^ msg) = 0;
+		virtual void HandleGetVisibleMsg(Message^ msg) = 0;
+		virtual void HandleGetHiddenMsg(Message^ msg) = 0;
+		virtual void HandleGetWeightsMsg(Message^ msg) = 0;
+		virtual void HandleExportModel(Stream^ s) = 0;
+		virtual void HandleImportModel(OMLT::Model& model) = 0;
+		virtual void HandleLoadScheduleMsg(Message^ msg) = 0;
+		virtual float Train(OpenGLBuffer2D& train_example) = 0;
+		virtual float Validation(OpenGLBuffer2D& validation_example) = 0;
+		// returns true if training schedule is complete
+		virtual bool HandleEpochCompleted() = 0;
+
+	};
+
+	class RBMTrainer : public BaseTrainer
+	{
+	public:
+		RBMTrainer() : _cd(nullptr), _schedule(nullptr), _loaded_rbm(nullptr) {}
+
+		virtual ~RBMTrainer()
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Stopped);
+			SAFE_DELETE(_cd);
+			SAFE_DELETE(_schedule);
+			SAFE_DELETE(_loaded_rbm);
+		}
+
+		virtual void HandleStartMsg( Message^ msg ) 
+		{
+			switch(currentState)
+			{
+			case RBMProcessor::RBMProcessorState::Paused:
+				{
+					assert(_cd != nullptr);
+					assert(_schedule != nullptr);
+
+					SAFE_DELETE(_schedule);
+					build_schedule();
+				
+					currentState = RBMProcessor::RBMProcessorState::Running;
+				}
+				break;
+			case RBMProcessor::RBMProcessorState::Stopped:
+				{
+					assert(_cd == nullptr);
+					assert(_schedule == nullptr);
+
+					build_schedule();
+					build_cd();
+
+					currentState = RBMProcessor::RBMProcessorState::Running;
+				}
+				break;
+			case RBMProcessor::RBMProcessorState::ScheduleLoaded:
+				{
+					assert(_schedule != nullptr);
+					assert(_cd != nullptr);
+
+					currentState = RBMProcessor::RBMProcessorState::ScheduleRunning;
+				}
+				break;
+			default:
+				assert(false);
+			}
+
+			assert(_schedule != nullptr);
+
+			_schedule->StartTraining();
+			// verify we have a valid constructed schedule
+			assert(_schedule->TrainingComplete() == false);
+
+			// populate CD with our new training parameters
+			CD::TrainingConfig config;
+			bool populated = _schedule->GetTrainingConfig(config);
+			assert(populated == true);
+
+			// update CD with our new training parameters
+			_cd->SetTrainingConfig(config);
+		}
+
+		virtual void HandleStopMsg( Message^ msg ) 
+		{
+			SAFE_DELETE(_cd);
+			SAFE_DELETE(_schedule);
+			currentState = RBMProcessor::RBMProcessorState::Stopped;
+		}
+
+		virtual void HandleGetVisibleMsg( Message^ msg ) 
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+
+			assert(_cd != nullptr);
+
+			// allocate buffer space if need be
+			const uint32_t visible_size = visible_count * minibatch_size;
+			visible_buffer.Acquire(visible_size);
+			visible_recon_buffer.Acquire(visible_size);
+			visible_diff_buffer.Acquire(visible_size);
+
+			float* visible_ptr = (float*)visible_buffer;
+			float* recon_ptr = (float*)visible_recon_buffer;
+			float* diff_ptr = (float*)visible_diff_buffer;
+
+			_cd->DumpLastVisible(&visible_ptr, &recon_ptr);
+
+			for(uint32_t k = 0;  k < visible_count * minibatch_size; k++)
+			{
+				diff_ptr[k] = recon_ptr[k] - visible_ptr[k];
+			}
+
+			List<IntPtr>^ visible_list = dynamic_cast<List<IntPtr>^>(msg["visible"]);
+			List<IntPtr>^ recon_list = dynamic_cast<List<IntPtr>^>(msg["reconstruction"]);
+			List<IntPtr>^ diff_list = dynamic_cast<List<IntPtr>^>(msg["diffs"]);
+
+			for(uint32_t k = 0; k < minibatch_size; k++)
+			{
+				visible_list->Add(IntPtr((float*)visible_buffer + k * visible_count));
+				recon_list->Add(IntPtr((float*)visible_recon_buffer + k * visible_count));
+				diff_list->Add(IntPtr((float*)visible_diff_buffer + k * visible_count));
+			}
+		}
+
+		virtual void HandleGetHiddenMsg( Message^ msg ) 
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+
+			assert(_cd != nullptr);
+
+			// allocate buffer space if need be
+			const uint32_t hidden_size = hidden_count * minibatch_size;
+			hidden_buffer.Acquire(hidden_size);
+			float* hidden_ptr = (float*)hidden_buffer;
+
+			_cd->DumpLastHidden(&hidden_ptr);
+
+			List<IntPtr>^ hidden_list = dynamic_cast<List<IntPtr>^>(msg["hidden"]);
+			for(uint32_t k = 0; k < minibatch_size; k++)
+			{
+				hidden_list->Add(IntPtr((float*)hidden_buffer + k * hidden_count));
+			}
+		}
+
+		virtual void HandleGetWeightsMsg( Message^ msg ) 
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+
+			assert(_cd != nullptr);
+
+			// allocate buffer space if need be
+			const uint32_t weight_size = (hidden_count + 1) * (visible_count + 1);
+			weight_buffer.Acquire(weight_size);
+
+			float* weight_ptr = (float*)weight_buffer;
+
+			_cd->DumpLastWeights(&weight_ptr);
+
+			List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
+			for(uint32_t j = 0; j <= hidden_count; j++)
+			{
+				weight_list->Add(IntPtr(weight_ptr + 1 + (visible_count + 1) * j));
+			}
+		}
+
+		virtual void HandleExportModel(Stream^ s)
+		{
+			assert(_cd != nullptr);
+			
+			RBM* rbm = _cd->GetRestrictedBoltzmannMachine();
+			assert(rbm != nullptr);
+			std::string model_json = rbm->ToJSON();
+
+			for(size_t k = 0; k < model_json.size(); k++)
+			{
+				s->WriteByte(model_json[k]);
+			}
+		}
+
+		virtual void HandleImportModel(OMLT::Model& model)
+		{
+			assert(model.type == OMLT::ModelType::RBM);
+			SAFE_DELETE(_loaded_rbm);
+			_loaded_rbm = model.rbm;
+		}
+
+		virtual void HandleLoadScheduleMsg( Message^ msg)
+		{
+			IntPtr ptr = (IntPtr)msg["schedule"];
+			assert(ptr.ToPointer() != nullptr);
+			
+			SAFE_DELETE(_schedule);
+			
+			_schedule = (TrainingSchedule<CD>*)ptr.ToPointer();
+
+			_schedule->StartTraining();
+
+			CD::ModelConfig model_config = _schedule->GetModelConfig();
+			model_config.VisibleUnits = visible_count;
+			model_config_to_ui(model_config);
+
+			CD::TrainingConfig train_config;
+			bool populated = _schedule->GetTrainingConfig(train_config);
+			assert(populated == true);
+			train_config_to_ui(train_config);
+
+			minibatches_to_ui(_schedule->GetMinibatchSize());
+			epochs_to_ui(_schedule->GetEpochs());
+
+			build_cd();
+
+			currentState = RBMProcessor::RBMProcessorState::ScheduleLoaded;
+		}
+
+		virtual float Train( OpenGLBuffer2D& train_example ) 
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			
+			_cd->Train(train_example);
+			return _cd->GetLastReconstructionError();
+		}
+
+		virtual float Validation( OpenGLBuffer2D& validation_example ) 
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+
+			return _cd->GetReconstructionError(validation_example);
+		}
+
+
+		virtual bool HandleEpochCompleted()
+		{
+			// done with epochs?
+			if(_schedule->NextEpoch())
+			{
+				// done with training?
+				if(_schedule->TrainingComplete())
+				{
+					return true;
+				}
+
+				// new training config to use
+				CD::TrainingConfig train_config;
+				bool populated = _schedule->GetTrainingConfig(train_config);
+				assert(populated);
+
+				_cd->SetTrainingConfig(train_config);
+
+				// now update our UI
+				assert(populated == true);
+				train_config_to_ui(train_config);
+
+				epochs_to_ui(_schedule->GetEpochs());
+
+			}
+			return false;
+		}
+	private:
+
+		void build_cd()
+		{
+			assert(_cd == nullptr);
+			assert(_schedule != nullptr);
+
+			CD::ModelConfig model_config = _schedule->GetModelConfig();
+			model_config.VisibleUnits = visible_count;
+			assert(_schedule->GetMinibatchSize() == minibatch_size);
+
+			RBMProcessor::Model = ModelType::RBM;
+			RBMProcessor::VisibleType = (UnitType)model_config.VisibleType;
+			RBMProcessor::HiddenType = (UnitType)model_config.HiddenType;
+			RBMProcessor::HiddenUnits = model_config.HiddenUnits;
+
+			if(_loaded_rbm == nullptr)
+			{
+				_cd = new ContrastiveDivergence(model_config, _schedule->GetMinibatchSize());
+			}
+			else
+			{
+				assert(_loaded_rbm->visible_count == visible_count);
+				_cd = new ContrastiveDivergence(_loaded_rbm, _schedule->GetMinibatchSize());
+				SAFE_DELETE(_loaded_rbm);
+			}
+		}
+
+		void build_schedule()
+		{
+			assert(_schedule == nullptr);
+			CD::ModelConfig model_config;
+			{
+				model_config.VisibleUnits = visible_count;
+				model_config.HiddenUnits = hidden_count;
+				model_config.VisibleType = (ActivationFunction_t)visible_type;
+				model_config.HiddenType = (ActivationFunction_t)hidden_type;
+			}
+			CD::TrainingConfig train_config;
+			{
+				train_config.LearningRate = learning_rate;
+				train_config.Momentum = momentum;
+				train_config.L1Regularization = l1;
+				train_config.L2Regularization = l2;
+				train_config.VisibleDropout = visible_dropout;
+				train_config.HiddenDropout = hidden_dropout;
+			}
+
+			_schedule = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size);
+			_schedule->AddTrainingConfig(train_config, epochs);
+		}
+
+		void model_config_to_ui(const CD::ModelConfig& model_config)
+		{
+			RBMProcessor::Model = ModelType::RBM;
+			RBMProcessor::VisibleType = (UnitType)model_config.VisibleType;
+			RBMProcessor::HiddenType = (UnitType)model_config.HiddenType;
+			RBMProcessor::HiddenUnits = model_config.HiddenUnits;
+		}
+
+		void train_config_to_ui(const CD::TrainingConfig& train_config)
+		{
+			RBMProcessor::LearningRate = train_config.LearningRate;
+			RBMProcessor::Momentum = train_config.Momentum;
+			RBMProcessor::L1Regularization = train_config.L1Regularization;
+			RBMProcessor::L2Regularization = train_config.L2Regularization;
+			RBMProcessor::VisibleDropout = train_config.VisibleDropout;
+			RBMProcessor::HiddenDropout = train_config.HiddenDropout;
+		}
+
+		void epochs_to_ui(uint32_t epochs)
+		{
+			RBMProcessor::Epochs = epochs;
+		}
+
+		void minibatches_to_ui(uint32_t minibatches)
+		{
+			RBMProcessor::MinibatchSize = minibatches;
+		}
+
+		ContrastiveDivergence* _cd;
+		TrainingSchedule<ContrastiveDivergence>* _schedule;
+		RBM* _loaded_rbm;
+	};
+
+	class AETrainer
+	{
+
+	};
+
 	void RBMProcessor::Run()
 	{
 		if(SiCKL::OpenGLRuntime::Initialize() == false)
@@ -245,7 +620,10 @@ namespace QuickBoltzmann
 		_message_queue = gcnew MessageQueue();
 
 		// update state to alert GUI we can go
-		currentState = RBMProcessorState::Ready;
+		currentState = RBMProcessorState::Stopped;
+		// start with an RBMTrainer by default
+		trainer = new RBMTrainer();
+
 		while(true)
 		{
 			Message^ msg = _message_queue->Dequeue();
@@ -285,6 +663,8 @@ namespace QuickBoltzmann
 							}
 						}
 
+						trainer->HandleStartMsg(msg);
+#if 0
 						switch(model_type)
 						{
 						case ModelType::RBM:
@@ -307,7 +687,6 @@ namespace QuickBoltzmann
 						case ModelType::AutoEncoder:
 							{
 								assert(false);
-#if 0
 								if(bp == nullptr)
 								{
 									BP::ModelConfig model_config;
@@ -346,24 +725,27 @@ namespace QuickBoltzmann
 								bp->SetTrainingConfig(train_config);
 								bp->SetInputDropoutProbability(0, visible_dropout);
 								bp->SetInputDropoutProbability(1, hidden_dropout);
-#endif
 							}
 							break;
 						}
-
+#endif
 						Action^ callback = dynamic_cast<Action^>(msg["callback"]);
 						if(callback != nullptr)
 						{
 							callback();
 						}
-
-						currentState = RBMProcessorState::Training;
+#if 0
+						currentState = RBMProcessorState::Running;
+#endif
 					}
 					break;
 				case MessageType::Pause:
+					assert(currentState == RBMProcessorState::Running ||
+					       currentState == RBMProcessorState::ScheduleRunning);
 					currentState = RBMProcessorState::Paused;
 					break;
 				case MessageType::Stop:
+#if 0
 					SAFE_DELETE(cd);
 					SAFE_DELETE(bp);
 					SAFE_DELETE(cd_schedule);
@@ -371,10 +753,15 @@ namespace QuickBoltzmann
 					epochs = 100;
 					iterations = 0;
 					total_iterations = 0;
-					currentState = RBMProcessorState::Ready;
-					
+					currentState = RBMProcessorState::Stopped;
+#endif
+					iterations = 0;
+					total_iterations = 0;
+					Epochs = 100;
+					trainer->HandleStopMsg(msg);
 					break;
 				case MessageType::GetVisible:
+#if 0
 					if(cd || bp)
 					{
 						// allocate space for buffers if necessary
@@ -446,8 +833,14 @@ namespace QuickBoltzmann
 							diff_list->Add(IntPtr((float*)visible_diff_buffer + k * visible_count));
 						}
 					}
+#endif
+					if(currentState == RBMProcessor::RBMProcessorState::Running || currentState == RBMProcessor::RBMProcessorState::ScheduleRunning)
+					{
+						trainer->HandleGetVisibleMsg(msg);
+					}
 					break;
 				case MessageType::GetHidden:
+#if 0
 					if(cd || bp)
 					{
 						const uint32_t hidden_size = hidden_count * minibatch_size;
@@ -476,8 +869,14 @@ namespace QuickBoltzmann
 							hidden_list->Add(IntPtr((float*)hidden_buffer + k * hidden_count));
 						}
 					}
+#endif
+					if(currentState == RBMProcessor::RBMProcessorState::Running || currentState == RBMProcessor::RBMProcessorState::ScheduleRunning)
+					{
+						trainer->HandleGetHiddenMsg(msg);
+					}
 					break;
 				case MessageType::GetWeights:
+#if 0
 					if(cd || bp)
 					{
 						List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
@@ -518,11 +917,16 @@ namespace QuickBoltzmann
 							break;
 						}
 					}
+#endif
+					if(currentState == RBMProcessor::RBMProcessorState::Running || currentState == RBMProcessor::RBMProcessorState::ScheduleRunning)
+					{
+						trainer->HandleGetWeightsMsg(msg);
+					}
 					break;
 				case MessageType::ExportModel:
 					{
+#if 0
 						Stream^ fs = (Stream^)msg["output_stream"];
-
 						std::string model_json;
 
 						msg["saved"] = false;
@@ -550,6 +954,18 @@ namespace QuickBoltzmann
 
 						fs->Flush();
 						fs->Close();
+
+						msg["saved"] = true;
+#endif
+						msg["saved"] = false;
+
+						Stream^ fs = (Stream^)msg["output_stream"];
+
+						trainer->HandleExportModel(fs);
+
+						fs->Flush();
+						fs->Close();
+
 						msg["saved"] = true;
 					}
 					break;
@@ -567,6 +983,19 @@ namespace QuickBoltzmann
 							switch(model.type)
 							{
 							case OMLT::ModelType::RBM:
+								RBMProcessor::Model = ModelType::RBM;
+								break;
+							case OMLT::ModelType::MLP:
+								assert(false);
+								break;
+							}
+
+							trainer->HandleImportModel(model);
+							msg["loaded"] = true;
+#if 0
+							switch(model.type)
+							{
+							case OMLT::ModelType::RBM:
 								{
 									assert(model.rbm != nullptr);
 									delete loaded_rbm;
@@ -577,7 +1006,6 @@ namespace QuickBoltzmann
 								break;
 							case OMLT::ModelType::MLP:
 								{
-#if 0
 									MLP* mlp = model.mlp;
 									if(mlp->LayerCount() == 2)
 									{
@@ -599,32 +1027,36 @@ namespace QuickBoltzmann
 										}
 									}
 									delete mlp;
-#endif
 									assert(false);
 								}
 								break;
 							}
+#endif
 						}
 					}
 					break;
-				case MessageType::LoadTrainingSchedule:
+				case MessageType::LoadSchedule:
 					{
 						Stream^ fs = (Stream^)msg["input_stream"];
 						std::string schedule_json = LoadFile(fs);
 
+						msg["loaded"] = false;
+
 						// see if we can parse it as CD training schedule
-						TrainingSchedule<CD>* schedule = TrainingSchedule<CD>::FromJSON(schedule_json);
-						if(schedule != nullptr)
+						if(TrainingSchedule<CD>* schedule = TrainingSchedule<CD>::FromJSON(schedule_json))
 						{
+#if 0
 							delete cd_schedule;
 							cd_schedule = schedule;
 
 							currentState = RBMProcessorState::ScheduleLoaded;
 							msg["loaded"] = true;
-						}
-						else
-						{
-							msg["loaded"] = false;
+#endif
+							msg["schedule"] = IntPtr(schedule);
+							
+							RBMProcessor::Model = ModelType::RBM;
+							trainer->HandleLoadScheduleMsg(msg);
+							msg["loaded"] = true;
 						}
 					}
 					break;
@@ -658,6 +1090,7 @@ namespace QuickBoltzmann
 			switch(currentState)
 			{
 			case RBMProcessorState::ScheduleLoaded:
+#if 0
 				switch(model_type)
 				{
 				case ModelType::RBM:
@@ -670,29 +1103,34 @@ namespace QuickBoltzmann
 					assert(false);
 					break;
 				}
+#endif
 				break;
-			case RBMProcessorState::Ready:
+			case RBMProcessorState::Stopped:
 			case RBMProcessorState::Paused:
 				Thread::Sleep(16);
 				break;
-			case RBMProcessorState::Training:
+			case RBMProcessorState::Running:
+			case RBMProcessorState::ScheduleRunning:
 				{
 					assert(training_data != nullptr);
-
-					// get next training example
-					training_data->Next(training_example);
-					if(validation_data != nullptr)
-					{
-						validation_data->Next(validation_example);
-					}
 
 					float training_error = -1.0f;
 					float validation_error = -1.0f;
 
-					// increment counters
+					// get next training example
+					training_data->Next(training_example);
+					training_error = trainer->Train(training_example);
+					if(validation_data != nullptr)
+					{
+						validation_data->Next(validation_example);
+						validation_error = trainer->Validation(validation_example);
+					}
+
+					// increment iteration counters
 					iterations++;
 					total_iterations++;
 
+#if 0
 					switch(model_type)
 					{
 					case ModelType::RBM:
@@ -721,6 +1159,7 @@ namespace QuickBoltzmann
 							}
 						}
 					}
+#endif
 
 					training_error = CapError(training_error);
 					validation_error = CapError(validation_error);
@@ -731,6 +1170,12 @@ namespace QuickBoltzmann
 					if(iterations == 0)
 					{
 						EpochCompleted(epochs--);
+						if(trainer->HandleEpochCompleted())
+						{
+							TrainingCompleted();
+							Pause();
+						}
+#if 0
 						switch(model_type)
 						{
 						case ModelType::RBM:
@@ -743,15 +1188,15 @@ namespace QuickBoltzmann
 							break;
 						case ModelType::AutoEncoder:
 							assert(false);
-#if 0
+
 							if(UpdateSchedule(bp_schedule, bp))
 							{
 								TrainingCompleted();
 								Pause();
 							}
-#endif
 							break;
 						}
+#endif
 					}
 				}
 				break;
@@ -860,7 +1305,7 @@ namespace QuickBoltzmann
 
 	bool RBMProcessor::LoadTrainingSchedule(Stream^ in_stream)
 	{
-		Message^ msg = gcnew Message(MessageType::LoadTrainingSchedule);
+		Message^ msg = gcnew Message(MessageType::LoadSchedule);
 		msg["input_stream"] = in_stream;
 
 		_message_queue->Enqueue(msg);
@@ -948,18 +1393,20 @@ namespace QuickBoltzmann
 			Thread::Sleep(16);
 		}
 
-		if(cd)
+		
+
+		if(model_type == QuickBoltzmann::ModelType::RBM)
 		{
 			assert(weights->Count == (hidden_count+1) || weights->Count == 0);
 			return weights->Count == (hidden_count+1);
 		}
-		else if(bp)
+		else if(model_type == QuickBoltzmann::ModelType::AutoEncoder)
 		{
 			// no bias for auto encoder currently
 			assert(weights->Count == hidden_count || weights->Count == 0);
 			return weights->Count == hidden_count;
 		}
-		
+
 	}
 
 #pragma region Properties
@@ -1045,6 +1492,18 @@ namespace QuickBoltzmann
 		{
 			model_type = in_type;
 			ModelTypeChanged(model_type);
+
+			switch(model_type)
+			{
+			case ModelType::RBM:
+				SAFE_DELETE(trainer);
+				trainer = new RBMTrainer();
+				break;
+			case ModelType::AutoEncoder:
+				SAFE_DELETE(trainer);
+				assert(false);
+				break;
+			}
 		}
 	}
 

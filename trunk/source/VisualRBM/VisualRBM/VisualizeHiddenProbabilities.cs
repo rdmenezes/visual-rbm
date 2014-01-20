@@ -53,6 +53,7 @@ namespace VisualRBM
 				for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
 				{
 					float* raw_hidden = (float*)hidden[k].ToPointer();
+					RBMProcessor.RescaleActivations(raw_hidden, (uint)RBMProcessor.HiddenUnits, RBMProcessor.HiddenType);
 					UpdateImageControlContents(k, PixelFormat.Lightness, (uint)RBMProcessor.HiddenUnits, raw_hidden);
 				}
 			}

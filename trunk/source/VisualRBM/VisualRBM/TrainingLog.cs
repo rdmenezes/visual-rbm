@@ -18,7 +18,7 @@ namespace VisualRBM
 
 		public void AddLog(String format, params object[] objects)
 		{
-			this.Invoke( new Action(() =>
+			this.BeginInvoke( new Action(() =>
 				{
 					logTextBox.AppendText(String.Format(format, objects) + "\r\n");
 				}));

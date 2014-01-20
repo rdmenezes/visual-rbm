@@ -52,11 +52,11 @@ namespace QuickBoltzmann
 
 		enum class RBMProcessorState
 		{
-			Unintialized, 
-			Ready, 
-			Training, 
+			Running, 
 			Paused,
+			Stopped, 
 			ScheduleLoaded,
+			ScheduleRunning,
 		};
 
 		/** Properties **/
@@ -178,6 +178,12 @@ namespace QuickBoltzmann
 		static bool GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs);
 		static bool GetCurrentHidden(List<IntPtr>^ hidden);
 		static bool GetCurrentWeights(List<IntPtr>^ weights);
+
+		// visualization methods
+		static void RescaleActivations(float* buffer, uint32_t count, UnitType type);
+		static void RescaleDiffs(float* buffer, uint32_t count, UnitType func);
+		static void RescaleWeights(float* buffer, float stddev, uint32_t count);
+		
 
 	private:
 		// our message queue

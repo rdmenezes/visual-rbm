@@ -373,64 +373,64 @@ namespace VisualRBM
 			// model parameters
 			RBMProcessor.ModelTypeChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { modelTypeComboBox.SelectedItem = (ModelType)obj; }));
+				this.BeginInvoke(new Action(() => { modelTypeComboBox.SelectedItem = (ModelType)obj; }));
 				_main_form.trainingLog.AddLog("Model Type = {0}", obj);
 			});
 			RBMProcessor.VisibleTypeChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { visibleTypeComboBox.SelectedItem = (UnitType)obj; }));
+				this.BeginInvoke(new Action(() => { visibleTypeComboBox.SelectedItem = (UnitType)obj; }));
 				_main_form.trainingLog.AddLog("Visible Type = {0}", obj);
 			});
 			RBMProcessor.HiddenTypeChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { hiddenTypeComboBox.SelectedItem = (UnitType)obj; }));
+				this.BeginInvoke(new Action(() => { hiddenTypeComboBox.SelectedItem = (UnitType)obj; }));
 				_main_form.trainingLog.AddLog("Hidden Type = {0}", obj);
 			});
 			RBMProcessor.HiddenUnitsChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { hiddenUnitsTextBox.Text = obj.ToString(); }));
+				this.BeginInvoke(new Action(() => { hiddenUnitsTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Hidden Units = {0}", obj);
 			});
 			// training parameters
 			RBMProcessor.LearningRateChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { learningRateTextBox.Text = obj.ToString(); }));
+				this.BeginInvoke(new Action(() => { learningRateTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Learning Rate = {0}", obj);
 			});
 			RBMProcessor.MomentumChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { momentumTextBox.Text = obj.ToString(); }));
+				this.BeginInvoke(new Action(() => { momentumTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Momentum = {0}", obj);
 			});
 			RBMProcessor.L1RegularizationChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { l1TextBox.Text = obj.ToString(); }));
+				this.BeginInvoke(new Action(() => { l1TextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("L1Regularization = {0}", obj);
 			});
 			RBMProcessor.L2RegularizationChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { l2TextBox.Text = obj.ToString(); }));
+				this.BeginInvoke(new Action(() => { l2TextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("L2Regularization = {0}", obj);
 			});
 			RBMProcessor.VisibleDropoutChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { visibleDropoutTextBox.Text = obj.ToString(); }));
+				this.BeginInvoke(new Action(() => { visibleDropoutTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Visible Dropout = {0}", obj);
 			});
 			RBMProcessor.HiddenDropoutChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { hiddenDropoutTextBox.Text = obj.ToString(); }));
+				this.BeginInvoke(new Action(() => { hiddenDropoutTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Hidden Dropout = {0}", obj);
 			});
 
 			RBMProcessor.MinibatchSizeChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { minibatchSizeTextBox.Text = obj.ToString(); }));
+				this.BeginInvoke(new Action(() => { minibatchSizeTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Minibatch Size = {0}", obj);
 			});
 			RBMProcessor.EpochsChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
 			{
-				this.Invoke(new Action(() => { epochsTextBox.Text = obj.ToString(); }));
+				this.BeginInvoke(new Action(() => { epochsTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Epochs = {0}", obj);
 			});
 		}
