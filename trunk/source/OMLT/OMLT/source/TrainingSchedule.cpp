@@ -171,10 +171,11 @@ namespace OMLT
 						}
 					}
 
-					// save off this schedulee and epoch count
+					// save off this schedule and epoch count
 					schedule.push_back(std::pair<CD::TrainingConfig, uint32_t>(train_config, epochs));
 				}
 
+				// finally construct our training schedule
 				result = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size);
 				for(uint32_t k = 0; k < schedule.size(); k++)
 				{

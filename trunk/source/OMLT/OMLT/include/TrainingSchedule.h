@@ -17,7 +17,7 @@ namespace OMLT
 			: model_config(in_model_config)
 			, minibatch_size(in_minibatch_size)
 			, epochs_remaining(0)
-			, index(0)
+			, index(-1)
 		{
 			
 		}
@@ -37,9 +37,10 @@ namespace OMLT
 		// returns true if we have a new training config, false if not
 		bool NextEpoch(struct T::TrainingConfig& out_config)
 		{
+			epochs_remaining = epochs_remaining == 0 ? 0 : epochs_remaining - 1;
 			if(epochs_remaining == 0)
 			{
-				index = std::min(index + 1, trainf_config.size());
+				index = std::min(index + 1, train_config.size());
 				if(index == train_config.size())
 				{
 					return false;
@@ -47,11 +48,11 @@ namespace OMLT
 				else
 				{
 					out_config = train_config[index].first;
-					epochs_remaining = trainf_config[index].second;
+					epochs_remaining = train_config[index].second;
 					return true;
 				}
 			}
-			epochs_remaining--;
+			return false;
 		}
 
 		struct T::ModelConfig GetModelConfig() const
@@ -62,6 +63,11 @@ namespace OMLT
 		uint32_t GetMinibatchSize() const
 		{
 			return minibatch_size;
+		}
+
+		uint32_t GetEpochs() const
+		{
+			return epochs_remaining;
 		}
 
 		static TrainingSchedule* FromJSON(const std::string& json);
