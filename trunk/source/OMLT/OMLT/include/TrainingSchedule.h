@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "ContrastiveDivergence.h"
+#include "BackPropagation.h"
 
 namespace OMLT
 {
@@ -92,4 +93,7 @@ namespace OMLT
 	// parsing specialization
 	template<>
 	TrainingSchedule<ContrastiveDivergence>* TrainingSchedule<ContrastiveDivergence>::FromJSON(const std::string& json);
+
+	template<>
+	TrainingSchedule<BackPropagation>* TrainingSchedule<BackPropagation>::FromJSON(const std::string& json);
 }

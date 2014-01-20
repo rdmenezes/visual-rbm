@@ -9,7 +9,6 @@ using std::swap;
 
 namespace OMLT
 {
-
 	BackPropagation::BackPropagation( const ModelConfig in_config, uint32_t in_minibatchsize )
 		: _input_units(in_config.InputCount)
 		, _minibatch_size(in_minibatchsize)
@@ -17,6 +16,7 @@ namespace OMLT
 		, _last_label(nullptr)
 		, _copy_visible(nullptr)
 	{
+		_training_config.Initialize(in_config.LayerConfigs.size());
 		assert(in_config.LayerConfigs.size() > 0);
 		for(auto it = in_config.LayerConfigs.begin(); it < in_config.LayerConfigs.end(); ++it)
 		{
@@ -31,6 +31,7 @@ namespace OMLT
 		, _last_label(nullptr)
 		, _copy_visible(nullptr)
 	{
+		_training_config.Initialize(in_mlp->LayerCount());
 		for(uint32_t k = 0; k < in_mlp->LayerCount(); k++)
 		{
 			MLP::Layer* layer = in_mlp->GetLayer(k);
@@ -38,7 +39,6 @@ namespace OMLT
 			LayerConfig layer_config;
 			{
 				layer_config.Function = layer->function;
-				layer_config.InputDropoutProbability = 0.0f;
 				layer_config.Noisy = false;
 				layer_config.OutputUnits = layer->outputs;
 			}
@@ -106,16 +106,6 @@ namespace OMLT
 		if(_layers[in_layer_index]->Noisy != in_noisy)
 		{
 			_layers[in_layer_index]->Noisy = in_noisy;
-			_recompile_required = true;
-		}
-	}
-
-	void BackPropagation::SetInputDropoutProbability( uint32_t in_layer_index, float in_prob )
-	{
-		assert(in_layer_index < _layers.size());
-		if(_layers[in_layer_index]->InputDropoutProbability != in_prob)
-		{
-			_layers[in_layer_index]->InputDropoutProbability = in_prob;
 			_recompile_required = true;
 		}
 	}
@@ -390,7 +380,6 @@ namespace OMLT
 		std::mt19937_64 random;
 		random.seed(1);
 		std::uniform_int_distribution<uint32_t> uniform(0, 0xFFFFFFFF);
-		std::normal_distribution<float> normal;
 
 		Layer* result = new Layer();
 
@@ -406,7 +395,6 @@ namespace OMLT
 	
 		result->Function = in_Config.Function;
 		result->Noisy = in_Config.Noisy;
-		result->InputDropoutProbability = in_Config.InputDropoutProbability;
 
 		if(_layers.size() == 0)
 		{
@@ -445,8 +433,13 @@ namespace OMLT
 			if(in_weights == nullptr)
 			{
 				std::uniform_real_distribution<float> funiform(0.0f, 1.0f);
+				float weight_stdev = float(1.0 / std::sqrtf((float)(result->InputUnits)));
+				std::normal_distribution<float> normal(0.0f, weight_stdev);
+
 				float* weight_buffer = new float[width * height];
 		
+				
+
 				for(uint32_t j = 0; j < height; j++)
 				{
 					// bias is first value in a row
@@ -455,8 +448,9 @@ namespace OMLT
 					weight_buffer[j * width + i] = 0.0f;
 					for(i = 1; i < width; i++)
 					{
-						// creates roughly 15 connections from each visible unit to hidden layer
-						weight_buffer[j * width + i] = funiform(random) < (15.0f / result->OutputUnits)? normal(random): 0.0f;
+						// creates roughly 15 connections from each hidden unit to the previous
+						//weight_buffer[j * width + i] = funiform(random) < (15.0f / result->InputUnits)? normal(random) : 0.0f;
+						weight_buffer[j * width + i] = normal(random);
 					}
 				}
 
@@ -611,14 +605,14 @@ namespace OMLT
 			_copy_visible->Initialize(_layers.front()->InputUnits, _minibatch_size);
 		}
 
-		for(auto it = _layers.begin(); it != _layers.end(); ++it)
+		for(uint32_t  k = 0; k < _layers.size(); k++)
 		{
-			Layer* layer = *it;
+			Layer* layer = _layers[k];
 
 			// calc enabled inputs
 			{
 				SourceCalcEnabledUnits source;
-				source.DROPOUT_PROB = layer->InputDropoutProbability;
+				source.DROPOUT_PROB = _training_config.Dropout[k];
 
 				source.Parse();
 				layer->CalcEnabledInputs = comp.Build(source);
@@ -630,7 +624,7 @@ namespace OMLT
 			{
 				SourceFeedForward source;
 				source.FUNC = layer->Function;
-				source.INPUT_DROPOUT_PROB = layer->InputDropoutProbability;
+				source.INPUT_DROPOUT_PROB = _training_config.Dropout[k];
 				source.INPUT_COUNT = layer->InputUnits;
 				source.NOISY = layer->Noisy;
 

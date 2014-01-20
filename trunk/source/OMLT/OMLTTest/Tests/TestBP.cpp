@@ -64,7 +64,6 @@ bool TrainAutoEncoder(int argc, char** argv)
 		hidden_config.OutputUnits = output_count;
 		hidden_config.Function = ActivationFunction::Sigmoid;
 		hidden_config.Noisy = true;
-		hidden_config.InputDropoutProbability = 0.2f;
 	}
 
 	BP::LayerConfig output_config;
@@ -72,7 +71,6 @@ bool TrainAutoEncoder(int argc, char** argv)
 		output_config.OutputUnits = input_count;
 		output_config.Function = ActivationFunction::Sigmoid;
 		output_config.Noisy = false;
-		output_config.InputDropoutProbability = 0.5f;
 	}
 
 	BP::ModelConfig model_config;
@@ -86,11 +84,14 @@ bool TrainAutoEncoder(int argc, char** argv)
 	const uint32_t minibatch_size = 10;
 
 	BP::TrainingConfig train_config;
+	train_config.Initialize(2);
 	{
 		train_config.LearningRate = base_rate;
 		train_config.Momentum = 0.5f;
 		train_config.L1Regularization = 0.00001f;
 		train_config.L2Regularization = 0.0f;
+		train_config.Dropout[0] = 0.2f;
+		train_config.Dropout[1] = 0.5f;
 	}
 
 	printf("Constructing data atlas\n");

@@ -1,4 +1,5 @@
 #include "TrainingSchedule.h"
+
 #include <cJSON.h>
 
 namespace OMLT
@@ -186,5 +187,11 @@ namespace OMLT
 Error:
 		cJSON_Delete(root);
 		return result;
+	}
+
+	template<>
+	TrainingSchedule<BackPropagation>* TrainingSchedule<BackPropagation>::FromJSON(const std::string& json)
+	{
+		return nullptr;
 	}
 }

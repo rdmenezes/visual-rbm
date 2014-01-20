@@ -6,6 +6,7 @@
 
 #include "Enums.h"
 
+struct cJSON;
 namespace OMLT
 {
 	class RestrictedBoltzmannMachine
