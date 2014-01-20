@@ -18,6 +18,7 @@ namespace QuickBoltzmann
 		GetWeights,
 		ExportModel,
 		ImportModel,
+		LoadTrainingSchedule,
 		Shutdown,
 	};
 
