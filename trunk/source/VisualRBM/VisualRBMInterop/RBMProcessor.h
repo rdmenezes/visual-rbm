@@ -30,34 +30,44 @@ namespace QuickBoltzmann
 		delegate void IterationCompletedHandler(uint32_t iteration, float training_error, float validation_error);
 		delegate void EpochCompletedHandler(uint32_t epoch);
 		delegate void TrainingCompletedHandler();
-
+		delegate void ValueChangedHandler(Object^ new_value);
 
 		static IterationCompletedHandler^ IterationCompleted;
 		static EpochCompletedHandler^ EpochCompleted;
 		static TrainingCompletedHandler^ TrainingCompleted;
 
+		// value changed handlers
+		static ValueChangedHandler^ ModelTypeChanged;
+		static ValueChangedHandler^ VisibleTypeChanged;
+		static ValueChangedHandler^ HiddenTypeChanged;
+		static ValueChangedHandler^ HiddenUnitsChanged;
+		static ValueChangedHandler^ LearningRateChanged;
+		static ValueChangedHandler^ MomentumChanged;
+		static ValueChangedHandler^ L1RegularizationChanged;
+		static ValueChangedHandler^ L2RegularizationChanged;
+		static ValueChangedHandler^ VisibleDropoutChanged;
+		static ValueChangedHandler^ HiddenDropoutChanged;
+		static ValueChangedHandler^ MinibatchSizeChanged;
+		static ValueChangedHandler^ EpochsChanged;
 
 		enum class RBMProcessorState
 		{
 			Unintialized, 
 			Ready, 
 			Training, 
-			Paused
+			Paused,
+			ScheduleLoaded,
 		};
 
 		/** Properties **/
 
 		static property RBMProcessorState CurrentState
 		{
-			RBMProcessorState get() {return _currentState;};
+			RBMProcessorState get();
 		}
 
-		static property bool HasTrainingData
-		{
-			bool get();
-		};
 
-		static property bool HasValidationData
+		static property bool HasTrainingData
 		{
 			bool get();
 		};
@@ -155,6 +165,8 @@ namespace QuickBoltzmann
 		static bool SaveModel(Stream^ stream);
 		static bool LoadModel(Stream^ stream);
 
+		static bool LoadTrainingSchedule(Stream^ stream);
+
 		// public command methods
 		static void Run();
 		// takes a callback for when rbmtrainer init is complete
@@ -168,11 +180,8 @@ namespace QuickBoltzmann
 		static bool GetCurrentWeights(List<IntPtr>^ weights);
 
 	private:
-
 		// our message queue
 		static MessageQueue^ _message_queue;
-
-		static RBMProcessorState _currentState = RBMProcessorState::Unintialized;
 
 	};
 }

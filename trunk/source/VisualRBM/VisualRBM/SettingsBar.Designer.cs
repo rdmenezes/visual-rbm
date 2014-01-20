@@ -473,6 +473,7 @@
 			this.resetParametersButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			this.resetParametersButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
 			this.resetParametersButton.UseVisualStyleBackColor = true;
+			this.resetParametersButton.Visible = false;
 			this.resetParametersButton.Click += new System.EventHandler(this.resetParametersButton_Click);
 			// 
 			// saveParametersButton
@@ -488,11 +489,13 @@
 			this.saveParametersButton.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
 			this.saveParametersButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
 			this.saveParametersButton.UseVisualStyleBackColor = true;
+			this.saveParametersButton.Visible = false;
 			this.saveParametersButton.Click += new System.EventHandler(this.saveParametersButton_Click);
 			// 
 			// loadParametersButton
 			// 
 			this.loadParametersButton.Dock = System.Windows.Forms.DockStyle.Top;
+			this.loadParametersButton.Enabled = false;
 			this.loadParametersButton.Image = ((System.Drawing.Image)(resources.GetObject("loadParametersButton.Image")));
 			this.loadParametersButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			this.loadParametersButton.Location = new System.Drawing.Point(0, 1);
