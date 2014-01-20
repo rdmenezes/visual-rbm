@@ -185,41 +185,40 @@ namespace QuickBoltzmann
 
 	};
 
-	class RBMTrainer : public BaseTrainer
+	template<class MODEL, class TRAINER>
+	class ITrainer : public BaseTrainer
 	{
 	public:
-		RBMTrainer() : _cd(nullptr), _schedule(nullptr), _loaded_rbm(nullptr) {}
-
-		virtual ~RBMTrainer()
+		ITrainer() : _trainer(nullptr), _schedule(nullptr), _loaded_model(nullptr) {}
+		virtual ~ITrainer()
 		{
 			assert(currentState == RBMProcessor::RBMProcessorState::Stopped);
-			SAFE_DELETE(_cd);
+			SAFE_DELETE(_trainer);
 			SAFE_DELETE(_schedule);
-			SAFE_DELETE(_loaded_rbm);
-		}
-
-		virtual void HandleStartMsg( Message^ msg ) 
+			SAFE_DELETE(_loaded_model);
+		};
+		virtual void HandleStartMsg( Message^ msg )
 		{
 			switch(currentState)
 			{
 			case RBMProcessor::RBMProcessorState::Paused:
 				{
-					assert(_cd != nullptr);
+					assert(_trainer != nullptr);
 					assert(_schedule != nullptr);
 
 					SAFE_DELETE(_schedule);
 					build_schedule();
-				
+
 					currentState = RBMProcessor::RBMProcessorState::Running;
 				}
 				break;
 			case RBMProcessor::RBMProcessorState::Stopped:
 				{
-					assert(_cd == nullptr);
+					assert(_trainer == nullptr);
 					assert(_schedule == nullptr);
 
 					build_schedule();
-					build_cd();
+					build_trainer();
 
 					currentState = RBMProcessor::RBMProcessorState::Running;
 				}
@@ -227,7 +226,7 @@ namespace QuickBoltzmann
 			case RBMProcessor::RBMProcessorState::ScheduleLoaded:
 				{
 					assert(_schedule != nullptr);
-					assert(_cd != nullptr);
+					assert(_trainer != nullptr);
 
 					currentState = RBMProcessor::RBMProcessorState::ScheduleRunning;
 				}
@@ -243,27 +242,107 @@ namespace QuickBoltzmann
 			assert(_schedule->TrainingComplete() == false);
 
 			// populate CD with our new training parameters
-			CD::TrainingConfig config;
+			struct TRAINER::TrainingConfig config;
 			bool populated = _schedule->GetTrainingConfig(config);
 			assert(populated == true);
 
 			// update CD with our new training parameters
-			_cd->SetTrainingConfig(config);
+			_trainer->SetTrainingConfig(config);
 		}
-
-		virtual void HandleStopMsg( Message^ msg ) 
+		virtual void HandleStopMsg( Message^ msg )
 		{
-			SAFE_DELETE(_cd);
+			SAFE_DELETE(_trainer);
 			SAFE_DELETE(_schedule);
 			currentState = RBMProcessor::RBMProcessorState::Stopped;
 		}
+		virtual void HandleImportModel(OMLT::Model& model)
+		{
+			SAFE_DELETE(_loaded_model);
+			_loaded_model = (MODEL*)model.ptr;
+		}
+		virtual void HandleLoadScheduleMsg( Message^ msg)
+		{
+			IntPtr ptr = (IntPtr)msg["schedule"];
+			assert(ptr.ToPointer() != nullptr);
 
+			SAFE_DELETE(_schedule);
+
+			_schedule = (TrainingSchedule<TRAINER>*)ptr.ToPointer();
+
+			_schedule->StartTraining();
+
+			struct TRAINER::ModelConfig model_config = _schedule->GetModelConfig();
+			model_config_to_ui(model_config);
+
+			struct TRAINER::TrainingConfig train_config;
+			bool populated = _schedule->GetTrainingConfig(train_config);
+			assert(populated == true);
+			train_config_to_ui(train_config);
+
+			minibatches_to_ui(_schedule->GetMinibatchSize());
+			epochs_to_ui(_schedule->GetEpochs());
+
+			build_trainer();
+
+			currentState = RBMProcessor::RBMProcessorState::ScheduleLoaded;
+		}
+		virtual bool HandleEpochCompleted()
+		{
+			// done with epochs?
+			if(_schedule->NextEpoch())
+			{
+				// done with training?
+				if(_schedule->TrainingComplete())
+				{
+					return true;
+				}
+
+				// new training config to use
+				struct TRAINER::TrainingConfig train_config;
+				bool populated = _schedule->GetTrainingConfig(train_config);
+				assert(populated);
+
+				_trainer->SetTrainingConfig(train_config);
+
+				// now update our UI
+				assert(populated == true);
+				train_config_to_ui(train_config);
+
+				epochs_to_ui(_schedule->GetEpochs());
+
+			}
+			return false;
+		}
+	protected:
+
+		void build_schedule();
+		void build_trainer();
+
+		void model_config_to_ui(const struct TRAINER::ModelConfig& model_config);
+		void train_config_to_ui(const struct TRAINER::TrainingConfig& train_config);
+
+		void epochs_to_ui(uint32_t epochs)
+		{
+			RBMProcessor::Epochs = epochs;
+		}
+		void minibatches_to_ui(uint32_t minibatches)
+		{
+			RBMProcessor::MinibatchSize = minibatches;
+		}
+
+		TRAINER* _trainer;
+		TrainingSchedule<TRAINER>* _schedule;
+		MODEL* _loaded_model;
+	};
+
+	class RBMTrainer : public ITrainer<RBM,ContrastiveDivergence>
+	{
 		virtual void HandleGetVisibleMsg( Message^ msg ) 
 		{
 			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
 				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
 
-			assert(_cd != nullptr);
+			assert(_trainer != nullptr);
 
 			// allocate buffer space if need be
 			const uint32_t visible_size = visible_count * minibatch_size;
@@ -275,7 +354,7 @@ namespace QuickBoltzmann
 			float* recon_ptr = (float*)visible_recon_buffer;
 			float* diff_ptr = (float*)visible_diff_buffer;
 
-			_cd->DumpLastVisible(&visible_ptr, &recon_ptr);
+			_trainer->DumpLastVisible(&visible_ptr, &recon_ptr);
 
 			for(uint32_t k = 0;  k < visible_count * minibatch_size; k++)
 			{
@@ -293,20 +372,19 @@ namespace QuickBoltzmann
 				diff_list->Add(IntPtr((float*)visible_diff_buffer + k * visible_count));
 			}
 		}
-
 		virtual void HandleGetHiddenMsg( Message^ msg ) 
 		{
 			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
 				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
 
-			assert(_cd != nullptr);
+			assert(_trainer != nullptr);
 
 			// allocate buffer space if need be
 			const uint32_t hidden_size = hidden_count * minibatch_size;
 			hidden_buffer.Acquire(hidden_size);
 			float* hidden_ptr = (float*)hidden_buffer;
 
-			_cd->DumpLastHidden(&hidden_ptr);
+			_trainer->DumpLastHidden(&hidden_ptr);
 
 			List<IntPtr>^ hidden_list = dynamic_cast<List<IntPtr>^>(msg["hidden"]);
 			for(uint32_t k = 0; k < minibatch_size; k++)
@@ -314,13 +392,12 @@ namespace QuickBoltzmann
 				hidden_list->Add(IntPtr((float*)hidden_buffer + k * hidden_count));
 			}
 		}
-
 		virtual void HandleGetWeightsMsg( Message^ msg ) 
 		{
 			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
 				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
 
-			assert(_cd != nullptr);
+			assert(_trainer != nullptr);
 
 			// allocate buffer space if need be
 			const uint32_t weight_size = (hidden_count + 1) * (visible_count + 1);
@@ -328,7 +405,7 @@ namespace QuickBoltzmann
 
 			float* weight_ptr = (float*)weight_buffer;
 
-			_cd->DumpLastWeights(&weight_ptr);
+			_trainer->DumpLastWeights(&weight_ptr);
 
 			List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
 			for(uint32_t j = 0; j <= hidden_count; j++)
@@ -336,12 +413,11 @@ namespace QuickBoltzmann
 				weight_list->Add(IntPtr(weight_ptr + 1 + (visible_count + 1) * j));
 			}
 		}
-
 		virtual void HandleExportModel(Stream^ s)
 		{
-			assert(_cd != nullptr);
-			
-			RBM* rbm = _cd->GetRestrictedBoltzmannMachine();
+			assert(_trainer != nullptr);
+
+			RBM* rbm = _trainer->GetRestrictedBoltzmannMachine();
 			assert(rbm != nullptr);
 			std::string model_json = rbm->ToJSON();
 
@@ -350,176 +426,101 @@ namespace QuickBoltzmann
 				s->WriteByte(model_json[k]);
 			}
 		}
-
-		virtual void HandleImportModel(OMLT::Model& model)
-		{
-			assert(model.type == OMLT::ModelType::RBM);
-			SAFE_DELETE(_loaded_rbm);
-			_loaded_rbm = model.rbm;
-		}
-
-		virtual void HandleLoadScheduleMsg( Message^ msg)
-		{
-			IntPtr ptr = (IntPtr)msg["schedule"];
-			assert(ptr.ToPointer() != nullptr);
-			
-			SAFE_DELETE(_schedule);
-			
-			_schedule = (TrainingSchedule<CD>*)ptr.ToPointer();
-
-			_schedule->StartTraining();
-
-			CD::ModelConfig model_config = _schedule->GetModelConfig();
-			model_config.VisibleUnits = visible_count;
-			model_config_to_ui(model_config);
-
-			CD::TrainingConfig train_config;
-			bool populated = _schedule->GetTrainingConfig(train_config);
-			assert(populated == true);
-			train_config_to_ui(train_config);
-
-			minibatches_to_ui(_schedule->GetMinibatchSize());
-			epochs_to_ui(_schedule->GetEpochs());
-
-			build_cd();
-
-			currentState = RBMProcessor::RBMProcessorState::ScheduleLoaded;
-		}
-
-		virtual float Train( OpenGLBuffer2D& train_example ) 
-		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
-			
-			_cd->Train(train_example);
-			return _cd->GetLastReconstructionError();
-		}
-
-		virtual float Validation( OpenGLBuffer2D& validation_example ) 
+		virtual float Train( OpenGLBuffer2D& train_example )
 		{
 			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
 				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
 
-			return _cd->GetReconstructionError(validation_example);
+			_trainer->Train(train_example);
+			return _trainer->GetLastReconstructionError();
 		}
-
-
-		virtual bool HandleEpochCompleted()
+		virtual float Validation( OpenGLBuffer2D& validation_example )
 		{
-			// done with epochs?
-			if(_schedule->NextEpoch())
-			{
-				// done with training?
-				if(_schedule->TrainingComplete())
-				{
-					return true;
-				}
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
 
-				// new training config to use
-				CD::TrainingConfig train_config;
-				bool populated = _schedule->GetTrainingConfig(train_config);
-				assert(populated);
-
-				_cd->SetTrainingConfig(train_config);
-
-				// now update our UI
-				assert(populated == true);
-				train_config_to_ui(train_config);
-
-				epochs_to_ui(_schedule->GetEpochs());
-
-			}
-			return false;
+			return _trainer->GetReconstructionError(validation_example);
 		}
-	private:
-
-		void build_cd()
-		{
-			assert(_cd == nullptr);
-			assert(_schedule != nullptr);
-
-			CD::ModelConfig model_config = _schedule->GetModelConfig();
-			model_config.VisibleUnits = visible_count;
-			assert(_schedule->GetMinibatchSize() == minibatch_size);
-
-			RBMProcessor::Model = ModelType::RBM;
-			RBMProcessor::VisibleType = (UnitType)model_config.VisibleType;
-			RBMProcessor::HiddenType = (UnitType)model_config.HiddenType;
-			RBMProcessor::HiddenUnits = model_config.HiddenUnits;
-
-			if(_loaded_rbm == nullptr)
-			{
-				_cd = new ContrastiveDivergence(model_config, _schedule->GetMinibatchSize());
-			}
-			else
-			{
-				assert(_loaded_rbm->visible_count == visible_count);
-				_cd = new ContrastiveDivergence(_loaded_rbm, _schedule->GetMinibatchSize());
-				SAFE_DELETE(_loaded_rbm);
-			}
-		}
-
-		void build_schedule()
-		{
-			assert(_schedule == nullptr);
-			CD::ModelConfig model_config;
-			{
-				model_config.VisibleUnits = visible_count;
-				model_config.HiddenUnits = hidden_count;
-				model_config.VisibleType = (ActivationFunction_t)visible_type;
-				model_config.HiddenType = (ActivationFunction_t)hidden_type;
-			}
-			CD::TrainingConfig train_config;
-			{
-				train_config.LearningRate = learning_rate;
-				train_config.Momentum = momentum;
-				train_config.L1Regularization = l1;
-				train_config.L2Regularization = l2;
-				train_config.VisibleDropout = visible_dropout;
-				train_config.HiddenDropout = hidden_dropout;
-			}
-
-			_schedule = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size);
-			_schedule->AddTrainingConfig(train_config, epochs);
-		}
-
-		void model_config_to_ui(const CD::ModelConfig& model_config)
-		{
-			RBMProcessor::Model = ModelType::RBM;
-			RBMProcessor::VisibleType = (UnitType)model_config.VisibleType;
-			RBMProcessor::HiddenType = (UnitType)model_config.HiddenType;
-			RBMProcessor::HiddenUnits = model_config.HiddenUnits;
-		}
-
-		void train_config_to_ui(const CD::TrainingConfig& train_config)
-		{
-			RBMProcessor::LearningRate = train_config.LearningRate;
-			RBMProcessor::Momentum = train_config.Momentum;
-			RBMProcessor::L1Regularization = train_config.L1Regularization;
-			RBMProcessor::L2Regularization = train_config.L2Regularization;
-			RBMProcessor::VisibleDropout = train_config.VisibleDropout;
-			RBMProcessor::HiddenDropout = train_config.HiddenDropout;
-		}
-
-		void epochs_to_ui(uint32_t epochs)
-		{
-			RBMProcessor::Epochs = epochs;
-		}
-
-		void minibatches_to_ui(uint32_t minibatches)
-		{
-			RBMProcessor::MinibatchSize = minibatches;
-		}
-
-		ContrastiveDivergence* _cd;
-		TrainingSchedule<ContrastiveDivergence>* _schedule;
-		RBM* _loaded_rbm;
 	};
 
-	class AETrainer
+	template<>
+	void ITrainer<RBM,CD>::build_schedule()
+	{
+		assert(_schedule == nullptr);
+		CD::ModelConfig model_config;
+		{
+			model_config.VisibleUnits = visible_count;
+			model_config.HiddenUnits = hidden_count;
+			model_config.VisibleType = (ActivationFunction_t)visible_type;
+			model_config.HiddenType = (ActivationFunction_t)hidden_type;
+		}
+		CD::TrainingConfig train_config;
+		{
+			train_config.LearningRate = learning_rate;
+			train_config.Momentum = momentum;
+			train_config.L1Regularization = l1;
+			train_config.L2Regularization = l2;
+			train_config.VisibleDropout = visible_dropout;
+			train_config.HiddenDropout = hidden_dropout;
+		}
+
+		_schedule = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size);
+		_schedule->AddTrainingConfig(train_config, epochs);
+	}
+
+	template<>
+	void ITrainer<RBM,CD>::build_trainer()
+	{
+		assert(_trainer == nullptr);
+		assert(_schedule != nullptr);
+
+		CD::ModelConfig model_config = _schedule->GetModelConfig();
+		model_config.VisibleUnits = visible_count;
+		assert(_schedule->GetMinibatchSize() == minibatch_size);
+
+		RBMProcessor::Model = ModelType::RBM;
+		RBMProcessor::VisibleType = (UnitType)model_config.VisibleType;
+		RBMProcessor::HiddenType = (UnitType)model_config.HiddenType;
+		RBMProcessor::HiddenUnits = model_config.HiddenUnits;
+
+		if(_loaded_model == nullptr)
+		{
+			_trainer = new ContrastiveDivergence(model_config, _schedule->GetMinibatchSize());
+		}
+		else
+		{
+			assert(_loaded_model->visible_count == visible_count);
+			_trainer = new ContrastiveDivergence(_loaded_model, _schedule->GetMinibatchSize());
+			SAFE_DELETE(_loaded_model);
+		}
+	}
+
+	template<>
+	void ITrainer<RBM,CD>::model_config_to_ui(const CD::ModelConfig& model_config)
+	{
+		RBMProcessor::Model = ModelType::RBM;
+		RBMProcessor::VisibleType = (UnitType)model_config.VisibleType;
+		RBMProcessor::HiddenType = (UnitType)model_config.HiddenType;
+		RBMProcessor::HiddenUnits = model_config.HiddenUnits;
+	}
+
+	template<>
+	void ITrainer<RBM,CD>::train_config_to_ui(const CD::TrainingConfig& train_config)
+	{
+		RBMProcessor::LearningRate = train_config.LearningRate;
+		RBMProcessor::Momentum = train_config.Momentum;
+		RBMProcessor::L1Regularization = train_config.L1Regularization;
+		RBMProcessor::L2Regularization = train_config.L2Regularization;
+		RBMProcessor::VisibleDropout = train_config.VisibleDropout;
+		RBMProcessor::HiddenDropout = train_config.HiddenDropout;
+	}
+
+#if 0
+	class AETrainer : public ITrainer<MLP,BackPropagation>
 	{
 
 	};
+#endif
 
 	void RBMProcessor::Run()
 	{
