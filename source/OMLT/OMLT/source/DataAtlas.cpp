@@ -28,7 +28,8 @@ OMLT::DataAtlas::DataAtlas( IDX* in_Data )
 
 OMLT::DataAtlas::~DataAtlas()
 {
-	
+	delete _texture_copy;
+	delete _idx;
 }
 
 template<typename T>
@@ -61,7 +62,8 @@ public:
 
 void OMLT::DataAtlas::Initialize( uint32_t in_BatchSize, uint32_t in_MaxPageSize )
 {
-	assert(_initialized == false);
+	// delete our textue copying program first
+	delete _texture_copy;
 
 	// dimension of each batch
 	_batch_width = _idx->GetRowLength();

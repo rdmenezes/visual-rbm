@@ -19,6 +19,11 @@ namespace OMLT
 		// resets data atlas to read from beginning of backing IDX
 		void Reset();
 		
+		// returns size of each minibatch
+		uint32_t GetBatchSize() const
+		{
+			return _batch_height;
+		}
 
 		bool Next(SiCKL::OpenGLBuffer2D& inout_Buffer);
 		inline uint32_t GetTotalBatches() const {return _total_batches;}

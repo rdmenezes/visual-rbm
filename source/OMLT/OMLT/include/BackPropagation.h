@@ -1,3 +1,5 @@
+#pragma once
+
 // std
 #include <stdint.h>
 #include <vector>
@@ -27,8 +29,6 @@ namespace OMLT
 			ActivationFunction_t Function;
 			// will we add noise to accumulation
 			bool Noisy;
-			// probability an input unit will be dropped out
-			float InputDropoutProbability;
 		};
 
 		struct ModelConfig
@@ -45,12 +45,55 @@ namespace OMLT
 			float L1Regularization;
 			float L2Regularization;
 
+			uint32_t LayerCount;
+			float* Dropout;
+
 			TrainingConfig()
 				: LearningRate(0.0f)
 				, Momentum(0.0f)
 				, L1Regularization(0.0f)
 				, L2Regularization(0.0f)
+				, Dropout(nullptr)
+				, LayerCount(0)
 			{ }
+
+			TrainingConfig(const TrainingConfig& in_config)
+			{
+				*this = in_config;
+			}
+
+			TrainingConfig& operator=(const TrainingConfig& in_config)
+			{
+				LearningRate = in_config.LearningRate;
+				Momentum = in_config.Momentum;
+				L1Regularization = in_config.L1Regularization;
+				L2Regularization = in_config.L2Regularization;
+				LayerCount = in_config.LayerCount;
+				Dropout =  new float[LayerCount];
+				for(uint32_t k = 0; k < LayerCount; k++)
+				{
+					Dropout[k] = in_config.Dropout[k];
+				}
+
+				return *this;
+			}
+
+			void Initialize(uint32_t layer_count)
+			{
+				LayerCount = layer_count;
+				Dropout =  new float[LayerCount];
+				for(uint32_t k = 0; k < LayerCount; k++)
+				{
+					Dropout[k] = 0.0f;
+				}
+
+			}
+
+			~TrainingConfig()
+			{
+				delete[] Dropout;
+				Dropout = nullptr;
+			}
 		};
 
 		
@@ -62,7 +105,6 @@ namespace OMLT
 		void SetTrainingConfig(const TrainingConfig&);
 		void SetActivationFunction(uint32_t in_layer_index, ActivationFunction_t in_func);
 		void SetNoisy(uint32_t in_layer_index, bool in_noisy);
-		void SetInputDropoutProbability(uint32_t in_layer_index, float in_prob);
 
 		void Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
 
@@ -90,7 +132,6 @@ namespace OMLT
 
 			ActivationFunction_t Function;
 			bool Noisy;
-			float InputDropoutProbability;
 
 			/* 
 			 * Inputs from previous layer

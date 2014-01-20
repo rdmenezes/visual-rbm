@@ -6,6 +6,7 @@
 
 #include "Enums.h"
 
+struct cJSON;
 namespace OMLT
 {
 	class MultilayerPerceptron
@@ -44,7 +45,7 @@ private:
 		std::vector<float*> _accumulations;
 		std::vector<float*> _activations;
 		// private parse method
-		static MultilayerPerceptron* FromJSON(struct cJSON* root);
+		static MultilayerPerceptron* FromJSON(cJSON* root);
 		friend bool FromJSON(const std::string& in_json, struct Model& out_model);
 	};
 	typedef MultilayerPerceptron MLP;
