@@ -41,6 +41,9 @@
     <ClCompile Include="source\RestrictedBoltzmannMachine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\TrainingSchedule.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\DataAtlas.h">
@@ -77,6 +80,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\RestrictedBoltzmannMachine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\TrainingSchedule.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
