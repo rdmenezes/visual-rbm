@@ -183,7 +183,6 @@ namespace QuickBoltzmann
 		static void RescaleActivations(float* buffer, uint32_t count, UnitType type);
 		static void RescaleDiffs(float* buffer, uint32_t count, UnitType func);
 		static void RescaleWeights(float* buffer, float stddev, uint32_t count);
-		
 
 	private:
 		// our message queue
