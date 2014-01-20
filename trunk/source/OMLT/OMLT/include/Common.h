@@ -40,6 +40,7 @@ namespace OMLT
 		ptr = nullptr;
 	}
 
+	// returns number of 4 float blocks required to store the given number of floats
 	inline uint32_t BlockCount(const uint32_t float_count)
 	{
 		return (float_count % 4 == 0 ? float_count / 4 : float_count / 4 + 1);
