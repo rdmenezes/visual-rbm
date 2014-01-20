@@ -37,12 +37,8 @@ namespace QuickBoltzmann
 	static RBMProcessor::RBMProcessorState currentState;
 
 	// Backend Static Data
-	static ContrastiveDivergence* cd = nullptr;
-	static BackPropagation* bp = nullptr;
 	static DataAtlas* training_data = nullptr;
 	static DataAtlas* validation_data = nullptr;
-	static TrainingSchedule<ContrastiveDivergence>* cd_schedule = nullptr;
-	static RBM* loaded_rbm = nullptr;
 
 	static class BaseTrainer* trainer = nullptr;
 
@@ -154,6 +150,30 @@ namespace QuickBoltzmann
 
 #pragma endregion
 
+	void InitializeDataAtlas()
+	{
+		if(training_data->GetBatchSize() == minibatch_size)
+		{
+			training_data->Reset();
+		}
+		else
+		{
+			training_data->Initialize(minibatch_size, 512);
+		}
+
+		if(validation_data)
+		{
+			if(validation_data->GetBatchSize() == minibatch_size)
+			{
+				validation_data->Reset();
+			}
+			else
+			{
+				validation_data->Initialize(minibatch_size, 512);
+			}
+		}
+	}
+
 	static float CapError(float error)
 	{
 		const float max_val = (float)7.9E+27;
@@ -209,6 +229,8 @@ namespace QuickBoltzmann
 					SAFE_DELETE(_schedule);
 					build_schedule();
 
+					InitializeDataAtlas();
+
 					currentState = RBMProcessor::RBMProcessorState::Running;
 				}
 				break;
@@ -219,6 +241,8 @@ namespace QuickBoltzmann
 
 					build_schedule();
 					build_trainer();
+
+					InitializeDataAtlas();
 
 					currentState = RBMProcessor::RBMProcessorState::Running;
 				}
@@ -234,6 +258,8 @@ namespace QuickBoltzmann
 			default:
 				assert(false);
 			}
+
+			
 
 			assert(_schedule != nullptr);
 
@@ -420,7 +446,7 @@ namespace QuickBoltzmann
 			RBM* rbm = _trainer->GetRestrictedBoltzmannMachine();
 			assert(rbm != nullptr);
 			std::string model_json = rbm->ToJSON();
-
+			delete rbm;
 			for(size_t k = 0; k < model_json.size(); k++)
 			{
 				s->WriteByte(model_json[k]);
@@ -478,10 +504,7 @@ namespace QuickBoltzmann
 		model_config.VisibleUnits = visible_count;
 		assert(_schedule->GetMinibatchSize() == minibatch_size);
 
-		RBMProcessor::Model = ModelType::RBM;
-		RBMProcessor::VisibleType = (UnitType)model_config.VisibleType;
-		RBMProcessor::HiddenType = (UnitType)model_config.HiddenType;
-		RBMProcessor::HiddenUnits = model_config.HiddenUnits;
+		model_config_to_ui(model_config);
 
 		if(_loaded_model == nullptr)
 		{
@@ -515,12 +538,200 @@ namespace QuickBoltzmann
 		RBMProcessor::HiddenDropout = train_config.HiddenDropout;
 	}
 
-#if 0
-	class AETrainer : public ITrainer<MLP,BackPropagation>
-	{
 
+	class AETrainer : public ITrainer<MLP,BP>
+	{
+		virtual void HandleGetVisibleMsg( Message^ msg ) 
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+
+			assert(_trainer != nullptr);
+
+			// allocate buffer space if need be
+			const uint32_t visible_size = visible_count * minibatch_size;
+			visible_buffer.Acquire(visible_size);
+			visible_recon_buffer.Acquire(visible_size);
+			visible_diff_buffer.Acquire(visible_size);
+
+			float* visible_ptr = (float*)visible_buffer;
+			float* recon_ptr = (float*)visible_recon_buffer;
+			float* diff_ptr = (float*)visible_diff_buffer;
+
+			_trainer->DumpLastLabel(&visible_ptr);
+			_trainer->DumpActivation(1, &recon_ptr);
+
+			for(uint32_t k = 0; k < visible_size; k++)
+			{
+				diff_ptr[k] = visible_ptr[k] - recon_ptr[k];
+			}
+
+			_trainer->DumpInput(0, &visible_ptr);
+
+			List<IntPtr>^ visible_list = dynamic_cast<List<IntPtr>^>(msg["visible"]);
+			List<IntPtr>^ recon_list = dynamic_cast<List<IntPtr>^>(msg["reconstruction"]);
+			List<IntPtr>^ diff_list = dynamic_cast<List<IntPtr>^>(msg["diffs"]);
+
+			for(uint32_t k = 0; k < minibatch_size; k++)
+			{
+				visible_list->Add(IntPtr((float*)visible_buffer + k * visible_count));
+				recon_list->Add(IntPtr((float*)visible_recon_buffer + k * visible_count));
+				diff_list->Add(IntPtr((float*)visible_diff_buffer + k * visible_count));
+			}
+		}
+		virtual void HandleGetHiddenMsg( Message^ msg ) 
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+
+			assert(_trainer != nullptr);
+			// allocate buffer space if need be
+			const uint32_t hidden_size = hidden_count * minibatch_size;
+			hidden_buffer.Acquire(hidden_size);
+			float* hidden_ptr = (float*)hidden_buffer;
+
+			_trainer->DumpActivation(0, &hidden_ptr);
+
+			List<IntPtr>^ hidden_list = dynamic_cast<List<IntPtr>^>(msg["hidden"]);
+			for(uint32_t k = 0; k < minibatch_size; k++)
+			{
+				hidden_list->Add(IntPtr((float*)hidden_buffer + k * hidden_count));
+			}
+		}
+		virtual void HandleGetWeightsMsg( Message^ msg ) 
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+
+			assert(_trainer != nullptr);
+
+			// allocate buffer space if need be
+			const uint32_t weight_size = (hidden_count) * (visible_count + 1);
+			weight_buffer.Acquire(weight_size);
+
+			float* weight_ptr = (float*)weight_buffer;
+			_trainer->DumpWeightMatrix(0, &weight_ptr);
+
+			List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
+			for(uint32_t j = 0; j < hidden_count; j++)
+			{
+				weight_list->Add(IntPtr(weight_ptr + 1 + (visible_count + 1) * j));
+			}
+		}
+		virtual void HandleExportModel(Stream^ s)
+		{
+			assert(_trainer != nullptr);
+
+			MLP* mlp = _trainer->GetMultilayerPerceptron(0, 1);
+			assert(mlp != nullptr);
+			std::string model_json = mlp->ToJSON();
+			delete mlp;
+
+			for(size_t k = 0; k < model_json.size(); k++)
+			{
+				s->WriteByte(model_json[k]);
+			}
+		}
+		virtual float Train( OpenGLBuffer2D& train_example )
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			
+			_trainer->Train(train_example, train_example);
+			return _trainer->GetLastOutputError();
+
+		}
+		virtual float Validation( OpenGLBuffer2D& validation_example )
+		{
+			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
+				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			return _trainer->GetOutputError(validation_example, validation_example);
+		}
 	};
-#endif
+
+	template<>
+	void ITrainer<MLP,BP>::build_schedule()
+	{
+		assert(_schedule == nullptr);
+		BP::ModelConfig model_config;
+		{
+			model_config.InputCount = visible_count;
+		}
+
+		BP::LayerConfig hidden_config;
+		{
+			hidden_config.OutputUnits = hidden_count;
+			hidden_config.Function = (ActivationFunction_t)hidden_type;
+			hidden_config.Noisy = false;
+		}
+		BP::LayerConfig output_config;
+		{
+			output_config.OutputUnits = visible_count;
+			output_config.Function = (ActivationFunction_t)visible_type;
+			output_config.Noisy = false;
+		}
+
+		model_config.LayerConfigs.push_back(hidden_config);
+		model_config.LayerConfigs.push_back(output_config);
+
+		BP::TrainingConfig train_config;
+		train_config.Initialize(2);
+		{
+			train_config.LearningRate = learning_rate;
+			train_config.Momentum = momentum;
+			train_config.L1Regularization = l1;
+			train_config.L2Regularization = l2;
+			train_config.Dropout[0] = visible_dropout;
+			train_config.Dropout[1] = hidden_dropout;
+		}
+
+		_schedule = new TrainingSchedule<BackPropagation>(model_config, minibatch_size);
+		_schedule->AddTrainingConfig(train_config, epochs);
+	}
+
+	template<>
+	void ITrainer<MLP,BP>::build_trainer()
+	{
+		assert(_trainer == nullptr);
+		assert(_schedule != nullptr);
+
+		BP::ModelConfig model_config = _schedule->GetModelConfig();
+		model_config.InputCount = visible_count;
+		assert(_schedule->GetMinibatchSize() == minibatch_size);
+
+		model_config_to_ui(model_config);
+
+		if(_loaded_model == nullptr)
+		{
+			_trainer = new BackPropagation(model_config, _schedule->GetMinibatchSize());
+		}
+		else
+		{
+			assert(_loaded_model->GetLayer(0)->inputs == visible_count);
+			_trainer = new BackPropagation(_loaded_model, _schedule->GetMinibatchSize());
+			SAFE_DELETE(_loaded_model);
+		}
+	}
+
+	template<>
+	void ITrainer<MLP,BP>::model_config_to_ui(const BP::ModelConfig& model_config)
+	{
+		RBMProcessor::Model = ModelType::AutoEncoder;
+		RBMProcessor::VisibleType = (UnitType)model_config.LayerConfigs[1].Function;
+		RBMProcessor::HiddenType = (UnitType)model_config.LayerConfigs[0].Function;
+		RBMProcessor::HiddenUnits = model_config.LayerConfigs[0].OutputUnits;
+	}
+
+	template<>
+	void ITrainer<MLP,BP>::train_config_to_ui(const BP::TrainingConfig& train_config)
+	{
+		RBMProcessor::LearningRate = train_config.LearningRate;
+		RBMProcessor::Momentum = train_config.Momentum;
+		RBMProcessor::L1Regularization = train_config.L1Regularization;
+		RBMProcessor::L2Regularization = train_config.L2Regularization;
+		RBMProcessor::VisibleDropout = train_config.Dropout[0];
+		RBMProcessor::HiddenDropout = train_config.Dropout[1];
+	}
 
 	void RBMProcessor::Run()
 	{
@@ -556,28 +767,6 @@ namespace QuickBoltzmann
 							   model_type == ModelType::AutoEncoder);
 
 						assert(training_data != nullptr);
-
-						if(training_data->GetIsInitialized())
-						{
-							training_data->Reset();
-						}
-						else
-						{
-							// construct data atlas
-							training_data->Initialize(minibatch_size, 512);
-						}
-
-						if(validation_data)
-						{
-							if(validation_data->GetIsInitialized())
-							{
-								validation_data->Reset();
-							}
-							else
-							{
-								validation_data->Initialize(minibatch_size, 512);
-							}
-						}
 
 						trainer->HandleStartMsg(msg);
 
@@ -951,7 +1140,6 @@ namespace QuickBoltzmann
 			assert(weights->Count == hidden_count || weights->Count == 0);
 			return weights->Count == hidden_count;
 		}
-
 	}
 
 #pragma region Properties
@@ -1046,7 +1234,7 @@ namespace QuickBoltzmann
 				break;
 			case ModelType::AutoEncoder:
 				SAFE_DELETE(trainer);
-				assert(false);
+				trainer = new AETrainer();
 				break;
 			}
 		}
