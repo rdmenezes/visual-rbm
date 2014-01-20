@@ -48,9 +48,24 @@ namespace VisualRBM
 
 				PixelFormat pf = _main_form.settingsBar.Format;
 
+				float stddev = 0.0f;
+				foreach (IntPtr ptr in weights)
+				{
+					float* raw_weights = (float*)ptr.ToPointer();
+					for (uint k = 0; k < RBMProcessor.VisibleUnits; k++)
+					{
+						float val = raw_weights[k];
+						stddev += val * val;
+					}
+				}
+				stddev /= weights.Count * RBMProcessor.VisibleUnits;
+				stddev = (float)Math.Sqrt(stddev);
+
 				for (int j = 0; j < weights.Count; j++)
 				{
 					float* raw_weights = (float*)weights[j].ToPointer();
+
+					RBMProcessor.RescaleWeights(raw_weights, stddev, (uint)RBMProcessor.VisibleUnits);
 					UpdateImageControlContents(j, pf, (uint)RBMProcessor.VisibleUnits, raw_weights);
 				}
 

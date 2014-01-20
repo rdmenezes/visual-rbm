@@ -240,6 +240,12 @@ namespace VisualRBM
 					float* raw_image = (float*)visible[k].ToPointer();
 					float* raw_recon = (float*)recon[k].ToPointer();
 					float* raw_diffs = (float*)diffs[k].ToPointer();
+
+					// rescale from raw
+					RBMProcessor.RescaleActivations(raw_image, (uint)RBMProcessor.VisibleUnits, RBMProcessor.VisibleType);
+					RBMProcessor.RescaleActivations(raw_recon, (uint)RBMProcessor.VisibleUnits, RBMProcessor.VisibleType);
+					RBMProcessor.RescaleDiffs(raw_diffs, (uint)RBMProcessor.VisibleUnits, RBMProcessor.VisibleType);
+
 					// post the data to the image control
 					UpdateImageControlContents(k, pf, (uint)RBMProcessor.VisibleUnits, raw_image, raw_recon, raw_diffs);
 				}

@@ -24,7 +24,7 @@ namespace VisualRBM
 			thr.IsBackground = true;
 			thr.Start();
 			
-			while (RBMProcessor.CurrentState != RBMProcessor.RBMProcessorState.Ready) Thread.Sleep(16);
+			while (RBMProcessor.CurrentState != RBMProcessor.RBMProcessorState.Stopped) Thread.Sleep(16);
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
