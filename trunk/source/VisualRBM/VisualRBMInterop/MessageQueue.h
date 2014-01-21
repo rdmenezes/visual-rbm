@@ -10,6 +10,7 @@ namespace QuickBoltzmann
 	public enum class MessageType
 	{
 		Invalid = -1,
+		DeleteData,	// atas shaders are created on the gpu thread, so need to be deleted on gpu thread
 		Start,
 		Pause,
 		Stop,
