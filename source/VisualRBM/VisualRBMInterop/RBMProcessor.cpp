@@ -229,8 +229,6 @@ namespace QuickBoltzmann
 					SAFE_DELETE(_schedule);
 					build_schedule();
 
-					InitializeDataAtlas();
-
 					currentState = RBMProcessor::RBMProcessorState::Running;
 				}
 				break;
@@ -251,6 +249,8 @@ namespace QuickBoltzmann
 				{
 					assert(_schedule != nullptr);
 					assert(_trainer != nullptr);
+
+					InitializeDataAtlas();
 
 					currentState = RBMProcessor::RBMProcessorState::ScheduleRunning;
 				}
@@ -759,6 +759,12 @@ namespace QuickBoltzmann
 			{
 				switch(msg->Type)
 				{
+				case MessageType::DeleteData:
+					{
+						DataAtlas* data = (DataAtlas*)((IntPtr)msg["data"]).ToPointer();
+						delete data;
+					}
+					break;
 				case MessageType::Start:
 					{
 						assert(epochs > 0);
@@ -856,11 +862,34 @@ namespace QuickBoltzmann
 						// see if we can parse it as CD training schedule
 						if(TrainingSchedule<CD>* schedule = TrainingSchedule<CD>::FromJSON(schedule_json))
 						{
-							msg["schedule"] = IntPtr(schedule);
+							if(schedule->GetModelConfig().VisibleUnits == visible_count)
+							{
+								msg["schedule"] = IntPtr(schedule);
+
+								RBMProcessor::Model = ModelType::RBM;
+								trainer->HandleLoadScheduleMsg(msg);
+								msg["loaded"] = true;
+							}
+							else
+							{
+								delete schedule;
+							}
 							
-							RBMProcessor::Model = ModelType::RBM;
-							trainer->HandleLoadScheduleMsg(msg);
-							msg["loaded"] = true;
+						}
+						else if(TrainingSchedule<BP>* schedule = TrainingSchedule<BP>::FromJSON(schedule_json))
+						{
+							if(schedule->GetModelConfig().InputCount == visible_count)
+							{
+								msg["schedule"] = IntPtr(schedule);
+
+								RBMProcessor::Model = ModelType::AutoEncoder;
+								trainer->HandleLoadScheduleMsg(msg);
+								msg["loaded"] = true;
+							}
+							else
+							{
+								delete schedule;
+							}
 						}
 					}
 					break;
@@ -955,7 +984,14 @@ namespace QuickBoltzmann
 		}
 
 		// clear out the old training data
-		delete training_data;
+		Message^ msg = gcnew Message(MessageType::DeleteData);
+		msg["data"] = IntPtr(training_data);
+		_message_queue->Enqueue(msg);
+		while(!msg->Handled)
+		{
+			Thread::Sleep(16);
+		}
+
 		// construct data atlas
 		training_data = new DataAtlas(idx);
 
@@ -1002,7 +1038,14 @@ namespace QuickBoltzmann
 			}
 
 			// clear out old validation data
-			delete validation_data;
+			Message^ msg = gcnew Message(MessageType::DeleteData);
+			msg["data"] = IntPtr(validation_data);
+			_message_queue->Enqueue(msg);
+			while(!msg->Handled)
+			{
+				Thread::Sleep(16);
+			}
+
 			// and set new one
 			validation_data = new DataAtlas(idx);
 			return true;
