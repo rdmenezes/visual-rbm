@@ -76,11 +76,11 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="MessageQueue.cpp" />
-    <ClCompile Include="RBMProcessor.cpp" />
+    <ClCompile Include="Processor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MessageQueue.h" />
-    <ClInclude Include="RBMProcessor.h" />
+    <ClInclude Include="Processor.h" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="System.Windows.Forms" />

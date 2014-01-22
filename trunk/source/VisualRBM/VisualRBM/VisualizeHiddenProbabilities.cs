@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using QuickBoltzmann;
+using VisualRBMInterop;
 
 namespace VisualRBM
 {
@@ -20,7 +20,7 @@ namespace VisualRBM
 		{
 			get
 			{
-				return (int)Math.Max(1, Math.Sqrt(RBMProcessor.HiddenUnits));
+				return (int)Math.Max(1, Math.Sqrt(Processor.HiddenUnits));
 			}
 		}
 
@@ -28,8 +28,8 @@ namespace VisualRBM
 		{
 			get
 			{
-				int result = RBMProcessor.HiddenUnits / ImageControlWidth;
-				if (result * ImageControlWidth < RBMProcessor.HiddenUnits)
+				int result = Processor.HiddenUnits / ImageControlWidth;
+				if (result * ImageControlWidth < Processor.HiddenUnits)
 					result++;
 				return result;
 			}
@@ -47,14 +47,14 @@ namespace VisualRBM
 		{
 			List<IntPtr> hidden = new List<IntPtr>();
 
-			if (RBMProcessor.GetCurrentHidden(hidden))
+			if (Processor.GetCurrentHidden(hidden))
 			{ 
 
-				for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
+				for (int k = 0; k < Processor.MinibatchSize; k++)
 				{
 					float* raw_hidden = (float*)hidden[k].ToPointer();
-					RBMProcessor.RescaleActivations(raw_hidden, (uint)RBMProcessor.HiddenUnits, RBMProcessor.HiddenType);
-					UpdateImageControlContents(k, PixelFormat.Lightness, (uint)RBMProcessor.HiddenUnits, raw_hidden);
+					Processor.RescaleActivations(raw_hidden, (uint)Processor.HiddenUnits, Processor.HiddenType);
+					UpdateImageControlContents(k, PixelFormat.Lightness, (uint)Processor.HiddenUnits, raw_hidden);
 				}
 			}
 		}

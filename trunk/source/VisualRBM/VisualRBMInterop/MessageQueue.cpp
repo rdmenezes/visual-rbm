@@ -1,6 +1,6 @@
 #include "MessageQueue.h"
 
-namespace QuickBoltzmann
+namespace VisualRBMInterop
 {
 
 	Message::Message(MessageType in_type)

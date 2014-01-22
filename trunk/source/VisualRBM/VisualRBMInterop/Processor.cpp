@@ -7,7 +7,7 @@
 #include <cmath>
 
 // VisualRBM Interop
-#include "RBMProcessor.h"
+#include "Processor.h"
 #include "MessageQueue.h"
 
 // OMLT
@@ -32,9 +32,20 @@ inline float sigmoid(float x)
 	return 1.0f / (1.0f + exp(-x));
 }
 
-namespace QuickBoltzmann
+namespace VisualRBMInterop
 {
-	static RBMProcessor::RBMProcessorState currentState;
+	enum ProcessorState
+	{
+		Invalid = -1,
+		Running,
+		Paused,
+		Stopped, 
+		ScheduleLoaded,
+		ScheduleRunning,
+	};
+
+
+	static ProcessorState currentState = ProcessorState::Invalid;
 
 	// Backend Static Data
 	static DataAtlas* training_data = nullptr;
@@ -91,7 +102,7 @@ namespace QuickBoltzmann
 
 #pragma region Data Rescaling Methods
 
-	void RBMProcessor::RescaleDiffs(float* buffer, uint32_t count, UnitType func)
+	void Processor::RescaleDiffs(float* buffer, uint32_t count, UnitType func)
 	{
 		// this constant will have sigmoid range from 0 to 1
 		const float diff_scale_factor = logf(127.0f) + logf(2.0f);
@@ -116,7 +127,7 @@ namespace QuickBoltzmann
 		}
 	}
 
-	void RBMProcessor::RescaleActivations(float* buffer, uint32_t count, UnitType type)
+	void Processor::RescaleActivations(float* buffer, uint32_t count, UnitType type)
 	{
 		switch(type)
 		{
@@ -140,7 +151,7 @@ namespace QuickBoltzmann
 		}
 	}
 
-	void RBMProcessor::RescaleWeights(float* buffer, float stddev, uint32_t count)
+	void Processor::RescaleWeights(float* buffer, float stddev, uint32_t count)
 	{
 		for(uint32_t k = 0; k < count; k++)
 		{
@@ -196,7 +207,7 @@ namespace QuickBoltzmann
 		virtual void HandleGetHiddenMsg(Message^ msg) = 0;
 		virtual void HandleGetWeightsMsg(Message^ msg) = 0;
 		virtual void HandleExportModel(Stream^ s) = 0;
-		virtual void HandleImportModel(OMLT::Model& model) = 0;
+		virtual bool HandleImportModel(OMLT::Model& model) = 0;
 		virtual void HandleLoadScheduleMsg(Message^ msg) = 0;
 		virtual float Train(OpenGLBuffer2D& train_example) = 0;
 		virtual float Validation(OpenGLBuffer2D& validation_example) = 0;
@@ -212,7 +223,7 @@ namespace QuickBoltzmann
 		ITrainer() : _trainer(nullptr), _schedule(nullptr), _loaded_model(nullptr) {}
 		virtual ~ITrainer()
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Stopped);
+			assert(currentState == ProcessorState::Stopped);
 			SAFE_DELETE(_trainer);
 			SAFE_DELETE(_schedule);
 			SAFE_DELETE(_loaded_model);
@@ -221,7 +232,7 @@ namespace QuickBoltzmann
 		{
 			switch(currentState)
 			{
-			case RBMProcessor::RBMProcessorState::Paused:
+			case ProcessorState::Paused:
 				{
 					assert(_trainer != nullptr);
 					assert(_schedule != nullptr);
@@ -229,10 +240,10 @@ namespace QuickBoltzmann
 					SAFE_DELETE(_schedule);
 					build_schedule();
 
-					currentState = RBMProcessor::RBMProcessorState::Running;
+					currentState = ProcessorState::Running;
 				}
 				break;
-			case RBMProcessor::RBMProcessorState::Stopped:
+			case ProcessorState::Stopped:
 				{
 					assert(_trainer == nullptr);
 					assert(_schedule == nullptr);
@@ -242,17 +253,17 @@ namespace QuickBoltzmann
 
 					InitializeDataAtlas();
 
-					currentState = RBMProcessor::RBMProcessorState::Running;
+					currentState = ProcessorState::Running;
 				}
 				break;
-			case RBMProcessor::RBMProcessorState::ScheduleLoaded:
+			case ProcessorState::ScheduleLoaded:
 				{
 					assert(_schedule != nullptr);
 					assert(_trainer != nullptr);
 
 					InitializeDataAtlas();
 
-					currentState = RBMProcessor::RBMProcessorState::ScheduleRunning;
+					currentState = ProcessorState::ScheduleRunning;
 				}
 				break;
 			default:
@@ -279,12 +290,7 @@ namespace QuickBoltzmann
 		{
 			SAFE_DELETE(_trainer);
 			SAFE_DELETE(_schedule);
-			currentState = RBMProcessor::RBMProcessorState::Stopped;
-		}
-		virtual void HandleImportModel(OMLT::Model& model)
-		{
-			SAFE_DELETE(_loaded_model);
-			_loaded_model = (MODEL*)model.ptr;
+			currentState = ProcessorState::Stopped;
 		}
 		virtual void HandleLoadScheduleMsg( Message^ msg)
 		{
@@ -310,7 +316,7 @@ namespace QuickBoltzmann
 
 			build_trainer();
 
-			currentState = RBMProcessor::RBMProcessorState::ScheduleLoaded;
+			currentState = ProcessorState::ScheduleLoaded;
 		}
 		virtual bool HandleEpochCompleted()
 		{
@@ -349,11 +355,11 @@ namespace QuickBoltzmann
 
 		void epochs_to_ui(uint32_t epochs)
 		{
-			RBMProcessor::Epochs = epochs;
+			Processor::Epochs = epochs;
 		}
 		void minibatches_to_ui(uint32_t minibatches)
 		{
-			RBMProcessor::MinibatchSize = minibatches;
+			Processor::MinibatchSize = minibatches;
 		}
 
 		TRAINER* _trainer;
@@ -365,8 +371,8 @@ namespace QuickBoltzmann
 	{
 		virtual void HandleGetVisibleMsg( Message^ msg ) 
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 
 			assert(_trainer != nullptr);
 
@@ -400,8 +406,8 @@ namespace QuickBoltzmann
 		}
 		virtual void HandleGetHiddenMsg( Message^ msg ) 
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 
 			assert(_trainer != nullptr);
 
@@ -420,8 +426,8 @@ namespace QuickBoltzmann
 		}
 		virtual void HandleGetWeightsMsg( Message^ msg ) 
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 
 			assert(_trainer != nullptr);
 
@@ -452,18 +458,32 @@ namespace QuickBoltzmann
 				s->WriteByte(model_json[k]);
 			}
 		}
+		virtual bool HandleImportModel(OMLT::Model& model)
+		{
+			_loaded_model = model.rbm;
+			if(visible_count != _loaded_model->visible_count)
+			{
+				SAFE_DELETE(_loaded_model);
+				return false;
+			}
+			Processor::HiddenUnits = _loaded_model->hidden_count;
+			Processor::VisibleType = (UnitType)_loaded_model->visible_type;
+			Processor::HiddenType = (UnitType)_loaded_model->hidden_type;
+
+			return true;
+		}
 		virtual float Train( OpenGLBuffer2D& train_example )
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 
 			_trainer->Train(train_example);
 			return _trainer->GetLastReconstructionError();
 		}
 		virtual float Validation( OpenGLBuffer2D& validation_example )
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 
 			return _trainer->GetReconstructionError(validation_example);
 		}
@@ -521,21 +541,21 @@ namespace QuickBoltzmann
 	template<>
 	void ITrainer<RBM,CD>::model_config_to_ui(const CD::ModelConfig& model_config)
 	{
-		RBMProcessor::Model = ModelType::RBM;
-		RBMProcessor::VisibleType = (UnitType)model_config.VisibleType;
-		RBMProcessor::HiddenType = (UnitType)model_config.HiddenType;
-		RBMProcessor::HiddenUnits = model_config.HiddenUnits;
+		Processor::Model = ModelType::RBM;
+		Processor::VisibleType = (UnitType)model_config.VisibleType;
+		Processor::HiddenType = (UnitType)model_config.HiddenType;
+		Processor::HiddenUnits = model_config.HiddenUnits;
 	}
 
 	template<>
 	void ITrainer<RBM,CD>::train_config_to_ui(const CD::TrainingConfig& train_config)
 	{
-		RBMProcessor::LearningRate = train_config.LearningRate;
-		RBMProcessor::Momentum = train_config.Momentum;
-		RBMProcessor::L1Regularization = train_config.L1Regularization;
-		RBMProcessor::L2Regularization = train_config.L2Regularization;
-		RBMProcessor::VisibleDropout = train_config.VisibleDropout;
-		RBMProcessor::HiddenDropout = train_config.HiddenDropout;
+		Processor::LearningRate = train_config.LearningRate;
+		Processor::Momentum = train_config.Momentum;
+		Processor::L1Regularization = train_config.L1Regularization;
+		Processor::L2Regularization = train_config.L2Regularization;
+		Processor::VisibleDropout = train_config.VisibleDropout;
+		Processor::HiddenDropout = train_config.HiddenDropout;
 	}
 
 
@@ -543,8 +563,8 @@ namespace QuickBoltzmann
 	{
 		virtual void HandleGetVisibleMsg( Message^ msg ) 
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 
 			assert(_trainer != nullptr);
 
@@ -581,8 +601,8 @@ namespace QuickBoltzmann
 		}
 		virtual void HandleGetHiddenMsg( Message^ msg ) 
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 
 			assert(_trainer != nullptr);
 			// allocate buffer space if need be
@@ -600,8 +620,8 @@ namespace QuickBoltzmann
 		}
 		virtual void HandleGetWeightsMsg( Message^ msg ) 
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 
 			assert(_trainer != nullptr);
 
@@ -632,10 +652,29 @@ namespace QuickBoltzmann
 				s->WriteByte(model_json[k]);
 			}
 		}
+
+		virtual bool HandleImportModel(OMLT::Model& model)
+		{
+			_loaded_model = model.mlp;
+			if(visible_count != _loaded_model->GetLayer(0)->inputs ||
+			   visible_count != _loaded_model->GetLayer(1)->outputs ||
+			   _loaded_model->LayerCount() != 2)
+			{
+				SAFE_DELETE(_loaded_model);
+				return false;
+			}
+
+			Processor::HiddenUnits = _loaded_model->GetLayer(1)->inputs;
+			Processor::VisibleType = (UnitType)_loaded_model->GetLayer(1)->function;
+			Processor::HiddenType = (UnitType)_loaded_model->GetLayer(0)->function;
+
+			return true;
+		}
+
 		virtual float Train( OpenGLBuffer2D& train_example )
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 			
 			_trainer->Train(train_example, train_example);
 			return _trainer->GetLastOutputError();
@@ -643,8 +682,8 @@ namespace QuickBoltzmann
 		}
 		virtual float Validation( OpenGLBuffer2D& validation_example )
 		{
-			assert(currentState == RBMProcessor::RBMProcessorState::Running ||
-				currentState == RBMProcessor::RBMProcessorState::ScheduleRunning);
+			assert(currentState == ProcessorState::Running ||
+				currentState == ProcessorState::ScheduleRunning);
 			return _trainer->GetOutputError(validation_example, validation_example);
 		}
 	};
@@ -716,24 +755,24 @@ namespace QuickBoltzmann
 	template<>
 	void ITrainer<MLP,BP>::model_config_to_ui(const BP::ModelConfig& model_config)
 	{
-		RBMProcessor::Model = ModelType::AutoEncoder;
-		RBMProcessor::VisibleType = (UnitType)model_config.LayerConfigs[1].Function;
-		RBMProcessor::HiddenType = (UnitType)model_config.LayerConfigs[0].Function;
-		RBMProcessor::HiddenUnits = model_config.LayerConfigs[0].OutputUnits;
+		Processor::Model = ModelType::AutoEncoder;
+		Processor::VisibleType = (UnitType)model_config.LayerConfigs[1].Function;
+		Processor::HiddenType = (UnitType)model_config.LayerConfigs[0].Function;
+		Processor::HiddenUnits = model_config.LayerConfigs[0].OutputUnits;
 	}
 
 	template<>
 	void ITrainer<MLP,BP>::train_config_to_ui(const BP::TrainingConfig& train_config)
 	{
-		RBMProcessor::LearningRate = train_config.LearningRate;
-		RBMProcessor::Momentum = train_config.Momentum;
-		RBMProcessor::L1Regularization = train_config.L1Regularization;
-		RBMProcessor::L2Regularization = train_config.L2Regularization;
-		RBMProcessor::VisibleDropout = train_config.Dropout[0];
-		RBMProcessor::HiddenDropout = train_config.Dropout[1];
+		Processor::LearningRate = train_config.LearningRate;
+		Processor::Momentum = train_config.Momentum;
+		Processor::L1Regularization = train_config.L1Regularization;
+		Processor::L2Regularization = train_config.L2Regularization;
+		Processor::VisibleDropout = train_config.Dropout[0];
+		Processor::HiddenDropout = train_config.Dropout[1];
 	}
 
-	void RBMProcessor::Run()
+	void Processor::Run()
 	{
 		if(SiCKL::OpenGLRuntime::Initialize() == false)
 		{
@@ -747,7 +786,7 @@ namespace QuickBoltzmann
 		_message_queue = gcnew MessageQueue();
 
 		// update state to alert GUI we can go
-		currentState = RBMProcessorState::Stopped;
+		currentState = ProcessorState::Stopped;
 		// start with an RBMTrainer by default
 		trainer = new RBMTrainer();
 
@@ -784,9 +823,9 @@ namespace QuickBoltzmann
 					}
 					break;
 				case MessageType::Pause:
-					assert(currentState == RBMProcessorState::Running ||
-					       currentState == RBMProcessorState::ScheduleRunning);
-					currentState = RBMProcessorState::Paused;
+					assert(currentState == ProcessorState::Running ||
+					       currentState == ProcessorState::ScheduleRunning);
+					currentState = ProcessorState::Paused;
 					break;
 				case MessageType::Stop:
 					iterations = 0;
@@ -795,19 +834,19 @@ namespace QuickBoltzmann
 					trainer->HandleStopMsg(msg);
 					break;
 				case MessageType::GetVisible:
-					if(currentState == RBMProcessor::RBMProcessorState::Running || currentState == RBMProcessor::RBMProcessorState::ScheduleRunning)
+					if(currentState == ProcessorState::Running || currentState == ProcessorState::ScheduleRunning)
 					{
 						trainer->HandleGetVisibleMsg(msg);
 					}
 					break;
 				case MessageType::GetHidden:
-					if(currentState == RBMProcessor::RBMProcessorState::Running || currentState == RBMProcessor::RBMProcessorState::ScheduleRunning)
+					if(currentState == ProcessorState::Running || currentState == ProcessorState::ScheduleRunning)
 					{
 						trainer->HandleGetHiddenMsg(msg);
 					}
 					break;
 				case MessageType::GetWeights:
-					if(currentState == RBMProcessor::RBMProcessorState::Running || currentState == RBMProcessor::RBMProcessorState::ScheduleRunning)
+					if(currentState == ProcessorState::Running || currentState == ProcessorState::ScheduleRunning)
 					{
 						trainer->HandleGetWeightsMsg(msg);
 					}
@@ -840,15 +879,18 @@ namespace QuickBoltzmann
 							switch(model.type)
 							{
 							case OMLT::ModelType::RBM:
-								RBMProcessor::Model = ModelType::RBM;
+								Processor::Model = ModelType::RBM;
 								break;
 							case OMLT::ModelType::MLP:
-								assert(false);
+								Processor::Model = ModelType::AutoEncoder;
 								break;
 							}
 
-							trainer->HandleImportModel(model);
-							msg["loaded"] = true;
+							if(trainer->HandleImportModel(model))
+							{
+								msg["loaded"] = true;
+							}
+
 						}
 					}
 					break;
@@ -866,7 +908,7 @@ namespace QuickBoltzmann
 							{
 								msg["schedule"] = IntPtr(schedule);
 
-								RBMProcessor::Model = ModelType::RBM;
+								Processor::Model = ModelType::RBM;
 								trainer->HandleLoadScheduleMsg(msg);
 								msg["loaded"] = true;
 							}
@@ -882,7 +924,7 @@ namespace QuickBoltzmann
 							{
 								msg["schedule"] = IntPtr(schedule);
 
-								RBMProcessor::Model = ModelType::AutoEncoder;
+								Processor::Model = ModelType::AutoEncoder;
 								trainer->HandleLoadScheduleMsg(msg);
 								msg["loaded"] = true;
 							}
@@ -920,13 +962,13 @@ namespace QuickBoltzmann
 		
 			switch(currentState)
 			{
-			case RBMProcessorState::ScheduleLoaded:
-			case RBMProcessorState::Stopped:
-			case RBMProcessorState::Paused:
+			case ProcessorState::ScheduleLoaded:
+			case ProcessorState::Stopped:
+			case ProcessorState::Paused:
 				Thread::Sleep(16);
 				break;
-			case RBMProcessorState::Running:
-			case RBMProcessorState::ScheduleRunning:
+			case ProcessorState::Running:
+			case ProcessorState::ScheduleRunning:
 				{
 					assert(training_data != nullptr);
 
@@ -967,7 +1009,7 @@ namespace QuickBoltzmann
 		}
 	}
 
-	bool RBMProcessor::SetTrainingData( String^ in_filename )
+	bool Processor::SetTrainingData( String^ in_filename )
 	{
 		IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(in_filename);
 		char* filename = static_cast<char*>(p.ToPointer());
@@ -1002,7 +1044,7 @@ namespace QuickBoltzmann
 		return true;
 	}
 
-	bool RBMProcessor::SetValidationData( String^ in_filename )
+	bool Processor::SetValidationData( String^ in_filename )
 	{
 		assert(training_data != nullptr);
 
@@ -1052,7 +1094,7 @@ namespace QuickBoltzmann
 		}
 	}
 
-	bool RBMProcessor::SaveModel(Stream^ in_stream)
+	bool Processor::SaveModel(Stream^ in_stream)
 	{
 		Message^ msg = gcnew Message(MessageType::ExportModel);
 		msg["output_stream"] = in_stream;
@@ -1066,7 +1108,7 @@ namespace QuickBoltzmann
 		return (bool)msg["saved"];
 	}
 
-	bool RBMProcessor::LoadModel(Stream^ in_stream)
+	bool Processor::LoadModel(Stream^ in_stream)
 	{
 		Message^ msg = gcnew Message(MessageType::ImportModel);
 		msg["input_stream"] = in_stream;
@@ -1080,7 +1122,7 @@ namespace QuickBoltzmann
 		return (bool)msg["loaded"];
 	}
 
-	bool RBMProcessor::LoadTrainingSchedule(Stream^ in_stream)
+	bool Processor::LoadTrainingSchedule(Stream^ in_stream)
 	{
 		Message^ msg = gcnew Message(MessageType::LoadSchedule);
 		msg["input_stream"] = in_stream;
@@ -1094,24 +1136,24 @@ namespace QuickBoltzmann
 		return (bool)msg["loaded"];
 	}
 
-	void RBMProcessor::Start( Action^ act)
+	void Processor::Start( Action^ act)
 	{
 		Message^ msg = gcnew Message(MessageType::Start);
 		msg["callback"] = act;
 		_message_queue->Enqueue(msg);
 	}
 
-	void RBMProcessor::Pause()
+	void Processor::Pause()
 	{
 		_message_queue->Enqueue(gcnew Message(MessageType::Pause));
 	}
 
-	void RBMProcessor::Stop()
+	void Processor::Stop()
 	{
 		_message_queue->Enqueue(gcnew Message(MessageType::Stop));
 	}
 
-	void RBMProcessor::Shutdown()
+	void Processor::Shutdown()
 	{
 		Message^ msg = gcnew Message(MessageType::Shutdown);
 
@@ -1122,7 +1164,7 @@ namespace QuickBoltzmann
 		}
 	}
 
-	bool RBMProcessor::GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs)
+	bool Processor::GetCurrentVisible(List<IntPtr>^ visible, List<IntPtr>^ reconstruction, List<IntPtr>^ diffs)
 	{
 		Message^ msg = gcnew Message(MessageType::GetVisible);
 		msg["visible"] = visible;
@@ -1143,7 +1185,7 @@ namespace QuickBoltzmann
 		return visible->Count == minibatch_size;
 	}
 
-	bool RBMProcessor::GetCurrentHidden( List<IntPtr>^ hidden_prob )
+	bool Processor::GetCurrentHidden( List<IntPtr>^ hidden_prob )
 	{
 		Message^ msg = gcnew Message(MessageType::GetHidden);
 		msg["hidden"] = hidden_prob;
@@ -1159,7 +1201,7 @@ namespace QuickBoltzmann
 		return hidden_prob->Count == minibatch_size;
 	}
 
-	bool RBMProcessor::GetCurrentWeights( List<IntPtr>^ weights )
+	bool Processor::GetCurrentWeights( List<IntPtr>^ weights )
 	{
 		Message^ msg = gcnew Message(MessageType::GetWeights);
 		msg["weights"] = weights;
@@ -1172,12 +1214,12 @@ namespace QuickBoltzmann
 
 		
 
-		if(model_type == QuickBoltzmann::ModelType::RBM)
+		if(model_type == VisualRBMInterop::ModelType::RBM)
 		{
 			assert(weights->Count == (hidden_count+1) || weights->Count == 0);
 			return weights->Count == (hidden_count+1);
 		}
-		else if(model_type == QuickBoltzmann::ModelType::AutoEncoder)
+		else if(model_type == VisualRBMInterop::ModelType::AutoEncoder)
 		{
 			// no bias for auto encoder currently
 			assert(weights->Count == hidden_count || weights->Count == 0);
@@ -1187,22 +1229,22 @@ namespace QuickBoltzmann
 
 #pragma region Properties
 
-	RBMProcessor::RBMProcessorState RBMProcessor::CurrentState::get()
+	bool Processor::IsInitialized()
 	{
-		return currentState;
+		return currentState != ProcessorState::Invalid;
 	}
 
-	bool RBMProcessor::HasTrainingData::get()
+	bool Processor::HasTrainingData::get()
 	{
 		return training_data != nullptr;
 	}
 
-	uint32_t RBMProcessor::Epochs::get()
+	uint32_t Processor::Epochs::get()
 	{
 		return epochs;
 	}
 
-	void RBMProcessor::Epochs::set( uint32_t e )
+	void Processor::Epochs::set( uint32_t e )
 	{
 		if(e != epochs)
 		{
@@ -1213,18 +1255,18 @@ namespace QuickBoltzmann
 	}
 
 
-	int RBMProcessor::VisibleUnits::get()
+	int Processor::VisibleUnits::get()
 	{
 		return visible_count;
 	}
 
 
-	int RBMProcessor::HiddenUnits::get()
+	int Processor::HiddenUnits::get()
 	{
 		return hidden_count;
 	}
 
-	void RBMProcessor::HiddenUnits::set( int units )
+	void Processor::HiddenUnits::set( int units )
 	{
 		assert(units > 0);
 		if(units != hidden_count)
@@ -1235,12 +1277,12 @@ namespace QuickBoltzmann
 	}
 
 
-	int RBMProcessor::MinibatchSize::get()
+	int Processor::MinibatchSize::get()
 	{
 		return minibatch_size;
 	}
 
-	void RBMProcessor::MinibatchSize::set( int ms )
+	void Processor::MinibatchSize::set( int ms )
 	{
 		assert(ms > 0);
 		if(ms != minibatch_size)
@@ -1251,18 +1293,18 @@ namespace QuickBoltzmann
 	}
 
 
-	unsigned int RBMProcessor::MinibatchCount::get()
+	unsigned int Processor::MinibatchCount::get()
 	{
 		assert(training_data != nullptr);
 		return training_data->GetTotalBatches();
 	}
 
-	QuickBoltzmann::ModelType RBMProcessor::Model::get()
+	VisualRBMInterop::ModelType Processor::Model::get()
 	{
 		return model_type;
 	}
 
-	void RBMProcessor::Model::set(QuickBoltzmann::ModelType in_type)
+	void Processor::Model::set(VisualRBMInterop::ModelType in_type)
 	{
 		if(in_type != model_type)
 		{
@@ -1283,12 +1325,12 @@ namespace QuickBoltzmann
 		}
 	}
 
-	UnitType RBMProcessor::VisibleType::get()
+	UnitType Processor::VisibleType::get()
 	{
 		return visible_type;
 	}
 
-	void RBMProcessor::VisibleType::set( UnitType ut )
+	void Processor::VisibleType::set( UnitType ut )
 	{
 		if(ut != visible_type)
 		{
@@ -1297,12 +1339,12 @@ namespace QuickBoltzmann
 		}
 	}
 
-	UnitType RBMProcessor::HiddenType::get()
+	UnitType Processor::HiddenType::get()
 	{
 		return hidden_type;
 	}
 
-	void RBMProcessor::HiddenType::set( UnitType ut )
+	void Processor::HiddenType::set( UnitType ut )
 	{
 		if(ut != hidden_type)
 		{
@@ -1311,12 +1353,12 @@ namespace QuickBoltzmann
 		}
 	}
 
-	float RBMProcessor::LearningRate::get()
+	float Processor::LearningRate::get()
 	{
 		return learning_rate;
 	}
 
-	void RBMProcessor::LearningRate::set( float lr )
+	void Processor::LearningRate::set( float lr )
 	{
 		assert(lr >= 0.0f);
 		if(lr != learning_rate)
@@ -1327,12 +1369,12 @@ namespace QuickBoltzmann
 	}
 
 
-	float RBMProcessor::Momentum::get()
+	float Processor::Momentum::get()
 	{
 		return momentum;
 	}
 
-	void RBMProcessor::Momentum::set( float m )
+	void Processor::Momentum::set( float m )
 	{
 		assert(m >= 0.0f && m <= 1.0f);
 		if(momentum != m)
@@ -1343,12 +1385,12 @@ namespace QuickBoltzmann
 	}
 
 
-	float RBMProcessor::L1Regularization::get()
+	float Processor::L1Regularization::get()
 	{
 		return l1;
 	}
 
-	void RBMProcessor::L1Regularization::set( float reg )
+	void Processor::L1Regularization::set( float reg )
 	{
 		assert(reg >= 0.0f);
 		if(reg != l1)
@@ -1359,12 +1401,12 @@ namespace QuickBoltzmann
 	}
 
 
-	float RBMProcessor::L2Regularization::get()
+	float Processor::L2Regularization::get()
 	{
 		return l2;
 	}
 
-	void RBMProcessor::L2Regularization::set( float reg )
+	void Processor::L2Regularization::set( float reg )
 	{
 		assert(reg >= 0.0f);
 		if(reg != l2)
@@ -1375,12 +1417,12 @@ namespace QuickBoltzmann
 	}
 
 
-	float RBMProcessor::VisibleDropout::get()
+	float Processor::VisibleDropout::get()
 	{
 		return visible_dropout;
 	}
 
-	void RBMProcessor::VisibleDropout::set( float vd )
+	void Processor::VisibleDropout::set( float vd )
 	{
 		assert(vd >= 0.0f && vd < 1.0f);
 		if(vd != visible_dropout)
@@ -1390,12 +1432,12 @@ namespace QuickBoltzmann
 		}
 	}
 
-	float RBMProcessor::HiddenDropout::get()
+	float Processor::HiddenDropout::get()
 	{
 		return hidden_dropout;
 	}
 
-	void RBMProcessor::HiddenDropout::set( float hd )
+	void Processor::HiddenDropout::set( float hd )
 	{
 		assert(hd >= 0.0f && hd < 1.0f);
 		if(hd != hidden_dropout)

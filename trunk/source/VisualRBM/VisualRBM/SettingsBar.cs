@@ -9,7 +9,7 @@ using System.Windows.Forms;
 using System.Threading;
 using System.IO;
 
-using QuickBoltzmann;
+using VisualRBMInterop;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 
@@ -253,20 +253,20 @@ namespace VisualRBM
 				// set initial values of all our forms
 
 				// model
-				modelTypeComboBox.SelectedItem = RBMProcessor.Model;
-				visibleTypeComboBox.SelectedItem = RBMProcessor.VisibleType;
-				hiddenTypeComboBox.SelectedItem = RBMProcessor.HiddenType;
-				hiddenUnitsTextBox.Text = RBMProcessor.HiddenUnits.ToString();
+				modelTypeComboBox.SelectedItem = Processor.Model;
+				visibleTypeComboBox.SelectedItem = Processor.VisibleType;
+				hiddenTypeComboBox.SelectedItem = Processor.HiddenType;
+				hiddenUnitsTextBox.Text = Processor.HiddenUnits.ToString();
 				// parameters
-				learningRateTextBox.Text = RBMProcessor.LearningRate.ToString();
-				momentumTextBox.Text = RBMProcessor.Momentum.ToString();
-				l1TextBox.Text = RBMProcessor.L1Regularization.ToString();
-				l2TextBox.Text = RBMProcessor.L2Regularization.ToString();
-				visibleDropoutTextBox.Text = RBMProcessor.VisibleDropout.ToString();
-				hiddenDropoutTextBox.Text = RBMProcessor.HiddenDropout.ToString();
+				learningRateTextBox.Text = Processor.LearningRate.ToString();
+				momentumTextBox.Text = Processor.Momentum.ToString();
+				l1TextBox.Text = Processor.L1Regularization.ToString();
+				l2TextBox.Text = Processor.L2Regularization.ToString();
+				visibleDropoutTextBox.Text = Processor.VisibleDropout.ToString();
+				hiddenDropoutTextBox.Text = Processor.HiddenDropout.ToString();
 				
-				minibatchSizeTextBox.Text = RBMProcessor.MinibatchSize.ToString();
-				epochsTextBox.Text = RBMProcessor.Epochs.ToString();
+				minibatchSizeTextBox.Text = Processor.MinibatchSize.ToString();
+				epochsTextBox.Text = Processor.Epochs.ToString();
 			}
 		}
 
@@ -311,16 +311,16 @@ namespace VisualRBM
 		{
 			InitializeComponent();
 			// fill in model types combobox
-			modelTypeComboBox.Items.Add(QuickBoltzmann.ModelType.RBM);
-			modelTypeComboBox.Items.Add(QuickBoltzmann.ModelType.AutoEncoder);
+			modelTypeComboBox.Items.Add(VisualRBMInterop.ModelType.RBM);
+			modelTypeComboBox.Items.Add(VisualRBMInterop.ModelType.AutoEncoder);
 			// fill in visible type combobox
-			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Sigmoid);
-			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Linear);
-			visibleTypeComboBox.Items.Add(QuickBoltzmann.UnitType.RectifiedLinear);
+			visibleTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Sigmoid);
+			visibleTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Linear);
+			visibleTypeComboBox.Items.Add(VisualRBMInterop.UnitType.RectifiedLinear);
 			// fill in hidden type combobox
-			hiddenTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Sigmoid);
-			hiddenTypeComboBox.Items.Add(QuickBoltzmann.UnitType.Linear);
-			hiddenTypeComboBox.Items.Add(QuickBoltzmann.UnitType.RectifiedLinear);
+			hiddenTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Sigmoid);
+			hiddenTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Linear);
+			hiddenTypeComboBox.Items.Add(VisualRBMInterop.UnitType.RectifiedLinear);
 
 			// setup all our tooltips
 			SetToolTip("Load training dataset", this.selectTrainingIdxButton);
@@ -352,14 +352,14 @@ namespace VisualRBM
 			SetToolTip("Save RBM to disk", this.exportButton);
 
 			// add event to update epochs textbox
-			RBMProcessor.EpochCompleted += new RBMProcessor.EpochCompletedHandler((uint i) => 
+			Processor.EpochCompleted += new Processor.EpochCompletedHandler((uint i) => 
 			{
 				epochsTextBox.Invoke(new Action(() => 
 				{
 					epochsTextBox.Text = i.ToString();
 				}));
 			});
-			RBMProcessor.TrainingCompleted += new RBMProcessor.TrainingCompletedHandler(() =>
+			Processor.TrainingCompleted += new Processor.TrainingCompletedHandler(() =>
 			{
 				this.Invoke(new Action(() =>
 				{
@@ -371,64 +371,64 @@ namespace VisualRBM
 			});
 			// callbacks for our UI to change items
 			// model parameters
-			RBMProcessor.ModelTypeChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.ModelTypeChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { modelTypeComboBox.SelectedItem = (ModelType)obj; }));
 				_main_form.trainingLog.AddLog("Model Type = {0}", obj);
 			});
-			RBMProcessor.VisibleTypeChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.VisibleTypeChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { visibleTypeComboBox.SelectedItem = (UnitType)obj; }));
 				_main_form.trainingLog.AddLog("Visible Type = {0}", obj);
 			});
-			RBMProcessor.HiddenTypeChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.HiddenTypeChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { hiddenTypeComboBox.SelectedItem = (UnitType)obj; }));
 				_main_form.trainingLog.AddLog("Hidden Type = {0}", obj);
 			});
-			RBMProcessor.HiddenUnitsChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.HiddenUnitsChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { hiddenUnitsTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Hidden Units = {0}", obj);
 			});
 			// training parameters
-			RBMProcessor.LearningRateChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.LearningRateChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { learningRateTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Learning Rate = {0}", obj);
 			});
-			RBMProcessor.MomentumChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.MomentumChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { momentumTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Momentum = {0}", obj);
 			});
-			RBMProcessor.L1RegularizationChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.L1RegularizationChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { l1TextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("L1Regularization = {0}", obj);
 			});
-			RBMProcessor.L2RegularizationChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.L2RegularizationChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { l2TextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("L2Regularization = {0}", obj);
 			});
-			RBMProcessor.VisibleDropoutChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.VisibleDropoutChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { visibleDropoutTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Visible Dropout = {0}", obj);
 			});
-			RBMProcessor.HiddenDropoutChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.HiddenDropoutChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { hiddenDropoutTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Hidden Dropout = {0}", obj);
 			});
 
-			RBMProcessor.MinibatchSizeChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.MinibatchSizeChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { minibatchSizeTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Minibatch Size = {0}", obj);
 			});
-			RBMProcessor.EpochsChanged += new RBMProcessor.ValueChangedHandler((Object obj) =>
+			Processor.EpochsChanged += new Processor.ValueChangedHandler((Object obj) =>
 			{
 				this.BeginInvoke(new Action(() => { epochsTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Epochs = {0}", obj);
@@ -477,7 +477,7 @@ namespace VisualRBM
 			{
 				_main_form.Cursor = Cursors.WaitCursor;
 				// load IDX file
-				if (RBMProcessor.SetTrainingData(ofd.FileName) == false)
+				if (Processor.SetTrainingData(ofd.FileName) == false)
 				{
 					_main_form.Cursor = Cursors.Default;
 					return;
@@ -486,9 +486,9 @@ namespace VisualRBM
 
 				// update labels
 				traingingIdxPathTextBox.Text = ofd.FileName;
-				visibleUnitsLabel.Text = RBMProcessor.VisibleUnits.ToString();
+				visibleUnitsLabel.Text = Processor.VisibleUnits.ToString();
 
-				int total_vals = RBMProcessor.VisibleUnits;
+				int total_vals = Processor.VisibleUnits;
 				ImageWidth = (int)SquareRoot((uint)total_vals);
 				ImageHeight = total_vals / ImageWidth;
 				if (ImageHeight * ImageWidth < total_vals)
@@ -504,7 +504,7 @@ namespace VisualRBM
 				_main_form.trainingLog.AddLog("Loaded Training .IDX: {0}", ofd.FileName);
 
 				// get rid of any validation data that's here
-				RBMProcessor.SetValidationData(null);
+				Processor.SetValidationData(null);
 				validationIdxPathTextBox.Text = "";
 
 				if (current_state == ProgramState.ProgramStarted)
@@ -522,7 +522,7 @@ namespace VisualRBM
 			if (ofd.ShowDialog() == DialogResult.OK)
 			{
 				Cursor.Current = Cursors.WaitCursor;
-				if (RBMProcessor.SetValidationData(ofd.FileName) == false)
+				if (Processor.SetValidationData(ofd.FileName) == false)
 				{
 					Cursor.Current = Cursors.Default;
 					return;
@@ -539,7 +539,7 @@ namespace VisualRBM
 
 		private void clearValidationDataButton_Click(object sender, EventArgs e)
 		{
-			RBMProcessor.SetValidationData(null);
+			Processor.SetValidationData(null);
 			validationIdxPathTextBox.Text = "";
 
 			_main_form.trainingLog.AddLog("Cleared Validation .IDX");
@@ -605,7 +605,7 @@ namespace VisualRBM
 		{
 			ComboBox cb = sender as ComboBox;
 
-			RBMProcessor.Model = (QuickBoltzmann.ModelType)cb.SelectedItem;
+			Processor.Model = (VisualRBMInterop.ModelType)cb.SelectedItem;
 		}
 		#endregion
 
@@ -613,9 +613,9 @@ namespace VisualRBM
 		private void visibleTypeComboBox_SelectionChangeCommitted(object sender, EventArgs e)
 		{
 			ComboBox cb = sender as ComboBox;
-			if (RBMProcessor.VisibleType != (QuickBoltzmann.UnitType)cb.SelectedItem)
+			if (Processor.VisibleType != (VisualRBMInterop.UnitType)cb.SelectedItem)
 			{
-				RBMProcessor.VisibleType = (QuickBoltzmann.UnitType)cb.SelectedItem;
+				Processor.VisibleType = (VisualRBMInterop.UnitType)cb.SelectedItem;
 			}
 		}
 		#endregion
@@ -624,9 +624,9 @@ namespace VisualRBM
 		private void hiddenTypeComboBox_SelectionChangeCommitted(object sender, EventArgs e)
 		{
 			ComboBox cb = sender as ComboBox;
-			if (RBMProcessor.HiddenType != (QuickBoltzmann.UnitType)cb.SelectedItem)
+			if (Processor.HiddenType != (VisualRBMInterop.UnitType)cb.SelectedItem)
 			{
-				RBMProcessor.HiddenType = (QuickBoltzmann.UnitType)cb.SelectedItem;
+				Processor.HiddenType = (VisualRBMInterop.UnitType)cb.SelectedItem;
 			}
 		}
 		#endregion
@@ -640,15 +640,15 @@ namespace VisualRBM
 			uint hidden; 
 			if (uint.TryParse(tb.Text, out hidden))
 			{
-				if ((int)hidden != RBMProcessor.HiddenUnits)
+				if ((int)hidden != Processor.HiddenUnits)
 				{
-					RBMProcessor.HiddenUnits = (int)hidden;
+					Processor.HiddenUnits = (int)hidden;
 					tb.Text = hidden.ToString();
 					return true;
 				}
 				return false;
 			}
-			tb.Text = RBMProcessor.HiddenUnits.ToString();
+			tb.Text = Processor.HiddenUnits.ToString();
 			return false;
 		}
 
@@ -674,14 +674,14 @@ namespace VisualRBM
 			float learning_rate;
 			if(float.TryParse(tb.Text, out learning_rate) && learning_rate > 0.0f)
 			{
-				if(learning_rate != RBMProcessor.LearningRate)
+				if(learning_rate != Processor.LearningRate)
 				{
-					RBMProcessor.LearningRate = learning_rate;
+					Processor.LearningRate = learning_rate;
 					tb.Text = learning_rate.ToString();
 					return true;
 				}
 			}
-			tb.Text = RBMProcessor.LearningRate.ToString();
+			tb.Text = Processor.LearningRate.ToString();
 			return false;
 		}
 
@@ -707,15 +707,15 @@ namespace VisualRBM
 			{
 				momentum = momentum > 0.0f ? (momentum < 1.0f ? momentum : 1.0f) : 0.0f;
 
-				if (momentum != RBMProcessor.Momentum)
+				if (momentum != Processor.Momentum)
 				{
-					RBMProcessor.Momentum = momentum;
+					Processor.Momentum = momentum;
 					tb.Text = momentum.ToString();
 					return true;
 				}
 				return false;
 			}
-			tb.Text = RBMProcessor.Momentum.ToString();
+			tb.Text = Processor.Momentum.ToString();
 			return false;
 		}
 
@@ -741,14 +741,14 @@ namespace VisualRBM
 			float l1;
 			if (float.TryParse(tb.Text, out l1) && l1 >= 0.0f)
 			{
-				if (l1 != RBMProcessor.L1Regularization)
+				if (l1 != Processor.L1Regularization)
 				{
-					RBMProcessor.L1Regularization = l1;
+					Processor.L1Regularization = l1;
 					return true;
 				}
 				return false;
 			}
-			tb.Text = RBMProcessor.L1Regularization.ToString();
+			tb.Text = Processor.L1Regularization.ToString();
 			return false;
 		}
 
@@ -771,14 +771,14 @@ namespace VisualRBM
 			float l2;
 			if (float.TryParse(tb.Text, out l2) && l2 >= 0.0f)
 			{
-				if (l2 != RBMProcessor.L2Regularization)
+				if (l2 != Processor.L2Regularization)
 				{
-					RBMProcessor.L2Regularization = l2;
+					Processor.L2Regularization = l2;
 					return true;
 				}
 				return false;
 			}
-			tb.Text = RBMProcessor.L2Regularization.ToString();
+			tb.Text = Processor.L2Regularization.ToString();
 			return false;
 		}
 
@@ -807,9 +807,9 @@ namespace VisualRBM
 			{
 				if (tb == visibleDropoutTextBox)
 				{
-					if (db != RBMProcessor.VisibleDropout)
+					if (db != Processor.VisibleDropout)
 					{
-						RBMProcessor.VisibleDropout = db;
+						Processor.VisibleDropout = db;
 					}
 					else
 					{
@@ -818,9 +818,9 @@ namespace VisualRBM
 				}
 				else if (tb == hiddenDropoutTextBox)
 				{
-					if (db != RBMProcessor.HiddenDropout)
+					if (db != Processor.HiddenDropout)
 					{
-						RBMProcessor.HiddenDropout = db;
+						Processor.HiddenDropout = db;
 					}
 					else
 					{
@@ -833,11 +833,11 @@ namespace VisualRBM
 			{
 				if (tb == visibleDropoutTextBox)
 				{
-					visibleDropoutTextBox.Text = RBMProcessor.VisibleDropout.ToString();
+					visibleDropoutTextBox.Text = Processor.VisibleDropout.ToString();
 				}
 				else if (tb == hiddenDropoutTextBox)
 				{
-					hiddenDropoutTextBox.Text = RBMProcessor.HiddenDropout.ToString();
+					hiddenDropoutTextBox.Text = Processor.HiddenDropout.ToString();
 				}
 			}
 
@@ -876,15 +876,15 @@ namespace VisualRBM
 			uint minibatch;
 			if(uint.TryParse(tb.Text, out minibatch))
 			{
-				if ((int)minibatch != RBMProcessor.MinibatchSize)
+				if ((int)minibatch != Processor.MinibatchSize)
 				{
-					RBMProcessor.MinibatchSize = (int)minibatch;
+					Processor.MinibatchSize = (int)minibatch;
 					tb.Text = minibatch.ToString();
 					return true;
 				}
 				return false;
 			}
-			tb.Text = RBMProcessor.MinibatchSize.ToString();
+			tb.Text = Processor.MinibatchSize.ToString();
 			return false;
 		}
 
@@ -908,19 +908,19 @@ namespace VisualRBM
 			uint epochs;
 			if(uint.TryParse(tb.Text, out epochs))
 			{
-				if ((uint)epochs != RBMProcessor.Epochs)
+				if ((uint)epochs != Processor.Epochs)
 				{
 					// user should not be able to set epochs to 0
 					if (epochs == 0)
 						epochs = 1;
 
 					// set number of epochs to train for in the processor
-					RBMProcessor.Epochs = (uint)epochs;
+					Processor.Epochs = (uint)epochs;
 
 					tb.Text = epochs.ToString();
 					// if we have data, then we are in the middle of training and start button should be enabled
 					// even though training may have finished already
-					if (RBMProcessor.HasTrainingData)
+					if (Processor.HasTrainingData)
 					{
 						this.startButton.Enabled = true;
 					}
@@ -930,7 +930,7 @@ namespace VisualRBM
 				return false;
 			}
 			// set text based on value in rbmprocessor
-			tb.Text = RBMProcessor.Epochs.ToString();
+			tb.Text = Processor.Epochs.ToString();
 			return false;
 		}
 
@@ -952,7 +952,7 @@ namespace VisualRBM
 		private void startButton_Click(object sender, EventArgs e)
 		{
 			// if we have no data then don't do anything
-			if (RBMProcessor.HasTrainingData)
+			if (Processor.HasTrainingData)
 			{
 				// start visualization
 				_main_form.visualizeReconstructionError.Start();
@@ -971,7 +971,7 @@ namespace VisualRBM
 					CurrentState = ProgramState.TrainerInitializing;
 					
 					// start training, give a callback to update our current_state
-					RBMProcessor.Start(new Action(() =>
+					Processor.Start(new Action(() =>
 					{
 						this.Invoke(new Action(() => _main_form.Cursor = Cursors.Default));
 						this.CurrentState = ProgramState.TrainerRunning;
@@ -980,12 +980,12 @@ namespace VisualRBM
 				else if (CurrentState == ProgramState.TrainerPaused)
 				{
 					CurrentState = ProgramState.TrainerRunning;
-					RBMProcessor.Start(null);	// no callback needed
+					Processor.Start(null);	// no callback needed
 				}
 				else if (CurrentState == ProgramState.TrainerScheduleLoaded)
 				{
 					CurrentState = ProgramState.TrainerScheduleRunning;
-					RBMProcessor.Start(null);	// no callback needed
+					Processor.Start(null);	// no callback needed
 				}
 				else
 				{
@@ -1005,7 +1005,7 @@ namespace VisualRBM
 
 			_main_form.trainingLog.AddLog("Training Stopped");
 
-			RBMProcessor.Stop();
+			Processor.Stop();
 		}
 
 		private void pauseButton_Click(object sender, EventArgs e)
@@ -1018,7 +1018,7 @@ namespace VisualRBM
 
 			_main_form.trainingLog.AddLog("Training Paused");
 
-			RBMProcessor.Pause();
+			Processor.Pause();
 		}
 
 		private void exportButton_Click(object sender, EventArgs e)
@@ -1032,7 +1032,7 @@ namespace VisualRBM
 				bool saved;
 				try
 				{
-					saved = RBMProcessor.SaveModel(sfd.OpenFile());
+					saved = Processor.SaveModel(sfd.OpenFile());
 				}
 				catch (Exception)
 				{
@@ -1065,7 +1065,7 @@ namespace VisualRBM
 				bool loaded;
 				try
 				{
-					loaded = RBMProcessor.LoadModel(ofd.OpenFile());
+					loaded = Processor.LoadModel(ofd.OpenFile());
 				}
 				catch(Exception)
 				{
@@ -1076,11 +1076,11 @@ namespace VisualRBM
 				{
 					_main_form.trainingLog.AddLog("Imported RBM from {0}", ofd.FileName);
 					
-					visibleUnitsLabel.Text = RBMProcessor.VisibleUnits.ToString();
-					hiddenUnitsTextBox.Text = RBMProcessor.HiddenUnits.ToString();
-					visibleTypeComboBox.SelectedItem = RBMProcessor.VisibleType;
-					hiddenTypeComboBox.SelectedItem = RBMProcessor.HiddenType;
-					modelTypeComboBox.SelectedItem = RBMProcessor.Model;
+					visibleUnitsLabel.Text = Processor.VisibleUnits.ToString();
+					hiddenUnitsTextBox.Text = Processor.HiddenUnits.ToString();
+					visibleTypeComboBox.SelectedItem = Processor.VisibleType;
+					hiddenTypeComboBox.SelectedItem = Processor.HiddenType;
+					modelTypeComboBox.SelectedItem = Processor.Model;
 
 					CurrentState = ProgramState.TrainerPaused;
 					_main_form.Cursor = Cursors.Default;
@@ -1120,7 +1120,7 @@ namespace VisualRBM
 					_main_form.Cursor = Cursors.Default;
 					MessageBox.Show(error);
 				}
-				else if (RBMProcessor.LoadTrainingSchedule(stream) == false)
+				else if (Processor.LoadTrainingSchedule(stream) == false)
 				{
 					String error = String.Format("Error parsing training schedule JSON from {0}", ofd.FileName);
 					_main_form.trainingLog.AddLog(error);
@@ -1149,16 +1149,16 @@ namespace VisualRBM
 					using (StreamWriter sw = new StreamWriter(new FileStream(sfd.FileName, FileMode.Create)))
 					{
 						sw.WriteLine("model = RBM");
-						sw.WriteLine("visible_type = {0}", RBMProcessor.VisibleType);
-						sw.WriteLine("hidden_units = {0}", RBMProcessor.HiddenUnits);
-						sw.WriteLine("learning_rate = {0}", RBMProcessor.LearningRate);
-						sw.WriteLine("momentum = {0}", RBMProcessor.Momentum);
-						sw.WriteLine("l1_regularization = {0}", RBMProcessor.L1Regularization);
-						sw.WriteLine("l2_regularization = {0}", RBMProcessor.L2Regularization);
-						sw.WriteLine("visible_dropout = {0}", RBMProcessor.VisibleDropout);
-						sw.WriteLine("hidden_dropout = {0}", RBMProcessor.HiddenDropout);
-						sw.WriteLine("minibatch_size = {0}", RBMProcessor.MinibatchSize);
-						sw.WriteLine("epochs = {0}", RBMProcessor.Epochs);
+						sw.WriteLine("visible_type = {0}", Processor.VisibleType);
+						sw.WriteLine("hidden_units = {0}", Processor.HiddenUnits);
+						sw.WriteLine("learning_rate = {0}", Processor.LearningRate);
+						sw.WriteLine("momentum = {0}", Processor.Momentum);
+						sw.WriteLine("l1_regularization = {0}", Processor.L1Regularization);
+						sw.WriteLine("l2_regularization = {0}", Processor.L2Regularization);
+						sw.WriteLine("visible_dropout = {0}", Processor.VisibleDropout);
+						sw.WriteLine("hidden_dropout = {0}", Processor.HiddenDropout);
+						sw.WriteLine("minibatch_size = {0}", Processor.MinibatchSize);
+						sw.WriteLine("epochs = {0}", Processor.Epochs);
 
 						_main_form.trainingLog.AddLog("Saved Parameters to {0}", sfd.FileName);
 					}
@@ -1176,23 +1176,23 @@ namespace VisualRBM
 			return;
 			if (MessageBox.Show("Reset training parameters to defaults?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
 			{
-				RBMProcessor.LearningRate = 0.001f;
-				RBMProcessor.Momentum = 0.5f;
-				RBMProcessor.L1Regularization = 0.0f;
-				RBMProcessor.L2Regularization = 0.0f;
-				RBMProcessor.VisibleDropout = 0.0f;
-				RBMProcessor.HiddenDropout = 0.5f;
-				RBMProcessor.MinibatchSize = 10;
-				RBMProcessor.Epochs = 100;
+				Processor.LearningRate = 0.001f;
+				Processor.Momentum = 0.5f;
+				Processor.L1Regularization = 0.0f;
+				Processor.L2Regularization = 0.0f;
+				Processor.VisibleDropout = 0.0f;
+				Processor.HiddenDropout = 0.5f;
+				Processor.MinibatchSize = 10;
+				Processor.Epochs = 100;
 
-				learningRateTextBox.Text = RBMProcessor.LearningRate.ToString();
-				momentumTextBox.Text = RBMProcessor.Momentum.ToString();
-				l1TextBox.Text = RBMProcessor.L1Regularization.ToString();
-				l2TextBox.Text = RBMProcessor.L2Regularization.ToString();
-				visibleDropoutTextBox.Text = RBMProcessor.VisibleDropout.ToString();
-				hiddenDropoutTextBox.Text = RBMProcessor.HiddenDropout.ToString();
-				minibatchSizeTextBox.Text = RBMProcessor.MinibatchSize.ToString();
-				epochsTextBox.Text = RBMProcessor.Epochs.ToString();
+				learningRateTextBox.Text = Processor.LearningRate.ToString();
+				momentumTextBox.Text = Processor.Momentum.ToString();
+				l1TextBox.Text = Processor.L1Regularization.ToString();
+				l2TextBox.Text = Processor.L2Regularization.ToString();
+				visibleDropoutTextBox.Text = Processor.VisibleDropout.ToString();
+				hiddenDropoutTextBox.Text = Processor.HiddenDropout.ToString();
+				minibatchSizeTextBox.Text = Processor.MinibatchSize.ToString();
+				epochsTextBox.Text = Processor.Epochs.ToString();
 				
 				_main_form.trainingLog.AddLog("Reset Parameters to Defaults");
 			}

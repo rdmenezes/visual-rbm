@@ -5,7 +5,7 @@ using namespace System::Collections;
 using namespace System::Collections::Concurrent;
 using namespace System::Threading;
 
-namespace QuickBoltzmann
+namespace VisualRBMInterop
 {
 	public enum class MessageType
 	{
@@ -58,8 +58,8 @@ namespace QuickBoltzmann
 	{
 	public:
 		MessageQueue();
-		void Enqueue(QuickBoltzmann::Message^);
-		QuickBoltzmann::Message^ Dequeue();
+		void Enqueue(VisualRBMInterop::Message^);
+		VisualRBMInterop::Message^ Dequeue();
 		void Clear();
 	private:
 		Queue^ _message_queue;

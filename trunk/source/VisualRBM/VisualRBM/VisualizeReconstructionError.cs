@@ -8,7 +8,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.Windows.Forms.DataVisualization.Charting;
 
-using QuickBoltzmann;
+using VisualRBMInterop;
 
 
 namespace VisualRBM
@@ -45,8 +45,8 @@ namespace VisualRBM
 
 			InitializeComponent();
 
-			RBMProcessor.IterationCompleted += new RBMProcessor.IterationCompletedHandler(RBMProcessor_ItereationCompleted);
-			RBMProcessor.EpochCompleted += new RBMProcessor.EpochCompletedHandler(RBMProcessor_EpochCompleted);
+			Processor.IterationCompleted += new Processor.IterationCompletedHandler(RBMProcessor_ItereationCompleted);
+			Processor.EpochCompleted += new Processor.EpochCompletedHandler(RBMProcessor_EpochCompleted);
 		}
 
 		void RBMProcessor_ItereationCompleted(uint iteration, float training_error, float validation_error)
@@ -59,9 +59,9 @@ namespace VisualRBM
 			// we don't know how many minibatches the trainer will have until it has been initialized
 			if(epoch_training_buffer == null && epoch_validation_buffer == null)
 			{
-				epoch_training_buffer = new float[RBMProcessor.MinibatchCount];
+				epoch_training_buffer = new float[Processor.MinibatchCount];
 				epoch_training_sum = 0.0f;
-				epoch_validation_buffer = new float[RBMProcessor.MinibatchCount];
+				epoch_validation_buffer = new float[Processor.MinibatchCount];
 				epoch_validation_sum = 0.0f;
 			}
 
@@ -77,12 +77,12 @@ namespace VisualRBM
 			last_validation_error = validation_sum;
 
 			// epoch errors
-			uint epoch_index = iteration % RBMProcessor.MinibatchCount;
-			epoch_training_sum += training_error / (float)RBMProcessor.MinibatchCount - epoch_training_buffer[epoch_index];
-			epoch_training_buffer[epoch_index] = training_error / (float)RBMProcessor.MinibatchCount;
+			uint epoch_index = iteration % Processor.MinibatchCount;
+			epoch_training_sum += training_error / (float)Processor.MinibatchCount - epoch_training_buffer[epoch_index];
+			epoch_training_buffer[epoch_index] = training_error / (float)Processor.MinibatchCount;
 
-			epoch_validation_sum += validation_error / (float)RBMProcessor.MinibatchCount - epoch_validation_buffer[epoch_index];
-			epoch_validation_buffer[epoch_index] = validation_error / (float)RBMProcessor.MinibatchCount;
+			epoch_validation_sum += validation_error / (float)Processor.MinibatchCount - epoch_validation_buffer[epoch_index];
+			epoch_validation_buffer[epoch_index] = validation_error / (float)Processor.MinibatchCount;
 
 			last_epoch_training_error = epoch_training_sum;
 			last_epoch_validation_error = epoch_validation_sum;
