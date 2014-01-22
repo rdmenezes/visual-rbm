@@ -1155,6 +1155,7 @@ namespace VisualRBMInterop
 
 	void Processor::Shutdown()
 	{
+		Stop();
 		Message^ msg = gcnew Message(MessageType::Shutdown);
 
 		_message_queue->Enqueue(msg);
