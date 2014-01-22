@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
-using QuickBoltzmann;
+using VisualRBMInterop;
 
 namespace VisualRBM
 {
@@ -16,12 +16,12 @@ namespace VisualRBM
 		{
 			get
 			{
-				switch (RBMProcessor.Model)
+				switch (Processor.Model)
 				{
 					case ModelType.AutoEncoder:
-						return RBMProcessor.HiddenUnits;
+						return Processor.HiddenUnits;
 					case ModelType.RBM:
-						return RBMProcessor.HiddenUnits + 1;
+						return Processor.HiddenUnits + 1;
 					default:
 						return 0;
 				}
@@ -43,7 +43,7 @@ namespace VisualRBM
 		protected override unsafe void Drawing()
 		{
 			List<IntPtr> weights = new List<IntPtr>();
-			if (RBMProcessor.GetCurrentWeights(weights))
+			if (Processor.GetCurrentWeights(weights))
 			{
 
 				PixelFormat pf = _main_form.settingsBar.Format;
@@ -52,21 +52,21 @@ namespace VisualRBM
 				foreach (IntPtr ptr in weights)
 				{
 					float* raw_weights = (float*)ptr.ToPointer();
-					for (uint k = 0; k < RBMProcessor.VisibleUnits; k++)
+					for (uint k = 0; k < Processor.VisibleUnits; k++)
 					{
 						float val = raw_weights[k];
 						stddev += val * val;
 					}
 				}
-				stddev /= weights.Count * RBMProcessor.VisibleUnits;
+				stddev /= weights.Count * Processor.VisibleUnits;
 				stddev = (float)Math.Sqrt(stddev);
 
 				for (int j = 0; j < weights.Count; j++)
 				{
 					float* raw_weights = (float*)weights[j].ToPointer();
 
-					RBMProcessor.RescaleWeights(raw_weights, stddev, (uint)RBMProcessor.VisibleUnits);
-					UpdateImageControlContents(j, pf, (uint)RBMProcessor.VisibleUnits, raw_weights);
+					Processor.RescaleWeights(raw_weights, stddev, (uint)Processor.VisibleUnits);
+					UpdateImageControlContents(j, pf, (uint)Processor.VisibleUnits, raw_weights);
 				}
 
 				foreach (ImageControl ic in imageFlowPanel.Controls)

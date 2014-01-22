@@ -8,7 +8,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.Threading;
 
-using QuickBoltzmann;
+using VisualRBMInterop;
 using System.Diagnostics;
 
 namespace VisualRBM
@@ -54,7 +54,7 @@ namespace VisualRBM
 		{
 			get
 			{
-				return RBMProcessor.MinibatchSize;
+				return Processor.MinibatchSize;
 			}
 		}
 
@@ -229,25 +229,25 @@ namespace VisualRBM
 			List<IntPtr> recon = new List<IntPtr>();
 			List<IntPtr> diffs = new List<IntPtr>();
 
-			if (RBMProcessor.GetCurrentVisible(visible, recon, diffs))
+			if (Processor.GetCurrentVisible(visible, recon, diffs))
 			{
 				PixelFormat pf = _main_form.settingsBar.Format;
 
-				Debug.Assert(visible.Count == recon.Count && visible.Count == RBMProcessor.MinibatchSize);
+				Debug.Assert(visible.Count == recon.Count && visible.Count == Processor.MinibatchSize);
 
-				for (int k = 0; k < RBMProcessor.MinibatchSize; k++)
+				for (int k = 0; k < Processor.MinibatchSize; k++)
 				{
 					float* raw_image = (float*)visible[k].ToPointer();
 					float* raw_recon = (float*)recon[k].ToPointer();
 					float* raw_diffs = (float*)diffs[k].ToPointer();
 
 					// rescale from raw
-					RBMProcessor.RescaleActivations(raw_image, (uint)RBMProcessor.VisibleUnits, RBMProcessor.VisibleType);
-					RBMProcessor.RescaleActivations(raw_recon, (uint)RBMProcessor.VisibleUnits, RBMProcessor.VisibleType);
-					RBMProcessor.RescaleDiffs(raw_diffs, (uint)RBMProcessor.VisibleUnits, RBMProcessor.VisibleType);
+					Processor.RescaleActivations(raw_image, (uint)Processor.VisibleUnits, Processor.VisibleType);
+					Processor.RescaleActivations(raw_recon, (uint)Processor.VisibleUnits, Processor.VisibleType);
+					Processor.RescaleDiffs(raw_diffs, (uint)Processor.VisibleUnits, Processor.VisibleType);
 
 					// post the data to the image control
-					UpdateImageControlContents(k, pf, (uint)RBMProcessor.VisibleUnits, raw_image, raw_recon, raw_diffs);
+					UpdateImageControlContents(k, pf, (uint)Processor.VisibleUnits, raw_image, raw_recon, raw_diffs);
 				}
 			}
 		}

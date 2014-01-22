@@ -18,15 +18,15 @@
     <ClCompile Include="MessageQueue.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RBMProcessor.cpp">
+    <ClCompile Include="Processor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="RBMProcessor.h">
+    <ClInclude Include="MessageQueue.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MessageQueue.h">
+    <ClInclude Include="Processor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

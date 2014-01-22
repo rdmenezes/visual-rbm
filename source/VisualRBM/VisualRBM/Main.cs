@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
-using QuickBoltzmann;
+using VisualRBMInterop;
 using System.Diagnostics;
 
 namespace VisualRBM
@@ -33,7 +33,7 @@ namespace VisualRBM
 
 		void Main_FormClosing(object sender, FormClosingEventArgs e)
 		{
-			RBMProcessor.Shutdown();
+			Processor.Shutdown();
 		}
 	}
 }

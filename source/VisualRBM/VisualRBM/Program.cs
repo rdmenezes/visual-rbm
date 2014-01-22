@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
-using QuickBoltzmann;
+using VisualRBMInterop;
 
 namespace VisualRBM
 {
@@ -18,13 +18,13 @@ namespace VisualRBM
 			// init the boltzmann trainer and set it go
 			Thread thr = new Thread(() =>
 			{
-				RBMProcessor.Run();
+				Processor.Run();
 			});
 			thr.Name = "RBM Processor";
 			thr.IsBackground = true;
 			thr.Start();
 			
-			while (RBMProcessor.CurrentState != RBMProcessor.RBMProcessorState.Stopped) Thread.Sleep(16);
+			while (Processor.IsInitialized()) Thread.Sleep(16);
 
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);

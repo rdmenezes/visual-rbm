@@ -7,7 +7,7 @@ using namespace System;
 using namespace System::IO;
 using namespace System::Collections::Generic;
 
-namespace QuickBoltzmann
+namespace VisualRBMInterop
 {
 	public enum class ModelType
 	{
@@ -24,7 +24,7 @@ namespace QuickBoltzmann
 		Sigmoid,
 	};
 
-	public ref class RBMProcessor
+	public ref class Processor
 	{
 	public:
 		delegate void IterationCompletedHandler(uint32_t iteration, float training_error, float validation_error);
@@ -50,22 +50,7 @@ namespace QuickBoltzmann
 		static ValueChangedHandler^ MinibatchSizeChanged;
 		static ValueChangedHandler^ EpochsChanged;
 
-		enum class RBMProcessorState
-		{
-			Running, 
-			Paused,
-			Stopped, 
-			ScheduleLoaded,
-			ScheduleRunning,
-		};
-
 		/** Properties **/
-
-		static property RBMProcessorState CurrentState
-		{
-			RBMProcessorState get();
-		}
-
 
 		static property bool HasTrainingData
 		{
@@ -154,11 +139,6 @@ namespace QuickBoltzmann
 			void set(float hd);
 		}
 
-		static float Sigmoid(float x)
-		{
-			return float(1.0 / (1.0 + Math::Exp(-x)));
-		}
-
 		static bool SetTrainingData(String^ filename);
 		static bool SetValidationData(String^ filename);
 
@@ -184,9 +164,10 @@ namespace QuickBoltzmann
 		static void RescaleDiffs(float* buffer, uint32_t count, UnitType func);
 		static void RescaleWeights(float* buffer, float stddev, uint32_t count);
 
+		static bool IsInitialized();
+
 	private:
 		// our message queue
 		static MessageQueue^ _message_queue;
-
 	};
 }
