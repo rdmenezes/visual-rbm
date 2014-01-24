@@ -90,7 +90,7 @@ namespace VisualRBM
 			// add data point ever BUFFER_LENGTH iterations
 			if (iteration % BUFFER_LENGTH == 0)
 			{
-				this.Invoke(new Action(() =>
+				this.BeginInvoke(new Action(() =>
 				{
 					DataPoint dp = new DataPoint(iteration, training_sum);
 					this.chart1.Series[0].Points.Add(dp);
