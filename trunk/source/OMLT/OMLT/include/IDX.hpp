@@ -126,7 +126,10 @@ namespace OMLT
 					}
 				}
 				else
-					fread(row, sizeof(T), _row_length, _idx_file);
+				{
+					uint32_t bytes_read = fread(row, sizeof(T), _row_length, _idx_file);
+					assert(bytes_read == _row_length);
+				}
 			}
 
 			return row;
@@ -310,9 +313,9 @@ namespace OMLT
 
 		static IDX* Create(const char* in_filename, Endianness in_endianness, DataFormat in_format, uint32_t* row_dimensions, uint32_t row_dimensions_count)
 		{
-			FILE* file = fopen(in_filename, "wb");
+			FILE* file = fopen(in_filename, "w+b");
 		
-			// make sure we coudl open the file
+			// make sure we could open the file
 			if(file == NULL)
 			{
 				return NULL;
