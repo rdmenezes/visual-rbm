@@ -984,16 +984,15 @@ namespace VisualRBMInterop
 						validation_error = trainer->Validation(validation_example);
 					}
 
-					// increment iteration counters
-					iterations++;
-					total_iterations++;
-
 					training_error = CapError(training_error);
 					validation_error = CapError(validation_error);
 
-					IterationCompleted(total_iterations, training_error, validation_error);
-
+					// increment iteration counters
+					total_iterations++;
 					iterations = (iterations + 1) % training_data->GetTotalBatches();
+
+					IterationCompleted(total_iterations, training_error, validation_error);
+					
 					if(iterations == 0)
 					{
 						EpochCompleted(epochs--);
