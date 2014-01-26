@@ -7,6 +7,11 @@
 #include <DataAtlas.h>
 #include <RestrictedBoltzmannMachine.h>
 #include <ContrastiveDivergence.h>
+#include <MultilayerPerceptron.h>
+#include <BackPropagation.h>
+#include <TrainingSchedule.h>
+#include <Enums.h>
+
 using namespace OMLT;
 
 // idx file to train on
@@ -15,27 +20,33 @@ IDX* training_data = NULL;
 IDX* validation_data = NULL;
 
 // training parameters
-struct
-{
-	ModelType_t model;
-	ActivationFunction_t visible_type;
-	uint32_t hiddden_units;
-	float learning_rate;
-	float momentum;
-	float l1_regularization;
-	float l2_regularization;
-	float visible_dropout_probability;
-	float hidden_dropout_probability;
-	uint32_t minibatch_size;
-	uint32_t epochs;
-	uint32_t print_interval;
-} parameters;
 
-// imported rbm to start with (optional)
-RBM* imported = NULL;
+ModelType_t model_type = ModelType::Invalid;
+
+// imported model to start with (optional)
+static union
+{
+	RBM* rbm;
+	MLP* mlp;
+} loaded =  {0};
+
+
+static union
+{
+	TrainingSchedule<CD>* cd;
+	TrainingSchedule<BP>* bp;
+	
+} schedule = {0};
+
+static union
+{
+	ContrastiveDivergence* cd;
+	BackPropagation* bp;
+} trainer = {0};
+
 // file to save rbm to
 FILE* export_file = NULL;
-// in quiet mode, reconstruction error and free energy are not calculated
+// in quiet mode, reconstruction error is not calculated
 bool quiet = false;
 
 
@@ -45,385 +56,18 @@ void print_help()
 	printf("Train an RBM using OpenGL\n\n");
 	printf(" Required Arguments:\n");
 	printf("  -train=IDX        Specifies the input idx training data file.\n");
-	printf("  -params=PARAMS    Load training parameters to use during training.\n");
+	printf("  -sched=SCHEDULE   Load training schedule to use during training.\n");
 	printf("  -export=OUT       Specifies filename to save trained RBM as.\n\n");
 	printf(" Optional Arguments:\n");
 	printf("  -valid=IDX        Specifies an optional validation data file.\n");
 	printf("  -import=RBM       Specifies filename of optional RBM to import and train.\n");
 	printf("  -quiet            Suppresses all stdout output\n");
-	printf("  -defaults         Save a default configuration file to default.vrbmparameters\n");
-
-}
-
-const char* params[] = 
-{
-	"model=",
-	"visible_type=",
-	"hidden_units=",
-	"learning_rate=",
-	"momentum=",
-	"l1_regularization=",
-	"l2_regularization=",
-	"visible_dropout=",
-	"hidden_dropout=",
-	"minibatch_size=",
-	"epochs=",
-	"print_interval="
-};
-
-const char* param_defaults[] =
-{
-	"rbm",
-	"binary",
-	"100",
-	"0.001",
-	"0.5",
-	"0.0",
-	"0.0",
-	"0.0",
-	"0.5",
-	"10",
-	"100",
-	"100",
-};
-
-bool load_parameters(const char* filename)
-{
-	bool result = false;
-
-	FILE* file = fopen(filename, "rb");
-	if(file == 0)
-	{
-		return result;
-	}
-
-	// get length of file
-	fseek(file, 0, SEEK_END);
-	int32_t length = ftell(file);
-	rewind(file);
-
-	// config file parameters
-	enum
-	{
-		Model,
-		VisibleType,
-		HiddenUnits,
-		LearningRate,
-		Momentum,
-		L1Regularization,
-		L2Regularization,
-		VisibleDropout,
-		HiddenDropout,
-		MinibatchSize,
-		Epochs,
-		PrintInterval,
-		Count
-	};
-
-	char* values[Count] = {0};
-
-	char* data = new char[length+1];
-	uint32_t index = 0;
-	uint8_t prev_char = 0;
-
-	std::vector<char*> line_list;
-	char* line_front = data;
-
-	
-
-	// get the lines
-	for(int i = 0; i < length; i++)
-	{
-		char val = fgetc(file);
-		// trim whitespace, ignore carriage return, don't write sequential new line, don't write percent
-		if((val == '\n' && prev_char != '\n') || (val != ' ' && val != '\t' && val != '\r' && val != '\n' && val != '%'))
-		{
-			// lowercase capital letters
-			if(val >= 'A' && val <= 'Z')
-				val += 'a' - 'A';
-
-			prev_char = val;
-			
-
-			if(val == '\n')
-			{
-				data[index++] = 0;
-				line_list.push_back(line_front);
-				line_front = data + index;
-			}
-			else if(i == (length-1))
-			{
-				data[index++] = val;
-				data[index++] = 0;
-				line_list.push_back(line_front);
-			}
-			else
-			{
-				data[index++] = val;
-			}
-		}
-	}
-	// close the parameters file
-	fclose(file);
-
-	// find the values
-	for(int k = 0; k < line_list.size(); k++)
-	{
-		char* line = line_list[k];
-		for(int i = 0; i < Count; i++)
-		{
-			if(strncmp(line, params[i], strlen(params[i])) == 0)
-			{
-				if(values[i] == NULL)
-				{
-					values[i] = line + strlen(params[i]);
-				}
-				else
-				{
-					printf("Duplicate parameter found:\n  \"%s\"", line);
-					goto ERROR;
-				}
-			}
-		}
-	}
-
-	// parse the values
-
-#pragma region Parameter Parsing
-
-	if(values[Model] && strcmp(values[Model], "rbm") != 0)
-	{
-		printf("Problem parsing \"%s\" as model", values[Model]);
-		goto ERROR;
-	}
-	else
-	{
-		parameters.model = ModelType::RBM;
-	}
-
-	if(values[VisibleType])
-	{
-		if(strcmp(values[VisibleType], "binary") == 0)
-		{
-			parameters.visible_type = ActivationFunction::Sigmoid;
-		}
-		else if(strcmp(values[VisibleType], "gaussian") == 0)
-		{
-			parameters.visible_type = ActivationFunction::Linear;
-		}
-		else
-		{
-			printf("Problem parsing \"%s\" as unit type; must be either 'binary' or 'gaussian'", values[VisibleType]);
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.visible_type = ActivationFunction::Sigmoid;
-	}
-
-	if(values[HiddenUnits])
-	{
-		if(sscanf(values[HiddenUnits], "%u", &parameters.hiddden_units) != 1)
-		{
-			printf("Problem parsing \"%s\" as hidden unit count", values[HiddenUnits]);
-			goto ERROR;
-		}
-		else if(parameters.hiddden_units == 0)
-		{
-			printf("Invalid hidden unit count value \"%s;\" must be a positive integer", values[HiddenUnits]);
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.hiddden_units = 100;
-	}
-
-	// learnign rate is a positive float
-	if(values[LearningRate])
-	{
-		if(sscanf(values[LearningRate], "%f", &parameters.learning_rate) != 1)
-		{
-			printf("Problem parsing \"%s\" as learning rate", values[LearningRate]);
-			goto ERROR;
-		}
-		else if(parameters.learning_rate <= 0)
-		{
-			printf("Invalid learning rate value \"%s;\" must be a positive real value", values[LearningRate]);
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.learning_rate = 0.001f;
-	}
-
-	// momentum value is a float on [0,1]
-	if(values[Momentum])
-	{
-		if(sscanf(values[Momentum], "%f", &parameters.momentum) != 1)
-		{
-			printf("Problem parsing \"%s\" as momentum", values[Momentum]);
-			goto ERROR;
-		}
-		else if(parameters.momentum < 0.0f || parameters.momentum > 1.0f)
-		{
-			printf("Invalid momentum value \"%s;\" must be real value on [0,1]", values[Momentum]);
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.momentum = 0.5f;
-	}
-
-	// non-neggative real value
-	if(values[L1Regularization])
-	{
-		if(sscanf(values[L1Regularization], "%f", &parameters.l1_regularization) != 1)
-		{
-			printf("Problem parsing \"%s\" as L1 regularization", values[L1Regularization]);
-			goto ERROR;
-		}
-		else if(parameters.l1_regularization < 0.0f)
-		{
-			printf("Invalid L1 regularization value \"%s;\" must be a non-negative real value", values[L1Regularization]);
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.l1_regularization = 0.0f;
-	}
-	
-	// non-negative real value
-	if(values[L2Regularization])
-	{
-		if(sscanf(values[L2Regularization], "%f", &parameters.l2_regularization) != 1)
-		{
-			printf("Problem parsing \"%s\" as L2 regularization", values[L2Regularization]);
-			goto ERROR;
-		}
-		else if(parameters.l2_regularization < 0.0f)
-		{
-			printf("Invalid L2 regularization value \"%s;\" must be a non-negative real value", values[L2Regularization]);
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.l2_regularization = 0.0f;
-	}
-
-	// real value on (0,1]
-	if(values[VisibleDropout])
-	{
-		if(sscanf(values[VisibleDropout], "%f", &parameters.visible_dropout_probability) != 1)
-		{
-			printf("Problem parsing \"%s\" as visible dropout probability", values[VisibleDropout]);
-			goto ERROR;
-		}
-		else if(parameters.visible_dropout_probability < 0.0f || parameters.visible_dropout_probability >= 1.0f)
-		{
-			printf("Invalid visible dropout probability value \"%s;\" must be a non-negative real value less than 1.0", values[VisibleDropout]);
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.visible_dropout_probability = 0.0f;
-	}
-
-	// real value on (0,1]
-	if(values[HiddenDropout])
-	{
-		if(sscanf(values[HiddenDropout], "%f", &parameters.hidden_dropout_probability) != 1)
-		{
-			printf("Problem parsing \"%s\" as hidden dropout probability", values[HiddenDropout]);
-			goto ERROR;
-		}
-		else if(parameters.hidden_dropout_probability < 0.0f || parameters.hidden_dropout_probability >= 1.0f)
-		{
-			printf("Invalid hidden dropout probability value \"%s;\" must be a non-negative real value less than 1.0", values[HiddenDropout]);
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.hidden_dropout_probability = 0.5f;
-	}
-
-	// positive integer
-	if(values[MinibatchSize])
-	{
-		if(sscanf(values[MinibatchSize], "%u", &parameters.minibatch_size) != 1)
-		{
-			printf("Problem parsing \"%s\" as minibatch size", values[MinibatchSize]);
-			goto ERROR;
-		}
-		else if(parameters.minibatch_size == 0)
-		{
-			printf("Minibatch size must be greater than 0");
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.minibatch_size = 10;
-	}
-
-	if(values[Epochs])
-	{
-		if(sscanf(values[Epochs], "%u", &parameters.epochs) != 1)
-		{
-			printf("Problem parsing \"%s\" as epoch count", values[Epochs]);
-			goto ERROR;
-		}
-		else if(parameters.epochs == 0)
-		{
-			printf("Epoch count must be greater than 0");
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.epochs = 100;
-	}
-
-	if(values[PrintInterval])
-	{
-		if(sscanf(values[PrintInterval], "%u", &parameters.print_interval) != 1)
-		{
-			printf("Problem parsing \"%s\" as print interval", values[PrintInterval]);
-			goto ERROR;
-		}
-		else if(parameters.print_interval == 0)
-		{
-			printf("Print interval must be greater than 0");
-			goto ERROR;
-		}
-	}
-	else
-	{
-		parameters.print_interval = 500;
-	}
-
-
-#pragma endregion
-
-	result = true;
-ERROR:
-	delete[] data;
-
-	return result;
 }
 
 enum HandleArgumentsResults
 {
 	Success,
 	Error,
-	CreateDefaults
 };
 
 HandleArgumentsResults handle_arguments(int argc, char** argv)
@@ -432,15 +76,14 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	{
 		TrainingData,
 		ValidationData,
-		Parameters,
+		Schedule,
 		Import,
 		Export,
 		Quiet,
-		Defaults,
 		Count
 	};
 
-	const char* flags[Count] = {"-train=", "-valid=", "-params=", "-import=", "-export=", "-quiet", "-defaults"};
+	const char* flags[Count] = {"-train=", "-valid=", "-sched=", "-import=", "-export=", "-quiet"};
 	char* arguments[Count] = {0};
 
 	for(int i = 1; i < argc; i++)
@@ -475,11 +118,6 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 		}
 	}
 
-	if(arguments[Defaults] != 0)
-	{
-		return CreateDefaults;
-	}
-
 	// error handling
 	if(arguments[TrainingData] == NULL)
 	{
@@ -487,7 +125,7 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 		return Error;
 	}
 
-	if(arguments[Parameters] == NULL)
+	if(arguments[Schedule] == NULL)
 	{
 		printf("Need parameters\n");
 		return Error;
@@ -503,7 +141,7 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	training_data = IDX::Load(arguments[TrainingData]);
 	if(training_data == NULL)
 	{
-		printf("Problem loading idx training data \"%s\"\n", arguments[TrainingData]);
+		printf("Problem loading idx training data: \"%s\"\n", arguments[TrainingData]);
 		return Error;
 	}
 
@@ -511,41 +149,69 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	if(arguments[ValidationData])
 	{
 		validation_data = IDX::Load(arguments[ValidationData]);
-		printf("Problem loading idx validation data \"%s\"\n", arguments[ValidationData]);
+		if(validation_data == nullptr)
+		{
+			printf("Problem loading idx validation data: \"%s\"\n", arguments[ValidationData]);
+			return Error;
+		}
 	}
 
-	// load parameters here
-	if(!load_parameters(arguments[Parameters]))
+	// load parameters here (scope schedule text so it goes away when we're done with it)
 	{
-		printf("\nProblem parsing parameters file:\n  \"%s\"\n", arguments[Parameters]);
-		return Error;
+		std::string schedule_json;
+		if(!OMLT::ReadTextFile(arguments[Schedule], schedule_json))
+		{
+			printf("Problem loading training schedule: \"%s\"\n", arguments[Schedule]);
+			return Error;
+		}
+
+		if(schedule.cd = TrainingSchedule<CD>::FromJSON(schedule_json))
+		{
+			model_type = ModelType::RBM;
+		}
+		else if(schedule.bp = TrainingSchedule<BP>::FromJSON(schedule_json))
+		{
+			model_type = ModelType::MLP;
+		}
+		else
+		{
+			printf("Problem parsing training schedule: \"%s\"\n", arguments[Schedule]);
+			return Error;
+		}
 	}
+
 
 	// get rbm to start from
 	if(arguments[Import])
 	{
-		FILE* f = fopen(arguments[Import], "rb");
-		if(f)
+		std::string model_json;
+		if(!OMLT::ReadTextFile(arguments[Import], model_json))
 		{
-			std::stringstream ss;
-			for(int32_t b = fgetc(f); b >= 0; b = fgetc(f))
-			{
-				ss << (uint8_t)b;
-			}
-			std::string json = ss.str();
-			fclose(f);
-			
-			imported = RBM::FromJSON(json);
-			if(imported == nullptr)
-			{
-				printf("Problem parsing RBM JSON in:\n  \"%s\"\n", arguments[Import]);
-				return Error;
-			}
+			printf("Problem loading model JSON from: \"%s\"\n", arguments[Import]);
+			return Error;
 		}
 		else
 		{
-			printf("Problem opening file:\n  \"%s\"\n", arguments[Import]);
-			return Error;
+			OMLT::Model model;
+			if(!FromJSON(model_json, model))
+			{
+				printf("Problem parsing model JSON from: \"%s\"\n", arguments[Import]);
+				return Error;
+			}
+			else if(model.type != model_type)
+			{
+				printf("Loaded model from \"%s\" does not match model found in training schedule \"%s\"\n", arguments[Import], arguments[Schedule]);
+				return Error;
+			}
+			switch(model_type)
+			{
+			case ModelType::RBM:
+				loaded.rbm = model.rbm;
+				break;
+			case ModelType::MLP:
+				loaded.mlp = model.mlp;
+				break;
+			}
 		}
 	}
 
@@ -570,10 +236,224 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	return Success;
 }
 
-ContrastiveDivergence* trainer = nullptr;
-
 DataAtlas* training_atlas = nullptr;
 DataAtlas* validation_atlas = nullptr;
+
+template<typename TRAINER>
+TRAINER* GetTrainer() { return nullptr;}
+
+template<typename MODEL, typename TRAINER>
+bool Run(MODEL* in_model, TrainingSchedule<TRAINER>* in_schedule)
+{
+	// load and initialize data
+	training_atlas = new DataAtlas(training_data);
+	training_atlas->Initialize(in_schedule->GetMinibatchSize(), 512);
+	if(validation_data)
+	{
+		validation_atlas = new DataAtlas(validation_data);
+		validation_atlas->Initialize(in_schedule->GetMinibatchSize(), 512);
+	}
+
+	in_schedule->StartTraining();
+	Initialize<MODEL>();
+	
+
+	uint32_t iterations = 0;
+	uint32_t epoch = 0;
+	float train_error = 0.0f;
+	float validation_error = 0.0f;
+	SiCKL::OpenGLBuffer2D train_example;
+	SiCKL::OpenGLBuffer2D validation_example;
+
+	const uint32_t total_batches = training_atlas->GetTotalBatches();
+
+	while(in_schedule->TrainingComplete() == false)
+	{
+		training_atlas->Next(train_example);
+
+		Train<TRAINER>(train_example);
+
+		if(!quiet)
+		{
+			train_error += GetError<TRAINER>();
+			if(validation_atlas)
+			{
+				validation_atlas->Next(validation_example);
+				validation_error += Validate<TRAINER>(validation_example);
+			}
+		}
+
+		iterations = (iterations + 1) % total_batches;
+		if(iterations == 0)
+		{
+			epoch++;
+			train_error /= total_batches;
+			validation_error /= total_batches;
+
+			if(!quiet)
+			{
+				if(validation_atlas)
+				{
+					printf("%u;%.8f;%.8f\n", epoch, train_error, validation_error);
+				}
+				else
+				{
+					printf("%u;%.8f\n", epoch, train_error);
+				}
+			}
+			fflush(stdout);
+
+			// reset error
+			train_error = validation_error = 0.0f;
+
+			if(in_schedule->NextEpoch())
+			{
+				epoch = 0;
+				if(in_schedule->TrainingComplete())
+				{
+					// get model JSOn and write to disk
+					std::string model_json = ToJSON<TRAINER>();
+					fwrite(model_json.c_str(), model_json.size(), sizeof(uint8_t), export_file);
+					fflush(export_file);
+					fclose(export_file);
+					
+					return true;
+				}
+				else
+				{
+					TRAINER::TrainingConfig train_config;
+					bool populated = in_schedule->GetTrainingConfig(train_config);
+					assert(populated);
+
+					GetTrainer<TRAINER>()->SetTrainingConfig(train_config);
+				}
+			}
+		}
+	}
+
+	return true;
+}
+
+
+template<typename MODEL>
+bool Initialize() { return false; }
+
+template <typename TRAINER>
+void Train(const OpenGLBuffer2D& train_example) { }
+
+template <typename TRAINER>
+float GetError() {return 0.0f;}
+
+template <typename TRAINER>
+float Validate(const OpenGLBuffer2D& validation_example) { return 0.0f; }
+
+template <typename TRAINER>
+std::string ToJSON() {return "";}
+
+#pragma region Contrastive Divergencce
+
+template<>
+CD* GetTrainer() {return trainer.cd;}
+
+template<>
+bool Initialize<RBM>()
+{
+	const auto model_config = schedule.cd->GetModelConfig();
+	if(loaded.rbm)
+	{
+		// verify modle config matches
+		
+		if(loaded.rbm->visible_count != model_config.VisibleUnits ||
+		   loaded.rbm->visible_type != model_config.VisibleType ||
+		   loaded.rbm->hidden_count != model_config.HiddenUnits ||
+		   loaded.rbm->hidden_type != model_config.HiddenType)
+		{
+			printf("Model parameters in schedule do not match those found in loaded RBM\n");
+			return false;
+		}
+
+		trainer.cd = new ContrastiveDivergence(loaded.rbm, schedule.cd->GetMinibatchSize());
+	}
+	else
+	{
+		trainer.cd = new ContrastiveDivergence(model_config, schedule.cd->GetMinibatchSize());
+	}
+	
+	CD::TrainingConfig train_config;
+	bool populated = schedule.cd->GetTrainingConfig(train_config);
+	assert(populated == true);
+	trainer.cd->SetTrainingConfig(train_config);
+
+	return true;
+}
+
+template<>
+void Train<CD>(const OpenGLBuffer2D& train_example)
+{
+	trainer.cd->Train(train_example);
+}
+
+template<>
+float GetError<CD>()
+{
+	return trainer.cd->GetLastReconstructionError();
+}
+
+template <>
+float Validate<CD>(const OpenGLBuffer2D& validation_example)
+{
+	return trainer.cd->GetReconstructionError(validation_example);
+}
+
+template <>
+std::string ToJSON<CD>()
+{
+	RBM* rbm = trainer.cd->GetRestrictedBoltzmannMachine();
+	std::string json = rbm->ToJSON();
+	delete rbm;
+
+	return json;
+}
+
+#pragma endregion
+
+#pragma region Back Propagation
+
+template<>
+BP* GetTrainer() {return trainer.bp;}
+
+
+template<>
+bool Initialize<MLP>()
+{
+	return true;
+}
+
+template<>
+void Train<BP>(const OpenGLBuffer2D& train_example)
+{
+
+}
+
+template<>
+float GetError<BP>()
+{
+	return 0.0f;
+}
+
+template <>
+float Validate<BP>(const OpenGLBuffer2D& validation_example)
+{
+	return 0.0f;
+}
+
+template <>
+std::string ToJSON<BP>()
+{
+	return "";
+}
+
+#pragma endregion
 
 int main(int argc, char** argv)
 {
@@ -586,20 +466,6 @@ int main(int argc, char** argv)
 	{
 	case Success:
 		{		
-			// print out the used training parameters
-			printf("Training Parameters:\n");
-			printf(" Model = %s\n", parameters.model == ModelType::RBM ? "RBM" : "AutoEncoder");
-			printf(" Visible Type = %s\n", ActivationFunctionNames[parameters.visible_type]);
-			printf(" Hidden Units = %u\n", parameters.hiddden_units);
-			printf(" Learning Rate = %f\n", parameters.learning_rate);
-			printf(" Momentum = %f\n", parameters.momentum);
-			printf(" L1 Regularization = %f\n", parameters.l1_regularization);
-			printf(" L2 Regularization = %f\n", parameters.l2_regularization);
-			printf(" Visible Dropout Probability = %f\n", parameters.visible_dropout_probability);
-			printf(" Hidden Dropout Probability = %f\n", parameters.hidden_dropout_probability);
-			printf(" Minibatch Size = %u\n", parameters.minibatch_size);
-			printf(" Training Epochs = %u\n", parameters.epochs);
-			
 			fflush(stdout);
 
 			if(!SiCKL::OpenGLRuntime::Initialize())
@@ -608,127 +474,26 @@ int main(int argc, char** argv)
 				goto ERROR;
 			}
 
-			training_atlas = new DataAtlas(training_data);
-			training_atlas->Initialize(parameters.minibatch_size, 512);
-			if(validation_data)
+			bool success = false;
+			switch(model_type)
 			{
-				validation_atlas = new DataAtlas(validation_data);
-				validation_atlas->Initialize(parameters.minibatch_size, 512);
+			case ModelType::RBM:
+				success = Run<RBM, CD>(loaded.rbm, schedule.cd);
+				break;
+			case ModelType::MLP:
+				success = Run<MLP, BP>(loaded.mlp, schedule.bp);
+				break;
 			}
 
-
-
-			if(imported)
+			if(success == false )
 			{
-				trainer = new CD(imported, parameters.minibatch_size);
-			}
-			else
-			{
-				CD::ModelConfig model_config;
-				{
-					model_config.VisibleUnits = training_data->GetRowLength();
-					model_config.VisibleType = parameters.visible_type;
-					model_config.HiddenUnits = parameters.hiddden_units;
-					// hard coded for now
-					model_config.HiddenType = ActivationFunction::Sigmoid;
-				}
-				trainer = new CD(model_config, parameters.minibatch_size);
+				goto ERROR;
 			}
 
-			CD::TrainingConfig train_config;
-			{
-				train_config.LearningRate = parameters.learning_rate;
-				train_config.Momentum = parameters.momentum;
-				train_config.L1Regularization = parameters.l1_regularization;
-				train_config.L2Regularization = parameters.l2_regularization;
-				train_config.VisibleDropout = parameters.visible_dropout_probability;
-				train_config.HiddenDropout = parameters.hidden_dropout_probability;
-			}
-			trainer->SetTrainingConfig(train_config);
-
-			uint64_t total_iterations = 0;
-
-			if (!quiet)
-			{
-				if(validation_data)
-				{
-					printf("interval; training reconstruction; validation reconstruction\n");
-				}
-				else
-				{
-					printf("interval; training reconstruction\n");
-				}
-			}
-
-			SiCKL::OpenGLBuffer2D train_example;
-			SiCKL::OpenGLBuffer2D validation_example;
-
-			while(parameters.epochs)
-			{
-				training_atlas->Next(train_example);
-
-				trainer->Train(train_example);
-
-				total_iterations++;
-
-				// decrement
-				if((total_iterations % training_atlas->GetTotalBatches()) == 0)
-				{
-					--parameters.epochs;
-				}
-
-				// print our update
-				if( !quiet)
-				{
-					if((total_iterations % parameters.print_interval) == 0)
-					{
-						float train_error = trainer->GetLastReconstructionError();
-						if(validation_atlas)
-						{
-							validation_atlas->Next(validation_example);
-							
-							float valid_error = trainer->GetReconstructionError(validation_example);
-
-							printf("%llu; %f; %f\n", total_iterations, train_error, valid_error);
-						}
-						else
-						{
-							printf("%llu; %f\n", total_iterations, train_error);
-						}
-
-						fflush(stdout);
-					}
-				}
-			}
-		
-			printf("Exporting trained RBM to \"%s\"\n", export_file);
-			fflush(stdout);
-
-			RBM* rbm = trainer->GetRestrictedBoltzmannMachine();
-			std::string rbm_json = rbm->ToJSON();
-			fwrite(rbm_json.c_str(), rbm_json.size(), sizeof(uint8_t), export_file);
-			fflush(export_file);
-			fclose(export_file);
-
-			delete rbm;
 			goto FINISHED;
 		}
 	case Error:
 		goto ERROR;
-	case CreateDefaults:
-		{
-			printf("Generating \"default.vrbmparameters\" file\n");
-			FILE* defaults = fopen("default.vrbmparameters", "wb");
-
-			for(int k = 0; k < sizeof(params)/sizeof(params[0]); k++)
-			{
-				fprintf(defaults, "%s%s\n",params[k], param_defaults[k]);
-			}
-
-			fflush(defaults);
-			fclose(defaults);
-			goto FINISHED;
-		}
 	}
 
 ERROR:
@@ -744,10 +509,5 @@ FINISHED:
 	if(validation_data)
 	{
 		delete validation_data;
-	}
-
-	if(imported)
-	{
-		delete imported;
 	}
 }
