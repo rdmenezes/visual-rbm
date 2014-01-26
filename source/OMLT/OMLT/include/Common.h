@@ -11,6 +11,8 @@
 
 namespace OMLT
 {
+	bool ReadTextFile(const std::string& in_filename, std::string& out_text);
+
 	struct Model
 	{
 		ModelType_t type;

@@ -1,5 +1,6 @@
 // stdlib
 #include <cstring>
+#include <sstream>
 
 // windows
 #include <intrin.h>
@@ -17,6 +18,32 @@ using namespace SiCKL;
 namespace OMLT
 {
 	/// Parse Methods
+
+	bool ReadTextFile(const std::string& in_filename, std::string& out_text)
+	{
+		FILE* file = fopen(in_filename.c_str(), "rb");
+		if(file == nullptr)
+		{
+			return false;
+		}
+
+		// 1K of space to read to
+		char buffer[1024];
+		auto readbytes = [&] () -> size_t
+		{
+			return fread(buffer, sizeof(char), ArraySize(buffer), file);
+		};
+
+		std::stringstream ss;
+		for(size_t bytes_read = readbytes(); bytes_read > 0; bytes_read = readbytes())
+		{
+			ss.write(buffer, bytes_read);
+		}
+		fclose(file);
+
+		out_text = ss.str();
+		return true;
+	}
 
 	bool FromJSON(const std::string& in_json, Model& out_model)
 	{
