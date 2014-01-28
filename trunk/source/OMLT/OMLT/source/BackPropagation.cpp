@@ -110,7 +110,7 @@ namespace OMLT
 		}
 	}
 
-	void BackPropagation::Train( OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label )
+	void BackPropagation::Train( const OpenGLBuffer2D& example_input, const OpenGLBuffer2D& example_label )
 	{
 		if(_recompile_required)
 		{
@@ -302,7 +302,7 @@ namespace OMLT
 		return err;
 	}
 
-	float BackPropagation::GetOutputError(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_output)
+	float BackPropagation::GetOutputError(const OpenGLBuffer2D& example_input, const OpenGLBuffer2D& example_output)
 	{
 		// set out output label texture for error calculation
 		_last_label  = &example_output;
