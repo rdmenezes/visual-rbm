@@ -52,7 +52,7 @@ bool quiet = false;
 
 void print_help()
 {
-	printf("\nUsage: clrbm [ARGS]\n");
+	printf("\nUsage: cltrain [ARGS]\n");
 	printf("Train a model using OpenGL\n\n");
 	printf(" Required Arguments:\n");
 	printf("  -train=IDX        Specifies the input idx training data file.\n");
