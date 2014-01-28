@@ -53,14 +53,14 @@ bool quiet = false;
 void print_help()
 {
 	printf("\nUsage: clrbm [ARGS]\n");
-	printf("Train an RBM using OpenGL\n\n");
+	printf("Train a model using OpenGL\n\n");
 	printf(" Required Arguments:\n");
 	printf("  -train=IDX        Specifies the input idx training data file.\n");
 	printf("  -sched=SCHEDULE   Load training schedule to use during training.\n");
-	printf("  -export=OUT       Specifies filename to save trained RBM as.\n\n");
+	printf("  -export=OUT       Specifies filename to save trained model as.\n\n");
 	printf(" Optional Arguments:\n");
 	printf("  -valid=IDX        Specifies an optional validation data file.\n");
-	printf("  -import=RBM       Specifies filename of optional RBM to import and train.\n");
+	printf("  -import=IN        Specifies filename of optional model to import and train.\n");
 	printf("  -quiet            Suppresses all stdout output\n");
 }
 
@@ -101,7 +101,7 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 
 		if(index == -1)
 		{
-			printf("Unknown argument \"%s\" found\n", argv[i]);
+			printf("Unknown argument \"%s\" found.\n", argv[i]);
 			return Error;
 		}
 		else if(arguments[index] == NULL)
@@ -113,7 +113,7 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 		else
 		{
 			// duplicate flag detected
-			printf("Duplicate flag \"%s\" found", flags[index]);
+			printf("Duplicate flag \"%s\" found.\n", flags[index]);
 			return Error;
 		}
 	}
@@ -121,19 +121,19 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	// error handling
 	if(arguments[TrainingData] == NULL)
 	{
-		printf("Need training data\n");
+		printf("Need training data.\n");
 		return Error;
 	}
 
 	if(arguments[Schedule] == NULL)
 	{
-		printf("Need parameters\n");
+		printf("Need training schedule.\n");
 		return Error;
 	}
 
 	if(arguments[Export] == NULL)
 	{
-		printf("Need export destination filename\n");
+		printf("Need export destination filename.\n");
 		return Error;
 	}
 
@@ -218,14 +218,14 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	// filename to export to
 	if(arguments[Export] == NULL)
 	{
-		printf("No export filename given for RBM\n");
+		printf("No export filename given for trained model.\n");
 		return Error;
 	}
 
 	export_file = fopen(arguments[Export], "wb");
 	if(export_file == nullptr)
 	{
-		printf("Could not open \"%s\" for writing\n", arguments[Export]);
+		printf("Could not open \"%s\" for writing.\n", arguments[Export]);
 		return Error;
 	}
 
@@ -361,8 +361,7 @@ bool Initialize<RBM>()
 	const auto model_config = schedule.cd->GetModelConfig();
 	if(loaded.rbm)
 	{
-		// verify modle config matches
-		
+		// verify model config matches
 		if(loaded.rbm->visible_count != model_config.VisibleUnits ||
 		   loaded.rbm->visible_type != model_config.VisibleType ||
 		   loaded.rbm->hidden_count != model_config.HiddenUnits ||
@@ -426,31 +425,62 @@ BP* GetTrainer() {return trainer.bp;}
 template<>
 bool Initialize<MLP>()
 {
+	const auto model_config = schedule.bp->GetModelConfig();
+	if(loaded.mlp)
+	{
+		// verify model config matches
+		auto input_layer = loaded.mlp->InputLayer();
+		auto output_layer = loaded.mlp->OutputLayer();
+		if(input_layer->inputs != model_config.InputCount ||
+		   input_layer->outputs != model_config.LayerConfigs[0].OutputUnits ||
+		   input_layer->function != model_config.LayerConfigs[0].Function ||
+		   output_layer->function != model_config.LayerConfigs[1].Function)
+		{
+			printf("Model parameters in schedule do not match those found in loaded MLP\n");
+			return false;
+		}
+		
+		trainer.bp = new BackPropagation(loaded.mlp, schedule.bp->GetMinibatchSize());
+	}
+	else
+	{
+		trainer.bp = new BackPropagation(model_config, schedule.bp->GetMinibatchSize());
+	}
+
+	BP::TrainingConfig train_config;
+	bool populated = schedule.bp->GetTrainingConfig(train_config);
+	assert(populated == true);
+	trainer.bp->SetTrainingConfig(train_config);
+
 	return true;
 }
 
 template<>
 void Train<BP>(const OpenGLBuffer2D& train_example)
 {
-
+	trainer.bp->Train(train_example, train_example);
 }
 
 template<>
 float GetError<BP>()
 {
-	return 0.0f;
+	return trainer.bp->GetLastOutputError();
 }
 
 template <>
 float Validate<BP>(const OpenGLBuffer2D& validation_example)
 {
-	return 0.0f;
+	return trainer.bp->GetOutputError(validation_example, validation_example);
 }
 
 template <>
 std::string ToJSON<BP>()
 {
-	return "";
+	MLP* mlp = trainer.bp->GetMultilayerPerceptron();
+	std::string json = mlp->ToJSON();
+	delete mlp;
+
+	return json;
 }
 
 #pragma endregion
