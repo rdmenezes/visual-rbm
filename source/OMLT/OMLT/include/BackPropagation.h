@@ -106,10 +106,10 @@ namespace OMLT
 		void SetActivationFunction(uint32_t in_layer_index, ActivationFunction_t in_func);
 		void SetNoisy(uint32_t in_layer_index, bool in_noisy);
 
-		void Train(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_label);
+		void Train(const OpenGLBuffer2D& example_input, const OpenGLBuffer2D& example_label);
 
 		float GetLastOutputError();
-		float GetOutputError(OpenGLBuffer2D& example_input, OpenGLBuffer2D& example_output);
+		float GetOutputError(const OpenGLBuffer2D& example_input, const OpenGLBuffer2D& example_output);
 
 		uint32_t LayerCount() const {return _layers.size();}
 
@@ -170,7 +170,7 @@ namespace OMLT
 			OpenGLProgram* CalcSensitivity;
 			OpenGLProgram* UpdateWeights;
 		};
-		OpenGLBuffer2D* _last_label;
+		const OpenGLBuffer2D* _last_label;
 
 		// buffer and program for dropping out input units
 		OpenGLBuffer2D _input_buffer;
