@@ -12,6 +12,7 @@ using namespace SiCKL;
 // omlt
 #include "Enums.h"
 #include "MultilayerPerceptron.h"
+#include "SiCKLShared.h"
 #include "Common.h"
 
 namespace OMLT

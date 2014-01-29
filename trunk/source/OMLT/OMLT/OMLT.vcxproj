@@ -87,6 +87,7 @@
     <ClCompile Include="source\MovingAverage.cpp" />
     <ClCompile Include="source\MultilayerPerceptron.cpp" />
     <ClCompile Include="source\RestrictedBoltzmannMachine.cpp" />
+    <ClCompile Include="source\SiCKLShared.cpp" />
     <ClCompile Include="source\TrainingSchedule.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -102,6 +103,7 @@
     <ClInclude Include="include\MovingAverage.h" />
     <ClInclude Include="include\MultilayerPerceptron.h" />
     <ClInclude Include="include\RestrictedBoltzmannMachine.h" />
+    <ClInclude Include="include\SiCKLShared.h" />
     <ClInclude Include="include\TrainingSchedule.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
