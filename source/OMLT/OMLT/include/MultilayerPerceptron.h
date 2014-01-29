@@ -14,6 +14,8 @@ namespace OMLT
 	public:
 		~MultilayerPerceptron();
 		void FeedForward(float* input_vector, float* output_vector);
+		// feedfoward to the given layer
+		void FeedForward(float* input_vector, float* output_vector, uint32_t layer);
 
 		struct Layer
 		{

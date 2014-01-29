@@ -9,6 +9,8 @@
 // OMLT
 #include "Enums.h"
 #include "Common.h"
+#include "SiCKLShared.h"
+
 
 using namespace SiCKL;
 

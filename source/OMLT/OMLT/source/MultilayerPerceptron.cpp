@@ -36,11 +36,18 @@ namespace OMLT
 		}
 	}
 
-	void MultilayerPerceptron::FeedForward( float* input_vector, float* output_vector )
+	void MultilayerPerceptron::FeedForward(float* input_vector, float* output_vector)
 	{
+		FeedForward(input_vector, output_vector, _layers.size() - 1);
+	}
+
+	void MultilayerPerceptron::FeedForward( float* input_vector, float* output_vector, uint32_t layer_index)
+	{
+		assert(layer_index < _layers.size());
+
 		memcpy(_activations[0], input_vector, sizeof(float) * _layers.front()->inputs);
 
-		for(uint32_t L = 0; L < _layers.size(); L++)
+		for(uint32_t L = 0; L <= layer_index; L++)
 		{
 			const Layer& layer = *_layers[L];
 
@@ -126,7 +133,7 @@ namespace OMLT
 		}
 
 		// memcpy activation to the output buffer
-		memcpy(output_vector, _activations.back(), sizeof(float) * _layers.back()->outputs);
+		memcpy(output_vector, _activations[layer_index + 1], sizeof(float) * _layers[layer_index]->outputs);
 	}
 
 	MultilayerPerceptron::Layer* MultilayerPerceptron::GetLayer( uint32_t index )
