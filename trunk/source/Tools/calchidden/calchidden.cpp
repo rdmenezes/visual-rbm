@@ -1,5 +1,7 @@
+#include <Common.h>
 #include <IDX.hpp>
 #include <RestrictedBoltzmannMachine.h>
+#include <MultilayerPerceptron.h>
 using namespace OMLT;
 
 #include <string.h>
@@ -7,20 +9,22 @@ using namespace OMLT;
 #include <sstream>
 
 const char* Usage = 
-	"Calculates the hidden activations or the hidden probabilities for an\n"
-	"input IDX dataset and trained RBM.\n"
+	"Calculates the hidden activations for an input IDX dataset and trained\n"
+	"model.\n"
 	"\n"
-	"Usage: calchidden [MODE] [INPUT] [OUTPUT] [RBM] [DROPOUT]\n"
+	"Usage: calchidden [INPUT] [OUTPUT] [MODEL]\n"
 	"\n"
 	"  INPUT     The input IDX dataset used as input\n"
 	"  OUTPUT    Destination IDX to save hidden values\n"
-	"  RBM       A trained RBM json file\n";
+	"  MODEL     A trained model json file\n";
+
+
 
 int main(int argc, char** argv)
 {
 	int result = -1;
 
-	if(argc != 6)
+	if(argc != 4)
 	{
 		printf(Usage);
 		return result;
@@ -32,8 +36,15 @@ int main(int argc, char** argv)
 
 	IDX* input = NULL;
 	IDX* output = NULL;
-	RBM* rbm =  NULL;
-	float dropout;
+	std::string model_json;
+	union
+	{
+		RBM* rbm;
+		MLP* mlp;
+	} model = {0};
+	ModelType_t model_type = ModelType::Invalid;
+	uint32_t input_count = 0;
+	uint32_t output_count = 0;
 
 	input = IDX::Load(input_string);
 	if(input == NULL)
@@ -46,49 +57,75 @@ int main(int argc, char** argv)
 		printf("Input data must have type 'Single' data format\n");
 		goto CLEANUP;
 	}
+	input_count = input->GetRowLength();
 
-	FILE* f = fopen(rbm_string, "rb");
-	if(f == NULL)
+
+	if(OMLT::ReadTextFile(rbm_string, model_json))
 	{
-		printf("Could not open input RBM file \"%s\"\n", rbm_string);
-		goto CLEANUP;
-	}
-	else
-	{
-		std::stringstream ss;
-		for(int32_t b = fgetc(f); b >= 0; b = fgetc(f))
+		if(model.rbm = RBM::FromJSON(model_json))
 		{
-			ss << (uint8_t)b;
+			if(model.rbm->visible_count == input_count)
+			{
+				model_type = ModelType::RBM;
+				output_count = model.rbm->hidden_count;
+			}
+			else
+			{
+				printf("Loaded RBM's visible unit count is %u, while input data requires %u\n", model.rbm->visible_count, input->GetRowLength());
+				goto CLEANUP;
+			}
 		}
-		std::string json = ss.str();
-		fclose(f);
-
-		rbm = RBM::FromJSON(json);
-		if(rbm == nullptr)
+		else if(model.mlp = MLP::FromJSON(model_json))
 		{
-			printf("Could not parse RBM json from \"%s\"\n", rbm_string);
+			if(model.mlp->InputLayer()->inputs == input_count)
+			{
+				model_type = ModelType::MLP;
+				output_count = model.mlp->GetLayer(0)->outputs;
+			}
+			else
+			{
+				printf("Loaded MLP's visible unit count is %u, while input data requires %u\n", model.mlp->InputLayer()->inputs, input->GetRowLength());
+				goto CLEANUP;
+			}
+		}
+		else
+		{
+			printf("Could not parse model json from \"%s\"\n", rbm_string);
 			goto CLEANUP;
 		}
 	}
+	else
+	{
+		printf("Could not open input model file \"%s\"\n", rbm_string);
+		goto CLEANUP;
+	}
 	
 
-	output = IDX::Create(output_string, input->GetEndianness(), Single, rbm->hidden_count);
+	output = IDX::Create(output_string, input->GetEndianness(), Single, output_count);
+
 	if(output == NULL)
 	{
 		printf("Could not create output IDX file \"%s\"\n", output_string);
 		goto CLEANUP;
 	}
 
-	float** weights = rbm->hidden_features;
-
 	// now calculate hidden values for visible vector
-	float* visible_buffer = new float[rbm->visible_count];
-	float* hidden_buffer = new float[rbm->hidden_count];
+	float* visible_buffer = new float[input_count];
+	float* hidden_buffer = new float[output_count];
 
 	for(uint32_t idx = 0; idx < input->GetRowCount(); idx++)
 	{
 		input->ReadRow(idx, visible_buffer);
-		rbm->CalcHidden(visible_buffer, hidden_buffer);
+		switch(model_type)
+		{
+		case ModelType::RBM:
+			model.rbm->CalcHidden(visible_buffer, hidden_buffer);
+			break;
+		case ModelType::MLP:
+			model.mlp->FeedForward(visible_buffer, hidden_buffer, 0);
+			break;
+		}
+		
 		output->AddRow(hidden_buffer);
 	}
 
@@ -102,7 +139,15 @@ CLEANUP:
 
 	delete input;
 	delete output;
-	delete rbm;
+	switch(model_type)
+	{
+	case ModelType::RBM:
+		delete model.rbm;
+		break;
+	case ModelType::MLP:
+		delete model.mlp;
+		break;
+	}
 
 	return result;
 }
