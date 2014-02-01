@@ -144,6 +144,11 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 		printf("Problem loading idx training data: \"%s\"\n", arguments[TrainingData]);
 		return Error;
 	}
+	else if(training_data->GetRowLength() >= SiCKL::OpenGLRuntime::GetMaxTextureSize())
+	{
+		printf("Training data row length is too long; can only support up to length %u\n", (SiCKL::OpenGLRuntime::GetMaxTextureSize() - 1));
+		return Error;
+	}
 
 	// get optional validation data file
 	if(arguments[ValidationData])
@@ -152,6 +157,11 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 		if(validation_data == nullptr)
 		{
 			printf("Problem loading idx validation data: \"%s\"\n", arguments[ValidationData]);
+			return Error;
+		}
+		else if(validation_data->GetRowLength() != training_data->GetRowLength())
+		{
+			printf("Mismatch between training data row length and validation data row length\n");
 			return Error;
 		}
 	}
@@ -167,11 +177,27 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 
 		if(schedule.cd = TrainingSchedule<CD>::FromJSON(schedule_json))
 		{
-			model_type = ModelType::RBM;
+			if(schedule.cd->GetMinibatchSize() > SiCKL::OpenGLRuntime::GetMaxTextureSize())
+			{
+				printf("Minibatch size greater than %u is not supported.\n", SiCKL::OpenGLRuntime::GetMaxTextureSize());
+				return Error;
+			}
+			else
+			{
+				model_type = ModelType::RBM;
+			}
 		}
 		else if(schedule.bp = TrainingSchedule<BP>::FromJSON(schedule_json))
 		{
-			model_type = ModelType::MLP;
+			if(schedule.bp->GetMinibatchSize() > SiCKL::OpenGLRuntime::GetMaxTextureSize())
+			{
+				printf("Minibatch size greater than %u is not supported.\n", SiCKL::OpenGLRuntime::GetMaxTextureSize());
+				return Error;
+			}
+			else
+			{
+				model_type = ModelType::MLP;
+			}
 		}
 		else
 		{
@@ -370,6 +396,11 @@ bool Initialize<RBM>()
 			printf("Model parameters in schedule do not match those found in loaded RBM\n");
 			return false;
 		}
+		else if(loaded.rbm->hidden_count >= SiCKL::OpenGLRuntime::GetMaxTextureSize())
+		{
+			printf("Hidden unit count greater than %u is not supported.\n", (SiCKL::OpenGLRuntime::GetMaxTextureSize() - 1));
+			return false;
+		}
 
 		trainer.cd = new ContrastiveDivergence(loaded.rbm, schedule.cd->GetMinibatchSize());
 	}
@@ -437,6 +468,11 @@ bool Initialize<MLP>()
 		   output_layer->function != model_config.LayerConfigs[1].Function)
 		{
 			printf("Model parameters in schedule do not match those found in loaded MLP\n");
+			return false;
+		}
+		else if(input_layer->outputs >= SiCKL::OpenGLRuntime::GetMaxTextureSize())
+		{
+			printf("Hidden unit count greater than %u is not supported.\n", (SiCKL::OpenGLRuntime::GetMaxTextureSize() - 1));
 			return false;
 		}
 		

@@ -1023,6 +1023,12 @@ namespace VisualRBMInterop
 			delete idx;
 			return false;
 		}
+		else if(idx->GetRowLength() >= SiCKL::OpenGLRuntime::GetMaxTextureSize())
+		{
+			ShowError(String::Format("Error: IDX training data may not have more than {0} values", SiCKL::OpenGLRuntime::GetMaxTextureSize() - 1));
+			delete idx;
+			return false;
+		}
 
 		// clear out the old training data
 		Message^ msg = gcnew Message(MessageType::DeleteData);
@@ -1271,7 +1277,15 @@ namespace VisualRBMInterop
 		assert(units > 0);
 		if(units != hidden_count)
 		{
-			hidden_count = units;
+			if(units >= SiCKL::OpenGLRuntime::GetMaxTextureSize())
+			{
+				ShowError(String::Format("Maximum number of hidden units supported is {0}", SiCKL::OpenGLRuntime::GetMaxTextureSize() - 1));
+				hidden_count = SiCKL::OpenGLRuntime::GetMaxTextureSize() - 1;
+			}
+			else
+			{
+				hidden_count = units;
+			}
 			HiddenUnitsChanged(hidden_count);
 		}
 	}
@@ -1287,7 +1301,15 @@ namespace VisualRBMInterop
 		assert(ms > 0);
 		if(ms != minibatch_size)
 		{
-			minibatch_size = ms;
+			if(ms > SiCKL::OpenGLRuntime::GetMaxTextureSize())
+			{
+				ShowError(String::Format("Maximum minibatch size supported is {0}", SiCKL::OpenGLRuntime::GetMaxTextureSize()));
+				minibatch_size = SiCKL::OpenGLRuntime::GetMaxTextureSize();
+			}
+			else
+			{
+				minibatch_size = ms;
+			}
 			MinibatchSizeChanged(minibatch_size);
 		}
 	}
