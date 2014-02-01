@@ -34,8 +34,16 @@ namespace VisualRBM
 		protected int _scale;
 		// number of images each control has (3 for this case: original, reconstruction, difference)
 		protected int _count;
+		
 		// how frequently we update the images (in seconds)
-		protected double _draw_interval = 1.5;
+		virtual protected double DrawInterval
+		{
+			get
+			{
+				return Math.Log10(10 * Processor.MinibatchSize);
+			}
+		}
+
 		// thread-safe message queue used here
 		protected MessageQueue _messages;
 
@@ -202,14 +210,14 @@ namespace VisualRBM
 					prev = DateTime.Now;
 				}
 
-				if (_current_state == State.Running && time_since_last_draw >= _draw_interval)
+				if (_current_state == State.Running && time_since_last_draw >= DrawInterval)
 				{
 					if (this.Parent != null && this.Parent.Visible == true)
 					{
 						if (parent_previously_visible == false)
 						{
-							// sleep awhile before drawing 
-							Thread.Sleep((int)(250 * _draw_interval));
+							// sleep awhile before drawing if we just flipped to this tab
+							Thread.Sleep(500);
 						}
 
 						// reset time_since_last_draw and update

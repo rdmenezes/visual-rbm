@@ -12,6 +12,14 @@ namespace VisualRBM
 {
 	public class VisualizeFeatureDetectors : VisualizeReconstruction
 	{
+		override protected double DrawInterval
+		{
+			get
+			{
+				return 2.0 * Math.Log10(Processor.HiddenUnits) + 0.5;
+			}
+		}
+
 		override protected int ImageControlCount
 		{
 			get
@@ -31,7 +39,6 @@ namespace VisualRBM
 
 		public VisualizeFeatureDetectors()
 		{
-			_draw_interval = 5.0;
 			_count = 1;
 		}
 
