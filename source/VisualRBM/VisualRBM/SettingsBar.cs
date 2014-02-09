@@ -62,9 +62,7 @@ namespace VisualRBM
 							minibatchSizeTextBox.Enabled = false;							
 							epochsTextBox.Enabled = false;
 
-							loadParametersButton.Enabled = false;
-							saveParametersButton.Enabled = false;
-							resetParametersButton.Enabled = false;
+							loadScheduleButton.Enabled = false;
 
 							importButton.Enabled = false;
 							startButton.Enabled = false;
@@ -94,9 +92,7 @@ namespace VisualRBM
 							minibatchSizeTextBox.Enabled = false;							
 							epochsTextBox.Enabled = false;
 
-							loadParametersButton.Enabled = false;
-							saveParametersButton.Enabled = false;
-							resetParametersButton.Enabled = false;
+							loadScheduleButton.Enabled = false;
 
 							importButton.Enabled = false;
 							startButton.Enabled = false;
@@ -126,9 +122,7 @@ namespace VisualRBM
 							minibatchSizeTextBox.Enabled = false;							
 							epochsTextBox.Enabled = true;
 
-							loadParametersButton.Enabled = true;
-							saveParametersButton.Enabled = true;
-							resetParametersButton.Enabled = true;
+							loadScheduleButton.Enabled = true;
 
 							importButton.Enabled = false;
 							startButton.Enabled = true;
@@ -156,9 +150,7 @@ namespace VisualRBM
 							minibatchSizeTextBox.Enabled = true;							
 							epochsTextBox.Enabled = true;
 
-							loadParametersButton.Enabled = true;
-							saveParametersButton.Enabled = true;
-							resetParametersButton.Enabled = true;
+							loadScheduleButton.Enabled = true;
 
 							importButton.Enabled = true;
 							startButton.Enabled = true;
@@ -187,9 +179,7 @@ namespace VisualRBM
 							minibatchSizeTextBox.Enabled = false;
 							epochsTextBox.Enabled = false;
 
-							loadParametersButton.Enabled = false;
-							saveParametersButton.Enabled = false;
-							resetParametersButton.Enabled = false;
+							loadScheduleButton.Enabled = false;
 
 							importButton.Enabled = false;
 							startButton.Enabled = true;
@@ -218,9 +208,7 @@ namespace VisualRBM
 							minibatchSizeTextBox.Enabled = false;
 							epochsTextBox.Enabled = false;
 
-							loadParametersButton.Enabled = false;
-							saveParametersButton.Enabled = false;
-							resetParametersButton.Enabled = true;
+							loadScheduleButton.Enabled = false;
 
 							importButton.Enabled = false;
 							startButton.Enabled = false;
@@ -334,9 +322,7 @@ namespace VisualRBM
 			SetToolTip("Activation function for hidden units", this.hiddenTypeComboBox);
 			SetToolTip("Number of visible units in each training vector of loaded training data", this.visibleUnitsLabel);
 			SetToolTip("Number of hidden units to use in trained model", this.hiddenUnitsTextBox);
-			SetToolTip("Load saved parameters file", this.loadParametersButton);
-			SetToolTip("Save parameters to disk", this.saveParametersButton);
-			SetToolTip("Reset training parameters to default", this.resetParametersButton);
+			SetToolTip("Load schedule file", this.loadScheduleButton);
 			SetToolTip("Speed of learning; reasonable values are around 0.001 (less for Gaussian visible units)", this.learningRateTextBox);
 			SetToolTip("Smooths learning by having the previous weight update contribute to the current update by the given percent.  Valid values range from 0 to 1.", this.momentumTextBox);
 			SetToolTip("L1 Regularization punishes all weights equally.  Many weights will be near zero with this method while others will grow large.", this.l1TextBox);
