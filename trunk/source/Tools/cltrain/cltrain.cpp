@@ -293,6 +293,20 @@ bool Run(MODEL* in_model, TrainingSchedule<TRAINER>* in_schedule)
 
 	const uint32_t total_batches = training_atlas->GetTotalBatches();
 
+	
+	if(!quiet)
+	{
+		if(validation_atlas)
+		{
+			printf("epoch;training error;validation error\n");
+		}
+		else
+		{
+			printf("epoch;training error\n");
+		}
+	}
+
+	uint32_t epoch_count = 0;
 	while(in_schedule->TrainingComplete() == false)
 	{
 		training_atlas->Next(train_example);
@@ -313,6 +327,7 @@ bool Run(MODEL* in_model, TrainingSchedule<TRAINER>* in_schedule)
 		if(iterations == 0)
 		{
 			epoch++;
+			epoch_count++;
 			train_error /= total_batches;
 			validation_error /= total_batches;
 
@@ -320,11 +335,11 @@ bool Run(MODEL* in_model, TrainingSchedule<TRAINER>* in_schedule)
 			{
 				if(validation_atlas)
 				{
-					printf("%u;%.8f;%.8f\n", epoch, train_error, validation_error);
+					printf("%u;%.8f;%.8f\n", epoch_count, train_error, validation_error);
 				}
 				else
 				{
-					printf("%u;%.8f\n", epoch, train_error);
+					printf("%u;%.8f\n", epoch_count, train_error);
 				}
 			}
 			fflush(stdout);
