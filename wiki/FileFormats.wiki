@@ -1,3 +1,5 @@
+= This page is out of date and will be updated shortly =
+
 There are three file formats that users of *VisualRBM* and *clrbm* need to be aware of if they intend to train RBMs on their own data-sets and subsequently use said RBMs in other applications:
  * VRBMParameters
  * IDX

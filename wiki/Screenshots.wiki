@@ -1,3 +1,5 @@
+= This page is out of date and will be updated shortly =
+
 <font size="3">*Reconstruction Error Graph*</font> - Displays the training and (optionally) validation data's reconstruction error over time.
 || http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot01.png ||
 

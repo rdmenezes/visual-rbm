@@ -1,3 +1,5 @@
+= This page is out of date and will be updated shortly =
+
 = Tools =
 
 This page contains an overview of the different command line tools available in the Tools.zip download found on the [http://code.google.com/p/visual-rbm/wiki/Downloads?tm=2 Downloads] page.

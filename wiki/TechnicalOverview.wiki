@@ -1,3 +1,5 @@
+= This page is out of date and will be updated shortly =
+
 == Overview ==
 
 The code of VisualRBM is divided into five Visual Studio 2010 Projects:
