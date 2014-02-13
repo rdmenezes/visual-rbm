@@ -68,7 +68,8 @@ namespace VisualRBMInterop
 	static float visible_dropout = 0.0f;
 	static float hidden_dropout = 0.0f;
 	
-	static uint32_t epochs = 100;
+	static uint32_t epochs_to_train = 100;
+	static uint32_t epochs_remaining = 100;
 	static uint32_t iterations = 0;
 	static uint32_t total_iterations = 0;
 
@@ -511,7 +512,7 @@ namespace VisualRBMInterop
 		}
 
 		_schedule = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size);
-		_schedule->AddTrainingConfig(train_config, epochs);
+		_schedule->AddTrainingConfig(train_config, epochs_remaining);
 	}
 
 	template<>
@@ -725,7 +726,7 @@ namespace VisualRBMInterop
 		}
 
 		_schedule = new TrainingSchedule<BackPropagation>(model_config, minibatch_size);
-		_schedule->AddTrainingConfig(train_config, epochs);
+		_schedule->AddTrainingConfig(train_config, epochs_remaining);
 	}
 
 	template<>
@@ -806,7 +807,7 @@ namespace VisualRBMInterop
 					break;
 				case MessageType::Start:
 					{
-						assert(epochs > 0);
+						assert(epochs_remaining > 0);
 						assert(training_data != nullptr);
 						assert(model_type == ModelType::RBM ||
 							   model_type == ModelType::AutoEncoder);
@@ -995,7 +996,7 @@ namespace VisualRBMInterop
 					
 					if(iterations == 0)
 					{
-						EpochCompleted(epochs--);
+						EpochCompleted(epochs_to_train - --epochs_remaining);
 						if(trainer->HandleEpochCompleted())
 						{
 							TrainingCompleted();
@@ -1247,14 +1248,15 @@ namespace VisualRBMInterop
 
 	uint32_t Processor::Epochs::get()
 	{
-		return epochs;
+		return epochs_remaining;
 	}
 
 	void Processor::Epochs::set( uint32_t e )
 	{
-		if(e != epochs)
+		if(e != epochs_remaining)
 		{
-			epochs = e;
+			epochs_remaining = e;
+			epochs_to_train = e;
 			iterations = 0;
 			EpochsChanged(e);
 		}
