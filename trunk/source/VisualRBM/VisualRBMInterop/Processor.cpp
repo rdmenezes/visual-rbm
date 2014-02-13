@@ -996,7 +996,8 @@ namespace VisualRBMInterop
 					
 					if(iterations == 0)
 					{
-						EpochCompleted(epochs_to_train - --epochs_remaining);
+						--epochs_remaining;
+						EpochCompleted(epochs_to_train - epochs_remaining, epochs_to_train);
 						if(trainer->HandleEpochCompleted())
 						{
 							TrainingCompleted();

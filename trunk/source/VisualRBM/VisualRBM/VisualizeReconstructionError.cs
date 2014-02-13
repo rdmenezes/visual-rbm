@@ -81,7 +81,7 @@ namespace VisualRBM
 			}
 		}
 
-		void RBMProcessor_EpochCompleted(uint epoch)
+		void RBMProcessor_EpochCompleted(uint epoch, uint total)
 		{
 			total_training_error /= Processor.MinibatchCount;
 			total_validation_error /= Processor.MinibatchCount;
