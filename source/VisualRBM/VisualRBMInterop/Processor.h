@@ -28,7 +28,7 @@ namespace VisualRBMInterop
 	{
 	public:
 		delegate void IterationCompletedHandler(uint32_t iteration, float training_error, float validation_error);
-		delegate void EpochCompletedHandler(uint32_t epoch);
+		delegate void EpochCompletedHandler(uint32_t epoch_completed, uint32_t total_epochs);
 		delegate void TrainingCompletedHandler();
 		delegate void ValueChangedHandler(Object^ new_value);
 

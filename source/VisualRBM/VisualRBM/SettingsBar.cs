@@ -338,11 +338,11 @@ namespace VisualRBM
 			SetToolTip("Save RBM to disk", this.exportButton);
 
 			// add event to update epochs textbox
-			Processor.EpochCompleted += new Processor.EpochCompletedHandler((uint i) => 
+			Processor.EpochCompleted += new Processor.EpochCompletedHandler((uint epoch, uint total) => 
 			{
 				epochsTextBox.Invoke(new Action(() => 
 				{
-					epochsTextBox.Text = i.ToString();
+					epochsTextBox.Text = (total - epoch).ToString();
 				}));
 			});
 			Processor.TrainingCompleted += new Processor.TrainingCompletedHandler(() =>
