@@ -2,7 +2,7 @@
 
 The visual-rbm reepository contains three Visual Studio 2010 solutions:
  * OMLT - The machine learning backend
- * !VisualRBM - UI frontend and CLI/Interop code interfacing with OMLT
+ * VisualRBM - UI frontend and CLI/Interop code interfacing with OMLT
  * Tools - Command line tools for handling IDX data files as well as the command-line trainer
 
 !VisualRBM and associated tools have a little bit of a dependency tree:
@@ -10,11 +10,11 @@ The visual-rbm reepository contains three Visual Studio 2010 solutions:
  * OMLT (native static lib)
   * cJSON  (C source) 
   * [https://code.google.com/p/sickl/ SiCKL] (native static lib)
-   * !FreeGLUT (native static lib)
+   * FreeGLUT (native static lib)
    * GLEW (native static lib)
 
- * !VisualRBM (C# Exe)
-  * !VisualRBMInterop (CLI Interop DLL)
+ * VisualRBM (C# Exe)
+  * VisualRBMInterop (CLI Interop DLL)
    * OMLT
  
  * Tools
