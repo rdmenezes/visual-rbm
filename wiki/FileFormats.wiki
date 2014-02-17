@@ -1,7 +1,7 @@
 VisualRBM and associated tools makes use of three different filetypes:
 
  * IDX (.idx) - binary data format used to store training data for VisualRBM
- * Model (.json) - JSON format used to store a model (RBM, AutoEncoder, etc) trained by VisualRBM
+ * Model (.json) - JSON format used to store a model (RBM, !AutoEncoder, etc) trained by VisualRBM
  * Schedule (.json) - JSON format used to represent a training schedule used by VisualRBM and cltrain
 
 -----
@@ -44,7 +44,7 @@ Since version r268, VisualRBM serializes trained models as a JSON object.  Each 
 
 }}}
 
-Currently, allowed values for "Type" are "RestrictedBoltzmannMachine" or "MultilayerPerceptron."  
+Currently, allowed values for Type are "!RestrictedBoltzmannMachine" and "!MultilayerPerceptron."  
 
 
 == !RestrictedBoltzmannMachine ==
