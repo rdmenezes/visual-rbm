@@ -4,8 +4,8 @@
 
 This page contains an overview of the different command line tools available in the Tools.zip download found on the [http://code.google.com/p/visual-rbm/wiki/Downloads?tm=2 Downloads] page.
 
- * [Tools#RBM_Tools RBM Tools]
-  * [Tools#clrbm clrbm]
+ * [Tools#Model_Tools Model Tools]
+  * [Tools#cltrain cltrain]
   * [Tools#calchidden calchidden]
  * [Tools#IDX_Tools IDX Tools]
   * [Tools#idxinfo idxinfo]
@@ -17,45 +17,42 @@ This page contains an overview of the different command line tools available in 
  
 ----
  
-== RBM Tools ==
+== Model Tools ==
 
-=== clrbm ===
+=== cltrain ===
 
-Used to train an RBM from the command line.  Should be a bit faster than using the frontend, as there should be fewer GPU->CPU transfers (since there is no visualization to be done).
+Used to train a model from the command line.  Should be a bit faster than using the frontend, as there should be fewer GPU->CPU transfers (since there is no visualization to be done).
 
 ==== Usage ====
 
 {{{
-clrbm [ARGS]
+cltrain [ARGS]
 }}}
 
  * Required Arguments
   * -train=*IDX* - Specifies the input IDX dataset to use during training
-  * -params=*PARAMS* - Specifies the training parameters file (in the format specified on the [FileFormats] wiki page) to use during training.
-  * -export=*OUT* - Specifies where to save the final RBM once training completes.
+  * -sched=*SCHEDULE* - Specifies the training schedule file (in the format specified on the [FileFormats] wiki page) to use during training.
+  * -export=*OUT* - Specifies where to save the final model once training completes.
  * Optional Arguments
-  * -valid=*IDX* - Specifies an optiona validation IDX dataset
+  * -valid=*IDX* - Specifies an optional validation IDX dataset
   * -import=*RBM* - Specifies an initial set of weights to start from (rather than randomly initialization the weights).
   * -quiet - Suppresses all stdout output and omits any reconstruction error calculations.
-  * -defaults - Rather than training an RBM, clrbm will instead output a configuration file with the default settings to "default.vrbmparameters"
 
 ----
 
 === calchidden ===
 
-Used to calculate the hidden probabilities or activations of an RBM over an entire IDX dataset.  The output IDX can be used as training data for another RBM.
+Used to calculate the hidden probabilities of an RBM or AutoEncoder over an entire IDX dataset.  The output IDX can be used as training data for another model.
 
 ==== Usage ====
 
 {{{
-calchidden [MODE] [INPUT] [OUTPUT] [RBM] [DROPOUT]
+calchidden [INPUT] [OUTPUT] [RBM] [DROPOUT]
 }}}
 
- * *MODE* - Determines what to calculate for each hidden.  Passing the argument "A" (sans quotes) will save off the activations for each hidden unit.  An argument of "P" (again, sans quotes) will save off the probabilities for each hidden unit.
  * *INPUT* - The input IDX dataset.
  * *OUTPUT* - Destination to save the calculated hidden units.
- * *RBM* - The RBM model to use.
- * *DROPOUT* - The value of the visible dropout probability (that is, the probability of a visible unit not being active) used training the given RBM.
+ * *MODEL* - The trained model to use.
  
 == IDX Tools ==
 
