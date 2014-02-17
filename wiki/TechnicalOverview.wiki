@@ -8,10 +8,10 @@ The visual-rbm reepository contains three Visual Studio 2010 solutions:
 !VisualRBM and associated tools have a little bit of a dependency tree:
 
  * OMLT (native static lib)
-  * cJSON  (C source) 
+  * [http://sourceforge.net/projects/cjson/ cJSON]  (C source, slightly modified) 
   * [https://code.google.com/p/sickl/ SiCKL] (native static lib)
-   * FreeGLUT (native static lib)
-   * GLEW (native static lib)
+   * [http://freeglut.sourceforge.net/ FreeGLUT] (native static lib)
+   * [http://glew.sourceforge.net/ GLEW] (native static lib)
 
  * VisualRBM (C# Exe)
   * VisualRBMInterop (CLI Interop DLL)
