@@ -39,7 +39,7 @@ Since version r268, VisualRBM serializes trained models as a JSON object.  Each 
 
 {
 	"Type" : "ModelType",
-	... other model specific data ...
+	(Model Data)
 }
 
 }}}
@@ -47,7 +47,7 @@ Since version r268, VisualRBM serializes trained models as a JSON object.  Each 
 Currently, allowed values for "Type" are "RestrictedBoltzmannMachine" or "MultilayerPerceptron."  
 
 
-== RestrictedBoltzmannMachine ==
+== !RestrictedBoltzmannMachine ==
 
 The RBM format is fairly simple and has the following format:
 
@@ -66,9 +66,9 @@ The RBM format is fairly simple and has the following format:
 
 }}}
 
-VisibleCount and HiddenCount must be positive non-zero integers.  VisibleType and HiddenType must each be one of: "Linear," "Sigmoid," or "RectifiedLinear."  VisibleBiases and HiddenBiases are arrays of numbers representing the bias vectors.  Weights is a length HiddenCount array of length VisibleCount arrays of numbers representing the weights.
+!VisibleCount and !HiddenCount must be positive non-zero integers.  !VisibleType and !HiddenType must each be one of: "Linear," "Sigmoid," or "!RectifiedLinear."  !VisibleBiases and !HiddenBiases are arrays of numbers representing the bias vectors.  Weights is a length HiddenCount array of length !VisibleCount arrays of numbers representing the weights.
 
-== MultilayerPerceptron ==
+== !MultilayerPerceptron ==
 
 The MLP format is a bit more complicated, since an MLP can have any number of layers.  MLPs have the following format:
 
@@ -95,9 +95,9 @@ Layers is an array of JSON objects which represent each layer of the MLP.  A lay
 
 }}}
 
-Inputs and Outputs must be positive non-zero integers.  Function must be one of: "Linear", "Sigmoid", or "RectifiedLinear."  Biases is an array of numbers representing the output bias vector, while Weights is a length Outputs array of length Inputs arrays of numbers representing the weights.
+Inputs and Outputs must be positive non-zero integers.  Function must be one of: "Linear", "Sigmoid", or "!RectifiedLinear."  Biases is an array of numbers representing the output bias vector, while Weights is a length Outputs array of length Inputs arrays of numbers representing the weights.
 
-Currently, VisualRBM serializes out the AutoEncoder model as a MultilayerPerceptron.  This will change in the next release AuotEncoder support with tied weights is implemeented.  At that point, the AutoEncoder's JSON format will be basically identical to that of the RBM.
+Currently, VisualRBM serializes out the !AutoEncoder model as a !MultilayerPerceptron.  This will change in the next release !AutoEncoder support with tied weights is implemeented.  At that point, the !AutoEncoder's JSON format will be basically identical to that of the RBM.
 
 ----
 
@@ -109,31 +109,32 @@ The training schedule allows the user to specify a model configuration and train
 
 {
 	"Type" : ...,
-	...
+	(Model Parameters)
 	"Schedule" : 
 	[
 		{
-			...,
+			(Training Parameters),
 			"Epochs" : ...
 		},
 		{
-			...,
+			(Training Parameters),
 			"Epochs" : ...
 		},
+		...
 	]
 }
 }}}
 
-The Type value is common for all schedule files, and must be either "RestrictedBoltzmannMachine" or "AutoEncoder."  The root object must also contain all of the values found in a Model JSON file for your given type (apart from any learned weights).  That is, an RBM or an AutoEncoder must include a VisibleCount, HiddenCount, VisibleType and HiddenType.  A schedule for training a MultilayerPerceptron would require an array of Layer objects containing Inputs, Outputs and Function fields.
+The Type value is common for all schedule files, and must be either "!RestrictedBoltzmannMachine" or "!AutoEncoder."  The root object must also contain all of the values found in a Model JSON file for your given type (apart from any learned weights).  That is, an RBM or an !AutoEncoder must include a !VisibleCount, !HiddenCount, !VisibleType and !HiddenType.  A schedule for training a !MultilayerPerceptron would require an array of Layer objects containing Inputs, Outputs and Function fields.
 
-The Schedule array contains a list of objects which contain training parameters.  AutoEncoders and RBMs use the same set of training parameters:
+The Schedule array contains a list of objects which contain training parameters.  !AutoEncoders and RBMs use the same set of training parameters:
 
-* LearningRate
-* Momentum
-* L1
-* L2
-* VisibleDropout
-* HiddenDropout
+ * !LearningRate
+ * Momentum
+ * L1
+ * L2
+ * !VisibleDropout
+ * !HiddenDropout
 
 Training parameters can be omitted if they do not need to change.
 
