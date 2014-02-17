@@ -1,14 +1,12 @@
-= This page is out of date and will be updated shortly =
-
 <font size="3">*Reconstruction Error Graph*</font> - Displays the training and (optionally) validation data's reconstruction error over time.
 || http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot01.png ||
 
 <br>
-<font size="3">*Visible Training Examples*</font> - This tab displays a recent training example presented to the RBM, along with the RBM's reconstruction and their difference.  With visible dropout enabled, these images will have black (when using binary visible units) or grey (when using linear units) speckles.  These units were disabled for this particular training example.
+<font size="3">*Visible Training Examples*</font> - This tab displays a recent training example presented to the RBM, along with the RBM's reconstruction and their difference.  With visible dropout enabled, these images will have black or grey (depending on the visible type) speckles.  These units were disabled for this particular training example.
 || http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot02.png ||
 
 <br>
-<font size="3">*Hidden Unit Activation Probabilities*</font> - This tab displays the the hidden activation probabilities for a recent training example.  If you are using hidden dropout, then there will be black speckles in these images (though it should really only be obvious at the beginning of training).
+<font size="3">*Hidden Unit Activation Probabilities*</font> - This tab displays the the hidden activations for a recent training example.  If you are using hidden dropout, then there will be grey or black speckles in these images (though it should really only be obvious at the beginning of training).
 || http://visual-rbm.googlecode.com/svn/wiki/Screenshots/screenshot03.png ||
 
 <br>
