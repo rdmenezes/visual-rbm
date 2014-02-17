@@ -1,5 +1,3 @@
-= This page is out of date and will be updated shortly =
-
 = Tools =
 
 This page contains an overview of the different command line tools available in the Tools.zip download found on the [http://code.google.com/p/visual-rbm/wiki/Downloads?tm=2 Downloads] page.
@@ -35,7 +33,7 @@ cltrain [ARGS]
   * -export=*OUT* - Specifies where to save the final model once training completes.
  * Optional Arguments
   * -valid=*IDX* - Specifies an optional validation IDX dataset
-  * -import=*RBM* - Specifies an initial set of weights to start from (rather than randomly initialization the weights).
+  * -import=*MODEL* - Specifies an initial set of weights to start from (rather than randomly initialization the weights).
   * -quiet - Suppresses all stdout output and omits any reconstruction error calculations.
 
 ----
