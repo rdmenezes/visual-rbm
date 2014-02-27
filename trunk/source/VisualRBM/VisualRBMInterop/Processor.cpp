@@ -13,9 +13,9 @@
 // OMLT
 #include <DataAtlas.h>
 #include <ContrastiveDivergence.h>
-#include <BackPropagation.h>
+#include <AutoEncoder.h>
 #include <RestrictedBoltzmannMachine.h>
-#include <MultilayerPerceptron.h>
+#include <AutoEncoderBackPropagation.h>
 #include <Common.h>
 #include <IDX.hpp>
 #include <TrainingSchedule.h>
@@ -560,7 +560,7 @@ namespace VisualRBMInterop
 	}
 
 
-	class AETrainer : public ITrainer<MLP,BP>
+	class AETrainer : public ITrainer<AutoEncoder,AutoEncoderBackPropagation>
 	{
 		virtual void HandleGetVisibleMsg( Message^ msg ) 
 		{
@@ -579,15 +579,12 @@ namespace VisualRBMInterop
 			float* recon_ptr = (float*)visible_recon_buffer;
 			float* diff_ptr = (float*)visible_diff_buffer;
 
-			_trainer->DumpLastLabel(&visible_ptr);
-			_trainer->DumpActivation(1, &recon_ptr);
+			_trainer->DumpLastVisible(&visible_ptr, &recon_ptr);
 
 			for(uint32_t k = 0; k < visible_size; k++)
 			{
 				diff_ptr[k] = visible_ptr[k] - recon_ptr[k];
 			}
-
-			_trainer->DumpInput(0, &visible_ptr);
 
 			List<IntPtr>^ visible_list = dynamic_cast<List<IntPtr>^>(msg["visible"]);
 			List<IntPtr>^ recon_list = dynamic_cast<List<IntPtr>^>(msg["reconstruction"]);
@@ -611,7 +608,7 @@ namespace VisualRBMInterop
 			hidden_buffer.Acquire(hidden_size);
 			float* hidden_ptr = (float*)hidden_buffer;
 
-			_trainer->DumpActivation(0, &hidden_ptr);
+			_trainer->DumpLastHidden(&hidden_ptr);
 
 			List<IntPtr>^ hidden_list = dynamic_cast<List<IntPtr>^>(msg["hidden"]);
 			for(uint32_t k = 0; k < minibatch_size; k++)
@@ -627,20 +624,23 @@ namespace VisualRBMInterop
 			assert(_trainer != nullptr);
 
 			// allocate buffer space if need be
-			const uint32_t weight_size = (hidden_count) * (visible_count + 1);
+			const uint32_t weight_size = (hidden_count + 1) * (visible_count + 1);
 			weight_buffer.Acquire(weight_size);
 
 			float* weight_ptr = (float*)weight_buffer;
-			_trainer->DumpWeightMatrix(0, &weight_ptr);
+			
+			_trainer->DumpLastWeights(&weight_ptr);
 
 			List<IntPtr>^ weight_list = dynamic_cast<List<IntPtr>^>(msg["weights"]);
-			for(uint32_t j = 0; j < hidden_count; j++)
+			for(uint32_t j = 0; j <= hidden_count; j++)
 			{
 				weight_list->Add(IntPtr(weight_ptr + 1 + (visible_count + 1) * j));
 			}
 		}
 		virtual void HandleExportModel(Stream^ s)
 		{
+			assert(false);
+#if 0
 			assert(_trainer != nullptr);
 
 			MLP* mlp = _trainer->GetMultilayerPerceptron(0, 1);
@@ -652,10 +652,13 @@ namespace VisualRBMInterop
 			{
 				s->WriteByte(model_json[k]);
 			}
+#endif
 		}
 
 		virtual bool HandleImportModel(OMLT::Model& model)
 		{
+			assert(false);
+#if 0
 			_loaded_model = model.mlp;
 			if(visible_count != _loaded_model->GetLayer(0)->inputs ||
 			   visible_count != _loaded_model->GetLayer(1)->outputs ||
@@ -669,6 +672,7 @@ namespace VisualRBMInterop
 			Processor::VisibleType = (UnitType)_loaded_model->GetLayer(1)->function;
 			Processor::HiddenType = (UnitType)_loaded_model->GetLayer(0)->function;
 
+#endif
 			return true;
 		}
 
@@ -677,100 +681,88 @@ namespace VisualRBMInterop
 			assert(currentState == ProcessorState::Running ||
 				currentState == ProcessorState::ScheduleRunning);
 			
-			_trainer->Train(train_example, train_example);
-			return _trainer->GetLastOutputError();
+			_trainer->Train(train_example);
+			return _trainer->GetLastError();
 
 		}
 		virtual float Validation( OpenGLBuffer2D& validation_example )
 		{
 			assert(currentState == ProcessorState::Running ||
 				currentState == ProcessorState::ScheduleRunning);
-			return _trainer->GetOutputError(validation_example, validation_example);
+			
+			return _trainer->GetError(validation_example);
 		}
 	};
 
 	template<>
-	void ITrainer<MLP,BP>::build_schedule()
+	void ITrainer<AutoEncoder,AutoEncoderBackPropagation>::build_schedule()
 	{
 		assert(_schedule == nullptr);
-		BP::ModelConfig model_config;
+		AutoEncoderBackPropagation::ModelConfig model_config;
 		{
-			model_config.InputCount = visible_count;
+			model_config.VisibleCount = visible_count;
+			model_config.HiddenCount = hidden_count;
+			model_config.OutputType = (ActivationFunction_t)visible_type;
+			model_config.HiddenType = (ActivationFunction_t)hidden_type;
 		}
-
-		BP::LayerConfig hidden_config;
-		{
-			hidden_config.OutputUnits = hidden_count;
-			hidden_config.Function = (ActivationFunction_t)hidden_type;
-			hidden_config.Noisy = false;
-		}
-		BP::LayerConfig output_config;
-		{
-			output_config.OutputUnits = visible_count;
-			output_config.Function = (ActivationFunction_t)visible_type;
-			output_config.Noisy = false;
-		}
-
-		model_config.LayerConfigs.push_back(hidden_config);
-		model_config.LayerConfigs.push_back(output_config);
-
-		BP::TrainingConfig train_config;
-		train_config.Initialize(2);
+		AutoEncoderBackPropagation::TrainingConfig train_config;
 		{
 			train_config.LearningRate = learning_rate;
 			train_config.Momentum = momentum;
 			train_config.L1Regularization = l1;
 			train_config.L2Regularization = l2;
-			train_config.Dropout[0] = visible_dropout;
-			train_config.Dropout[1] = hidden_dropout;
+			train_config.VisibleDropout = visible_dropout;
+			train_config.HiddenDropout = hidden_dropout;
 		}
 
-		_schedule = new TrainingSchedule<BackPropagation>(model_config, minibatch_size);
+		_schedule = new TrainingSchedule<AutoEncoderBackPropagation>(model_config, minibatch_size);
 		_schedule->AddTrainingConfig(train_config, epochs_remaining);
 	}
 
 	template<>
-	void ITrainer<MLP,BP>::build_trainer()
+	void ITrainer<AutoEncoder,AutoEncoderBackPropagation>::build_trainer()
 	{
 		assert(_trainer == nullptr);
 		assert(_schedule != nullptr);
 
-		BP::ModelConfig model_config = _schedule->GetModelConfig();
-		model_config.InputCount = visible_count;
+		AutoEncoderBackPropagation::ModelConfig model_config = _schedule->GetModelConfig();
+		model_config.VisibleCount = visible_count;
 		assert(_schedule->GetMinibatchSize() == minibatch_size);
 
 		model_config_to_ui(model_config);
 
 		if(_loaded_model == nullptr)
 		{
-			_trainer = new BackPropagation(model_config, _schedule->GetMinibatchSize());
+			_trainer = new AutoEncoderBackPropagation(model_config, _schedule->GetMinibatchSize());
 		}
 		else
 		{
+#if 0
 			assert(_loaded_model->GetLayer(0)->inputs == visible_count);
-			_trainer = new BackPropagation(_loaded_model, _schedule->GetMinibatchSize());
+			_trainer = new AutoEncoderBackPropagation(_loaded_model, _schedule->GetMinibatchSize());
 			SAFE_DELETE(_loaded_model);
+#endif
 		}
 	}
 
 	template<>
-	void ITrainer<MLP,BP>::model_config_to_ui(const BP::ModelConfig& model_config)
+	void ITrainer<AutoEncoder,AutoEncoderBackPropagation>::model_config_to_ui(const AutoEncoderBackPropagation::ModelConfig& model_config)
 	{
 		Processor::Model = ModelType::AutoEncoder;
-		Processor::VisibleType = (UnitType)model_config.LayerConfigs[1].Function;
-		Processor::HiddenType = (UnitType)model_config.LayerConfigs[0].Function;
-		Processor::HiddenUnits = model_config.LayerConfigs[0].OutputUnits;
+		Processor::VisibleType = (UnitType)model_config.OutputType;
+		Processor::HiddenType = (UnitType)model_config.HiddenType;
+		Processor::HiddenUnits = model_config.HiddenCount;
 	}
 
 	template<>
-	void ITrainer<MLP,BP>::train_config_to_ui(const BP::TrainingConfig& train_config)
+	void ITrainer<AutoEncoder,AutoEncoderBackPropagation>::train_config_to_ui(const AutoEncoderBackPropagation::TrainingConfig& train_config)
 	{
 		Processor::LearningRate = train_config.LearningRate;
 		Processor::Momentum = train_config.Momentum;
 		Processor::L1Regularization = train_config.L1Regularization;
 		Processor::L2Regularization = train_config.L2Regularization;
-		Processor::VisibleDropout = train_config.Dropout[0];
-		Processor::HiddenDropout = train_config.Dropout[1];
+		Processor::VisibleDropout = train_config.VisibleDropout;
+		Processor::HiddenDropout = train_config.HiddenDropout;
 	}
 
 	void Processor::Run()
@@ -919,9 +911,9 @@ namespace VisualRBMInterop
 							}
 							
 						}
-						else if(TrainingSchedule<BP>* schedule = TrainingSchedule<BP>::FromJSON(schedule_json))
+						else if(TrainingSchedule<AutoEncoderBackPropagation>* schedule = TrainingSchedule<AutoEncoderBackPropagation>::FromJSON(schedule_json))
 						{
-							if(schedule->GetModelConfig().InputCount == visible_count)
+							if(schedule->GetModelConfig().VisibleCount == visible_count)
 							{
 								msg["schedule"] = IntPtr(schedule);
 
@@ -1220,8 +1212,9 @@ namespace VisualRBMInterop
 			Thread::Sleep(16);
 		}
 
-		
+		return weights->Count == (hidden_count+1);
 
+#if 0
 		if(model_type == VisualRBMInterop::ModelType::RBM)
 		{
 			assert(weights->Count == (hidden_count+1) || weights->Count == 0);
@@ -1233,6 +1226,7 @@ namespace VisualRBMInterop
 			assert(weights->Count == hidden_count || weights->Count == 0);
 			return weights->Count == hidden_count;
 		}
+#endif
 	}
 
 #pragma region Properties

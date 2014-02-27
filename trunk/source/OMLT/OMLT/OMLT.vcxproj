@@ -79,6 +79,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\extern\cJSON\cJSON.c" />
+    <ClCompile Include="source\AutoEncoder.cpp" />
+    <ClCompile Include="source\AutoEncoderBackPropagation.cpp" />
     <ClCompile Include="source\Common.cpp" />
     <ClCompile Include="source\ContrastiveDivergence.cpp" />
     <ClCompile Include="source\Enums.cpp" />
@@ -91,6 +93,9 @@
     <ClCompile Include="source\TrainingSchedule.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\AutoEncoder.h" />
+    <ClInclude Include="include\AutoEncoderBackPropagation.h" />
+    <ClInclude Include="include\AutoEncoderBackPropagationKernels.h" />
     <ClInclude Include="include\Common.h" />
     <ClInclude Include="include\ConfusionMatrix.h" />
     <ClInclude Include="include\ContrastiveDivergence.h" />

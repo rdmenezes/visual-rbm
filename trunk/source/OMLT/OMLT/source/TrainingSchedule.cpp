@@ -404,4 +404,10 @@ Error:
 		cJSON_Delete(root);
 		return result;
 	}
+
+	template<>
+	TrainingSchedule<AutoEncoderBackPropagation>* TrainingSchedule<AutoEncoderBackPropagation>::FromJSON(const std::string& json)
+	{
+		return nullptr;
+	}
 }

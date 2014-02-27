@@ -2,6 +2,8 @@
 #include <SiCKL.h>
 using namespace SiCKL;
 
+#include "Enums.h"
+
 namespace OMLT
 {
 
@@ -48,8 +50,56 @@ namespace OMLT
 		out_gaussian = Sqrt(-2.0f * Log(u1)) * Sin(2.0f * PI * u2);
 	}
 
+	extern SiCKL::Float Linear( const SiCKL::Float& in_x)
+	{
+		return in_x;
+	}
+
 	extern SiCKL::Float Sigmoid( const SiCKL::Float& in_x )
 	{
 		return 1.0f / (1.0f + Exp(-in_x));
+	}
+
+	extern SiCKL::Float RectifiedLinear(const SiCKL::Float& in_x)
+	{
+		return Max(in_x, 0.0f);
+	}
+	
+	extern SiCKL::Float CalcActivation(ActivationFunction_t in_func, const SiCKL::Float& in_accumulation)
+	{
+		COMPUTE_ASSERT(in_func == ActivationFunction::Linear ||
+		               in_func == ActivationFunction::Sigmoid ||
+					   in_func == ActivationFunction::RectifiedLinear);
+
+		switch(in_func)
+		{
+		case ActivationFunction::Linear:
+			return Linear(in_accumulation);
+		case ActivationFunction::Sigmoid:
+			return Sigmoid(in_accumulation);
+		case ActivationFunction::RectifiedLinear:
+			return RectifiedLinear(in_accumulation);
+		}
+		
+		return SiCKL::Float(0.0f);
+	}
+
+	extern SiCKL::Float CalcActivationPrime(ActivationFunction_t in_func, const SiCKL::Float& in_activation)
+	{
+		COMPUTE_ASSERT(in_func == ActivationFunction::Linear ||
+			in_func == ActivationFunction::Sigmoid ||
+			in_func == ActivationFunction::RectifiedLinear);
+
+		switch(in_func)
+		{
+		case ActivationFunction::Linear:
+			return SiCKL::Float(1.0f);
+		case ActivationFunction::Sigmoid:
+			return (1.0f - in_activation) * in_activation;
+		case ActivationFunction::RectifiedLinear:
+			return Max(0.0f, Sign(in_activation));
+		}
+
+		return SiCKL::Float(0.0f);
 	}
 }

@@ -47,6 +47,12 @@
     <ClCompile Include="source\SiCKLShared.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\AutoEncoder.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\AutoEncoderBackPropagation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\DataAtlas.h">
@@ -89,6 +95,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\SiCKLShared.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AutoEncoder.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AutoEncoderBackPropagation.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\AutoEncoderBackPropagationKernels.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
