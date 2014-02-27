@@ -7,6 +7,7 @@
 
 #include "ContrastiveDivergence.h"
 #include "BackPropagation.h"
+#include "AutoEncoderBackPropagation.h"
 
 namespace OMLT
 {
