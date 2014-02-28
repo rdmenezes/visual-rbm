@@ -146,7 +146,7 @@ namespace VisualRBMInterop
 		case UnitType::RectifiedLinear:
 			for(uint32_t k = 0; k < count; k++)
 			{
-				buffer[k] = std::min(buffer[k] / 5.0f, 1.0f);
+				buffer[k] = std::min(buffer[k], 1.0f);
 			}
 			break;
 		}
