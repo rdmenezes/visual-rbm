@@ -55,24 +55,41 @@ namespace VisualRBM
 
 				PixelFormat pf = _main_form.settingsBar.Format;
 
-				float stddev = 0.0f;
-				foreach (IntPtr ptr in weights)
+				// stddev calculations assume zero mean
+
+				float* raw_weights = (float*)weights[0].ToPointer();
+				float bias_stddev = 0.0f;
+				for (uint k = 0; k < Processor.VisibleUnits; k++)
 				{
-					float* raw_weights = (float*)ptr.ToPointer();
+					float val = raw_weights[k];
+					bias_stddev += val * val;
+				}
+				bias_stddev /= Processor.VisibleUnits;
+				bias_stddev = (float)Math.Sqrt(bias_stddev);
+
+				Processor.RescaleWeights(raw_weights, bias_stddev, (uint)Processor.VisibleUnits);
+				UpdateImageControlContents(0, pf, (uint)Processor.VisibleUnits, raw_weights);
+
+				float weight_stddev = 0.0f;
+				for(int j = 1; j < weights.Count; j++)
+				{
+					raw_weights = (float*)weights[j].ToPointer();
 					for (uint k = 0; k < Processor.VisibleUnits; k++)
 					{
 						float val = raw_weights[k];
-						stddev += val * val;
+						weight_stddev += val * val;
 					}
 				}
-				stddev /= weights.Count * Processor.VisibleUnits;
-				stddev = (float)Math.Sqrt(stddev);
+				weight_stddev /= (weights.Count - 1) * Processor.VisibleUnits;
+				weight_stddev = (float)Math.Sqrt(weight_stddev);
 
-				for (int j = 0; j < weights.Count; j++)
+
+
+				for (int j = 1; j < weights.Count; j++)
 				{
-					float* raw_weights = (float*)weights[j].ToPointer();
+					raw_weights = (float*)weights[j].ToPointer();
 
-					Processor.RescaleWeights(raw_weights, stddev, (uint)Processor.VisibleUnits);
+					Processor.RescaleWeights(raw_weights, weight_stddev, (uint)Processor.VisibleUnits);
 					UpdateImageControlContents(j, pf, (uint)Processor.VisibleUnits, raw_weights);
 				}
 
