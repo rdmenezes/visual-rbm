@@ -78,16 +78,15 @@ int main(int argc, char** argv)
 		count = input->GetRowCount() - from;
 	}
 
-	float* buffer = new float[input->GetRowLength()];
-
+	void* row_buffer = malloc(input->GetRowLengthBytes());
 	printf("Writing %s to disk ... \n", output_string);
 
 	for(uint32_t i = 0; i < count; i++)
 	{
-		input->ReadRow(from + i, buffer);
-		output->AddRow(buffer);
+		input->ReadRow(from + i, row_buffer);
+		output->AddRow(row_buffer);
 	}
-	delete buffer;
+	free(row_buffer);
 
 	input->Close();
 	output->Close();
