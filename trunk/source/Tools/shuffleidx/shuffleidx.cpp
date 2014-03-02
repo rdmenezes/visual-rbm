@@ -87,11 +87,11 @@ int main(int argc, char** argv)
 	result = 0;
 CLEANUP:
 
-	if(!input)
+	if(input)
 	{
 		input->Close();
 	}
-	if(!shuffled)
+	if(shuffled)
 	{
 		shuffled->Close();
 	}
