@@ -48,7 +48,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_MBCS;STBI_HEADER_FILE_ONLY;STBI_FAILURE_USERMSG%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_MBCS;STBI_FAILURE_USERMSG</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..\extern\stb_image;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -61,7 +61,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>_MBCS;STBI_FAILURE_USERMSG%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_MBCS;STBI_FAILURE_USERMSG</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>..\..\..\extern\stb_image;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

@@ -7,8 +7,8 @@
 #include <DataAtlas.h>
 #include <RestrictedBoltzmannMachine.h>
 #include <ContrastiveDivergence.h>
-#include <MultilayerPerceptron.h>
-#include <BackPropagation.h>
+#include <AutoEncoder.h>
+#include <AutoEncoderBackPropagation.h>
 #include <TrainingSchedule.h>
 #include <Enums.h>
 
@@ -27,21 +27,21 @@ ModelType_t model_type = ModelType::Invalid;
 static union
 {
 	RBM* rbm;
-	MLP* mlp;
+	AutoEncoder* ae;
 } loaded =  {0};
 
 
 static union
 {
 	TrainingSchedule<CD>* cd;
-	TrainingSchedule<BP>* bp;
+	TrainingSchedule<AutoEncoderBackPropagation>* bp;
 	
 } schedule = {0};
 
 static union
 {
 	ContrastiveDivergence* cd;
-	BackPropagation* bp;
+	AutoEncoderBackPropagation* bp;
 } trainer = {0};
 
 // file to save rbm to
@@ -187,7 +187,7 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 				model_type = ModelType::RBM;
 			}
 		}
-		else if(schedule.bp = TrainingSchedule<BP>::FromJSON(schedule_json))
+		else if(schedule.bp = TrainingSchedule<AutoEncoderBackPropagation>::FromJSON(schedule_json))
 		{
 			if(schedule.bp->GetMinibatchSize() > SiCKL::OpenGLRuntime::GetMaxTextureSize())
 			{
@@ -196,7 +196,7 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 			}
 			else
 			{
-				model_type = ModelType::MLP;
+				model_type = ModelType::AutoEncoder;
 			}
 		}
 		else
@@ -219,7 +219,7 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 		else
 		{
 			OMLT::Model model;
-			if(!FromJSON(model_json, model))
+			if(!Model::FromJSON(model_json, model))
 			{
 				printf("Problem parsing model JSON from: \"%s\"\n", arguments[Import]);
 				return Error;
@@ -234,9 +234,12 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 			case ModelType::RBM:
 				loaded.rbm = model.rbm;
 				break;
-			case ModelType::MLP:
-				loaded.mlp = model.mlp;
+			case ModelType::AE:
+				loaded.ae = model.ae;
 				break;
+			default:
+				printf("Loaded model must be either a RestrictedBoltzmannMachine or an AutoEncoder\n");
+				return Error;
 			}
 		}
 	}
@@ -465,40 +468,38 @@ std::string ToJSON<CD>()
 #pragma region Back Propagation
 
 template<>
-BP* GetTrainer() {return trainer.bp;}
+AutoEncoderBackPropagation* GetTrainer() {return trainer.bp;}
 
 
 template<>
-bool Initialize<MLP>()
+bool Initialize<AutoEncoder>()
 {
 	const auto model_config = schedule.bp->GetModelConfig();
-	if(loaded.mlp)
+	if(loaded.ae)
 	{
 		// verify model config matches
-		auto input_layer = loaded.mlp->InputLayer();
-		auto output_layer = loaded.mlp->OutputLayer();
-		if(input_layer->inputs != model_config.InputCount ||
-		   input_layer->outputs != model_config.LayerConfigs[0].OutputUnits ||
-		   input_layer->function != model_config.LayerConfigs[0].Function ||
-		   output_layer->function != model_config.LayerConfigs[1].Function)
+		if(loaded.ae->visible_count != model_config.VisibleCount ||
+		   loaded.ae->hidden_count != model_config.HiddenCount ||
+		   loaded.ae->hidden_type != model_config.HiddenType ||
+		   loaded.ae->output_type != model_config.OutputType)
 		{
-			printf("Model parameters in schedule do not match those found in loaded MLP\n");
+			printf("Model parameters in schedule do not match those found in loaded AutoEncoder\n");
 			return false;
 		}
-		else if(input_layer->outputs >= SiCKL::OpenGLRuntime::GetMaxTextureSize())
+		else if(loaded.ae->hidden_count >= SiCKL::OpenGLRuntime::GetMaxTextureSize())
 		{
 			printf("Hidden unit count greater than %u is not supported.\n", (SiCKL::OpenGLRuntime::GetMaxTextureSize() - 1));
 			return false;
 		}
 		
-		trainer.bp = new BackPropagation(loaded.mlp, schedule.bp->GetMinibatchSize());
+		trainer.bp = new AutoEncoderBackPropagation(loaded.ae, schedule.bp->GetMinibatchSize());
 	}
 	else
 	{
-		trainer.bp = new BackPropagation(model_config, schedule.bp->GetMinibatchSize());
+		trainer.bp = new AutoEncoderBackPropagation(model_config, schedule.bp->GetMinibatchSize());
 	}
 
-	BP::TrainingConfig train_config;
+	AutoEncoderBackPropagation::TrainingConfig train_config;
 	bool populated = schedule.bp->GetTrainingConfig(train_config);
 	assert(populated == true);
 	trainer.bp->SetTrainingConfig(train_config);
@@ -507,29 +508,29 @@ bool Initialize<MLP>()
 }
 
 template<>
-void Train<BP>(const OpenGLBuffer2D& train_example)
+void Train<AutoEncoderBackPropagation>(const OpenGLBuffer2D& train_example)
 {
-	trainer.bp->Train(train_example, train_example);
+	trainer.bp->Train(train_example);
 }
 
 template<>
-float GetError<BP>()
+float GetError<AutoEncoderBackPropagation>()
 {
-	return trainer.bp->GetLastOutputError();
+	return trainer.bp->GetLastError();
 }
 
 template <>
-float Validate<BP>(const OpenGLBuffer2D& validation_example)
+float Validate<AutoEncoderBackPropagation>(const OpenGLBuffer2D& validation_example)
 {
-	return trainer.bp->GetOutputError(validation_example, validation_example);
+	return trainer.bp->GetError(validation_example);
 }
 
 template <>
-std::string ToJSON<BP>()
+std::string ToJSON<AutoEncoderBackPropagation>()
 {
-	MLP* mlp = trainer.bp->GetMultilayerPerceptron();
-	std::string json = mlp->ToJSON();
-	delete mlp;
+	AutoEncoder* ae = trainer.bp->GetAutoEncoder();
+	std::string json = ae->ToJSON();
+	delete ae;
 
 	return json;
 }
@@ -561,8 +562,8 @@ int main(int argc, char** argv)
 			case ModelType::RBM:
 				success = Run<RBM, CD>(loaded.rbm, schedule.cd);
 				break;
-			case ModelType::MLP:
-				success = Run<MLP, BP>(loaded.mlp, schedule.bp);
+			case ModelType::AutoEncoder:
+				success = Run<AutoEncoder, AutoEncoderBackPropagation>(loaded.ae, schedule.bp);
 				break;
 			}
 
