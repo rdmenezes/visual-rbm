@@ -19,6 +19,7 @@
 #include <Common.h>
 #include <IDX.hpp>
 #include <TrainingSchedule.h>
+#include <Model.h>
 using namespace OMLT;
 
 // msft
@@ -639,40 +640,27 @@ namespace VisualRBMInterop
 		}
 		virtual void HandleExportModel(Stream^ s)
 		{
-			assert(false);
-#if 0
 			assert(_trainer != nullptr);
 
-			MLP* mlp = _trainer->GetMultilayerPerceptron(0, 1);
-			assert(mlp != nullptr);
-			std::string model_json = mlp->ToJSON();
-			delete mlp;
+			AutoEncoder* ae = _trainer->GetAutoEncoder();
+			assert(ae != nullptr);
+			std::string model_json = ae->ToJSON();
+			delete ae;
 
 			for(size_t k = 0; k < model_json.size(); k++)
 			{
 				s->WriteByte(model_json[k]);
 			}
-#endif
 		}
 
 		virtual bool HandleImportModel(OMLT::Model& model)
 		{
-			assert(false);
-#if 0
-			_loaded_model = model.mlp;
-			if(visible_count != _loaded_model->GetLayer(0)->inputs ||
-			   visible_count != _loaded_model->GetLayer(1)->outputs ||
-			   _loaded_model->LayerCount() != 2)
-			{
-				SAFE_DELETE(_loaded_model);
-				return false;
-			}
+			_loaded_model = model.ae;
 
-			Processor::HiddenUnits = _loaded_model->GetLayer(1)->inputs;
-			Processor::VisibleType = (UnitType)_loaded_model->GetLayer(1)->function;
-			Processor::HiddenType = (UnitType)_loaded_model->GetLayer(0)->function;
+			Processor::HiddenUnits = _loaded_model->hidden_count;
+			Processor::HiddenType = (UnitType)_loaded_model->hidden_type;
+			Processor::VisibleType = (UnitType)_loaded_model->output_type;
 
-#endif
 			return true;
 		}
 
@@ -737,11 +725,9 @@ namespace VisualRBMInterop
 		}
 		else
 		{
-#if 0
-			assert(_loaded_model->GetLayer(0)->inputs == visible_count);
+			assert(_loaded_model->visible_count == visible_count);
 			_trainer = new AutoEncoderBackPropagation(_loaded_model, _schedule->GetMinibatchSize());
 			SAFE_DELETE(_loaded_model);
-#endif
 		}
 	}
 
@@ -867,19 +853,23 @@ namespace VisualRBMInterop
 						msg["loaded"] = false;
 
 						OMLT::Model model;
-						if(FromJSON(model_json ,model))
+						if(OMLT::Model::FromJSON(model_json ,model))
 						{
+							bool invalid_type = false;
 							switch(model.type)
 							{
 							case OMLT::ModelType::RBM:
 								Processor::Model = ModelType::RBM;
 								break;
-							case OMLT::ModelType::MLP:
+							case OMLT::ModelType::AE:
 								Processor::Model = ModelType::AutoEncoder;
+								break;
+							default:
+								invalid_type = true;
 								break;
 							}
 
-							if(trainer->HandleImportModel(model))
+							if(!invalid_type && trainer->HandleImportModel(model))
 							{
 								msg["loaded"] = true;
 							}
@@ -1213,20 +1203,6 @@ namespace VisualRBMInterop
 		}
 
 		return weights->Count == (hidden_count+1);
-
-#if 0
-		if(model_type == VisualRBMInterop::ModelType::RBM)
-		{
-			assert(weights->Count == (hidden_count+1) || weights->Count == 0);
-			return weights->Count == (hidden_count+1);
-		}
-		else if(model_type == VisualRBMInterop::ModelType::AutoEncoder)
-		{
-			// no bias for auto encoder currently
-			assert(weights->Count == hidden_count || weights->Count == 0);
-			return weights->Count == hidden_count;
-		}
-#endif
 	}
 
 #pragma region Properties
