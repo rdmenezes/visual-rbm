@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Enums.h"
+#include "Model.h"
 
 struct cJSON;
 namespace OMLT
@@ -48,7 +49,7 @@ private:
 		std::vector<float*> _activations;
 		// private parse method
 		static MultilayerPerceptron* FromJSON(cJSON* root);
-		friend bool FromJSON(const std::string& in_json, struct Model& out_model);
+		friend bool Model::FromJSON(const std::string& in_json, struct Model& out_model);
 	};
 	typedef MultilayerPerceptron MLP;
 }

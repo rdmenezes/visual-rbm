@@ -2,26 +2,13 @@
 
 namespace OMLT
 {
-	// a general parsing method
-	namespace ModelType
-	{
-		enum Enum
-		{
-			Invalid = -1,
-			NotSet = 0,
-			MultilayerPerceptron,
-			RestrictedBoltzmannMachine,
 
-			MLP = MultilayerPerceptron,
-			RBM = RestrictedBoltzmannMachine,
-		};
-	}
-	typedef ModelType::Enum ModelType_t;
 
 	namespace ActivationFunction
 	{
 		enum Enum
 		{
+			Invalid = -1,
 			// linear: f(x) = x
 			Linear,
 			// rectified linear function : f(x) = max(0, x)

@@ -202,62 +202,62 @@ Error:
 	template<>
 	TrainingSchedule<BackPropagation>* TrainingSchedule<BackPropagation>::FromJSON(const std::string& json)
 	{
-		TrainingSchedule<BackPropagation>* result = nullptr;
+		return nullptr;
+	}
+
+	template<>
+	TrainingSchedule<AutoEncoderBackPropagation>* TrainingSchedule<AutoEncoderBackPropagation>::FromJSON(const std::string& json)
+	{
+		TrainingSchedule<AutoEncoderBackPropagation>* result = nullptr;
 
 		cJSON* root = cJSON_Parse(json.c_str());
 		if(root)
 		{
 			cJSON* cj_type = cJSON_GetObjectItem(root, "Type");
 
-			if(!cj_type ||  strcmp(cj_type->valuestring, "AutoEncoder") != 0)
+			if(!cj_type || strcmp(cj_type->valuestring, "AutoEncoder") != 0)
 			{
 				goto Error;
 			}
 
-			cJSON* cj_visible_type = cJSON_GetObjectItem(root, "VisibleType");
 			cJSON* cj_visible_count = cJSON_GetObjectItem(root, "VisibleCount");
-			cJSON* cj_hidden_type = cJSON_GetObjectItem(root, "HiddenType");
 			cJSON* cj_hidden_count = cJSON_GetObjectItem(root, "HiddenCount");
+			cJSON* cj_hidden_type = cJSON_GetObjectItem(root, "HiddenType");
+			cJSON* cj_output_type = cJSON_GetObjectItem(root, "OutputType");
 			cJSON* cj_minibatch_size = cJSON_GetObjectItem(root, "MinibatchSize");
 			cJSON* cj_schedule = cJSON_GetObjectItem(root, "Schedule");
 
-			if(cj_visible_type && cj_hidden_type &&
+			if(cj_output_type && cj_hidden_type &&
 				cj_hidden_count && cj_minibatch_size &&
 				cj_schedule)
 			{
-				BP::ModelConfig model_config = {0};
-				BP::LayerConfig hidden_layer = {0};
-				BP::LayerConfig output_layer = {0};
-
-				hidden_layer.Function= (ActivationFunction_t)-1;
-				hidden_layer.OutputUnits =  (uint32_t)-1;
-				output_layer.Function = (ActivationFunction_t)-1;
-				output_layer.OutputUnits =  (uint32_t)-1;
-
+				AutoEncoderBackPropagation::ModelConfig model_config = {0};
+				model_config.HiddenType = (ActivationFunction_t)-1;
+				model_config.OutputType = (ActivationFunction_t)-1;
 				uint32_t minibatch_size = 0;
 
 				for(int func = 0; func < ActivationFunction::Count; func++)
 				{
-					if(strcmp(cj_visible_type->valuestring, ActivationFunctionNames[func]) == 0)
-					{
-						output_layer.Function = (ActivationFunction_t)func;
-					}
-
 					if(strcmp(cj_hidden_type->valuestring, ActivationFunctionNames[func]) == 0)
 					{
-						hidden_layer.Function = (ActivationFunction_t)func;
+						model_config.HiddenType = (ActivationFunction_t)func;
+					}
+
+					if(strcmp(cj_output_type->valuestring, ActivationFunctionNames[func]) == 0)
+					{
+						model_config.OutputType = (ActivationFunction_t)func;
 					}
 				}
 
 				// make sure we found both activation functions
-				if(output_layer.Function == -1 || hidden_layer.Function == -1)
+				if(model_config.HiddenType == -1 || model_config.OutputType == -1)
 				{
 					goto Error;
 				}
 
 				if(cj_visible_count->valueint > 0)
 				{
-					output_layer.OutputUnits = cj_visible_count->valueint;
+					model_config.VisibleCount = cj_visible_count->valueint;
 				}
 				else
 				{
@@ -266,7 +266,7 @@ Error:
 
 				if(cj_hidden_count->valueint > 0)
 				{
-					hidden_layer.OutputUnits = cj_hidden_count->valueint;
+					model_config.HiddenCount = cj_hidden_count->valueint;
 				}
 				else
 				{
@@ -282,14 +282,9 @@ Error:
 					goto Error;
 				}
 
-				model_config.InputCount = output_layer.OutputUnits;
-				model_config.LayerConfigs.push_back(hidden_layer);
-				model_config.LayerConfigs.push_back(output_layer);
-
 				// now step through schedule array 
-				std::vector<std::pair<BP::TrainingConfig, uint32_t>> schedule;
-				BP::TrainingConfig train_config;
-				train_config.Initialize(2);
+				std::vector<std::pair<AutoEncoderBackPropagation::TrainingConfig, uint32_t>> schedule;
+				AutoEncoderBackPropagation::TrainingConfig train_config;
 				uint32_t epochs;
 				const int schedule_length = cJSON_GetArraySize(cj_schedule);
 				if(schedule_length == 0)
@@ -369,7 +364,7 @@ Error:
 					{
 						if(cj_visible_dropout->valuedouble >= 0.0 && cj_visible_dropout->valuedouble < 1.0)
 						{
-							train_config.Dropout[0] = (float)cj_visible_dropout->valuedouble;
+							train_config.VisibleDropout = (float)cj_visible_dropout->valuedouble;
 						}
 						else
 						{
@@ -380,7 +375,7 @@ Error:
 					{
 						if(cj_hidden_dropout->valuedouble >= 0.0 && cj_hidden_dropout->valuedouble < 1.0)
 						{
-							train_config.Dropout[1] = (float)cj_hidden_dropout->valuedouble;
+							train_config.HiddenDropout = (float)cj_hidden_dropout->valuedouble;
 						}
 						else
 						{
@@ -389,11 +384,11 @@ Error:
 					}
 
 					// save off this schedule and epoch count
-					schedule.push_back(std::pair<BP::TrainingConfig, uint32_t>(train_config, epochs));
+					schedule.push_back(std::pair<AutoEncoderBackPropagation::TrainingConfig, uint32_t>(train_config, epochs));
 				}
 
 				// finally construct our training schedule
-				result = new TrainingSchedule<BP>(model_config, minibatch_size);
+				result = new TrainingSchedule<AutoEncoderBackPropagation>(model_config, minibatch_size);
 				for(uint32_t k = 0; k < schedule.size(); k++)
 				{
 					result->AddTrainingConfig(schedule[k].first, schedule[k].second);
@@ -403,11 +398,5 @@ Error:
 Error:
 		cJSON_Delete(root);
 		return result;
-	}
-
-	template<>
-	TrainingSchedule<AutoEncoderBackPropagation>* TrainingSchedule<AutoEncoderBackPropagation>::FromJSON(const std::string& json)
-	{
-		return nullptr;
 	}
 }

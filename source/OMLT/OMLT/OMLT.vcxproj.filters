@@ -53,6 +53,9 @@
     <ClCompile Include="source\AutoEncoderBackPropagation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\Model.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\DataAtlas.h">
@@ -104,6 +107,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\AutoEncoderBackPropagationKernels.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\Model.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

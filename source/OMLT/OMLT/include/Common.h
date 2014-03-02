@@ -1,9 +1,12 @@
 #pragma once
 
 // c
+#include <assert.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string>
+// for aligned malloc/free
+#include <malloc.h>
 
 // OMLT
 #include "Enums.h"
@@ -11,21 +14,6 @@
 namespace OMLT
 {
 	bool ReadTextFile(const std::string& in_filename, std::string& out_text);
-
-	struct Model
-	{
-		ModelType_t type;
-		union
-		{
-			void* ptr;
-			class MultilayerPerceptron* mlp;
-			class RestrictedBoltzmannMachine* rbm;
-		};
-		Model() : type(ModelType::NotSet), ptr(nullptr) {}
-	};
-
-	// true on successful parse, false on failure
-	bool FromJSON(const std::string& in_json, Model& out_model);
 
 	/// Util Methods
 	template<typename T, size_t N>
@@ -39,6 +27,16 @@ namespace OMLT
 	{
 		delete ptr;
 		ptr = nullptr;
+	}
+
+	inline void* AlignedMalloc(size_t count, size_t alignment)
+	{
+		return _aligned_malloc(count, alignment);
+	}
+
+	inline void AlignedFree(void* ptr)
+	{
+		_aligned_free(ptr);
 	}
 
 	// returns number of 4 float blocks required to store the given number of floats
@@ -61,8 +59,6 @@ namespace OMLT
 
 		void Acquire(uint32_t in_count)
 		{
-			
-
 			uint32_t alignment_offset = Alignment;
 			uint32_t byte_count = in_count * sizeof(T);
 			uint32_t back_padding = byte_count % Alignment == 0 ? 0 : Alignment;
@@ -124,6 +120,31 @@ namespace OMLT
 		uint32_t _user_size;
 	};
 
+	struct FeatureMap
+	{
+	public:
+		FeatureMap(uint32_t input_length, uint32_t feature_count, ActivationFunction_t function);
+		~FeatureMap();
+		void CalcFeatureVector(const float* input_vector, float* output_vector) const;
+		
+		inline float* biases() {return _biases;};
+		inline float* feature(uint32_t k) {assert(k < feature_count); return _features[k];}
 
+		inline const float* biases() const {return _biases;};
+		inline const float* feature(uint32_t k) const {assert(k < feature_count); return _features[k];}
+
+
+		const uint32_t input_length;
+		const uint32_t feature_count;
+		const ActivationFunction_t function;
+	private:
+
+		const uint32_t _feature_blocks;
+		const uint32_t _input_blocks;
+
+		float* _biases;
+		float** _features;
+		mutable float* _accumulations;
+	};
 }
 
