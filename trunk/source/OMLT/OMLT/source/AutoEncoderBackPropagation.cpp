@@ -25,8 +25,49 @@ namespace OMLT
 	}
 
 	AutoEncoderBackPropagation::AutoEncoderBackPropagation(const AutoEncoder* in_autoencoder, uint32_t in_minibatch_size)
+		: _minibatch_size(in_minibatch_size),
+		  CalcEnabledVisible(nullptr),
+		  CalcEnabledHidden(nullptr),
+		  CopyVisible(nullptr),
+		  CalcHidden(nullptr),
+		  CalcOutput(nullptr),
+		  CalcOutputSensitivities(nullptr),
+		  CalcHiddenSensitivities(nullptr),
+		  UpdateWeights(nullptr),
+		  CalcError(nullptr)
 	{
-		assert(false);
+		_model_config.VisibleCount = in_autoencoder->visible_count;
+		_model_config.HiddenCount = in_autoencoder->hidden_count;
+		_model_config.HiddenType = in_autoencoder->hidden_type;
+		_model_config.OutputType = in_autoencoder->output_type;
+		
+		float* weight_buffer = new float[(_model_config.VisibleCount + 1) * (_model_config.HiddenCount + 1)];
+		weight_buffer[0] = 0.0f;
+
+		// hidden biases
+		for(uint32_t j = 0; j < _model_config.HiddenCount; j++)
+		{
+			weight_buffer[(_model_config.VisibleCount + 1) * (j + 1)] = in_autoencoder->encoder.biases()[j];
+		}
+
+		// output biases
+		for(uint32_t k = 0; k < _model_config.VisibleCount; k++)
+		{
+			weight_buffer[1 + k] = in_autoencoder->decoder.biases()[k];
+		}
+
+		// weights
+		for(uint32_t j = 0; j < _model_config.HiddenCount; j++)
+		{
+			for(uint32_t k = 0; k < _model_config.VisibleCount; k++)
+			{
+				weight_buffer[(_model_config.VisibleCount + 1) * (j + 1) + k + 1] = in_autoencoder->encoder.feature(j)[k];
+			}
+		}
+
+		allocate_textures(weight_buffer);
+
+		delete[] weight_buffer;
 	}
 
 	AutoEncoderBackPropagation::~AutoEncoderBackPropagation()
@@ -118,6 +159,45 @@ namespace OMLT
 
 		swap(Weights0, Weights1);
 		swap(DeltaWeights0, DeltaWeights1);
+	}
+
+	AutoEncoder* AutoEncoderBackPropagation::GetAutoEncoder() const
+	{
+		AutoEncoder* result = new AutoEncoder(_model_config.VisibleCount, _model_config.HiddenCount, _model_config.HiddenType, _model_config.OutputType);
+
+		float* raw_weights = nullptr;
+		Weights0.GetData(raw_weights);
+
+		// get the output biases
+
+		for(uint32_t k = 0; k < _model_config.VisibleCount; k++)
+		{
+			result->decoder.biases()[k] = raw_weights[k + 1];
+		}
+
+		// get the hidden biases
+
+		for(uint32_t j = 0; j < _model_config.HiddenCount; j++)
+		{
+			result->encoder.biases()[j] = raw_weights[(_model_config.VisibleCount + 1) *(j + 1)];
+		}
+
+		// now get the symmetrical weights
+
+		for(uint32_t j = 0; j < _model_config.HiddenCount; j++)
+		{
+			for(uint32_t k = 0; k < _model_config.VisibleCount; k++)
+			{
+				const uint32_t& i = k;
+
+				float w = raw_weights[(_model_config.VisibleCount + 1) * (j + 1) + k + 1];
+
+				result->encoder.feature(j)[k] = w;
+				result->decoder.feature(i)[j] = w;
+			}
+		}
+
+		return result;
 	}
 
 	bool AutoEncoderBackPropagation::DumpLastVisible( float** image, float** recon )

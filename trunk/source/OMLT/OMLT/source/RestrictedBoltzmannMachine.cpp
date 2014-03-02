@@ -2,7 +2,6 @@
 #include <assert.h>
 
 // windows
-#include <malloc.h>
 #include <intrin.h>
 
 // extern
@@ -14,21 +13,21 @@
 
 namespace OMLT
 {
-	inline static void allocate_features(float**& ptr, const uint32_t width, const size_t size)
+	inline void allocate_features(float**& ptr, const uint32_t width, const size_t size)
 	{
 		ptr = new float*[width];
 		for(uint32_t i = 0; i < width; i++)
 		{
-			ptr[i] = (float*)_aligned_malloc(size, 16);
+			ptr[i] = (float*)AlignedMalloc(size, 16);
 			memset(ptr[i], 0x00, size);
 		}
 	}
 
-	inline static void free_features(float** const buff, uint32_t width)
+	inline void free_features(float** const buff, uint32_t width)
 	{
 		for(uint32_t i = 0; i < width; i++)
 		{
-			_aligned_free(buff[i]);
+			AlignedFree(buff[i]);
 		}
 
 		delete[] buff;
@@ -45,8 +44,8 @@ namespace OMLT
 		const size_t hidden_allocsize = sizeof(float) * 4 * BlockCount(hidden_count);
 
 		// biases
-		visible_biases = (float*)_aligned_malloc(visible_allocsize, 16);
-		hidden_biases = (float*)_aligned_malloc(hidden_allocsize, 16);
+		visible_biases = (float*)AlignedMalloc(visible_allocsize, 16);
+		hidden_biases = (float*)AlignedMalloc(hidden_allocsize, 16);
 
 		memset(visible_biases, 0x00, visible_allocsize);
 		memset(hidden_biases, 0x00, hidden_allocsize);
@@ -56,8 +55,8 @@ namespace OMLT
 		allocate_features(visible_features, visible_count, hidden_allocsize);
 
 		// aligned scratch space
-		_visible_buffer = (float*)_aligned_malloc(visible_allocsize, 16);
-		_hidden_buffer = (float*)_aligned_malloc(hidden_allocsize, 16);
+		_visible_buffer = (float*)AlignedMalloc(visible_allocsize, 16);
+		_hidden_buffer = (float*)AlignedMalloc(hidden_allocsize, 16);
 
 		memset(_visible_buffer, 0x00, visible_allocsize);
 		memset(_hidden_buffer, 0x00, hidden_allocsize);
@@ -65,14 +64,14 @@ namespace OMLT
 
 	RestrictedBoltzmannMachine::~RestrictedBoltzmannMachine()
 	{
-		_aligned_free(visible_biases);
-		_aligned_free(hidden_biases);
+		AlignedFree(visible_biases);
+		AlignedFree(hidden_biases);
 
 		free_features(hidden_features, hidden_count);
 		free_features(visible_features, visible_count);
 
-		_aligned_free(_visible_buffer);
-		_aligned_free(_hidden_buffer);
+		AlignedFree(_visible_buffer);
+		AlignedFree(_hidden_buffer);
 	}
 
 	static void calc_activation(const float* biases, float* inout_buffer, const uint32_t blocks, ActivationFunction_t func)

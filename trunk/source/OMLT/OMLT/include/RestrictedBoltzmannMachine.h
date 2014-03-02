@@ -5,6 +5,7 @@
 #include <string>
 
 #include "Enums.h"
+#include "Model.h"
 
 struct cJSON;
 namespace OMLT
@@ -42,7 +43,7 @@ namespace OMLT
 		float* _hidden_buffer;
 		// private parse method
 		static RestrictedBoltzmannMachine* FromJSON(struct cJSON* root);
-		friend bool FromJSON(const std::string& in_json, struct Model& out_model);
+		friend bool Model::FromJSON(const std::string& in_json, struct Model& out_model);
 	};
 	typedef RestrictedBoltzmannMachine RBM;
 }

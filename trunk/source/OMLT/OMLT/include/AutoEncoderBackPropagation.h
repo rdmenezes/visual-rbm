@@ -53,6 +53,9 @@ namespace OMLT
 
 		void Train(const OpenGLBuffer2D&);
 
+		/// get our trained model
+		AutoEncoder* GetAutoEncoder() const;
+
 		/// these methods are used by VisualRBM for real-time visualization
 		bool DumpLastVisible(float** image, float** recon);
 		bool DumpLastHidden(float** activations);
