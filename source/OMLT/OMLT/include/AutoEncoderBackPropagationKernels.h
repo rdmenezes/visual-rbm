@@ -212,6 +212,8 @@ struct SourceUpdateWeights : public SiCKL::Source
 	float MOMENTUM;
 	float L1_REGULARIZATION;
 	float L2_REGULARIZATION;
+	float VISIBLE_DROPOUT;
+	float HIDDEN_DROPOUT;
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
 			CONST_DATA(Buffer2D<Float>, in_output_sensitivities)
@@ -265,10 +267,15 @@ struct SourceUpdateWeights : public SiCKL::Source
 				Float Dw_ji = 0.0f;
 				Float Dw_kj = 0.0f;
 				ForInRange(m, 0, MINIBATCH_SIZE)
+					// visible to hidden
 					Dw_ji = Dw_ji + d_j(j-1, m) * in_visible(i-1, m);
+					// hidden to output
 					Dw_kj = Dw_kj + d_k(k-1, m) * in_hidden(j-1, m);
 				EndFor
 				
+				Dw_ji = Dw_ji / (1.0f - VISIBLE_DROPOUT);
+				Dw_kj = Dw_kj / (1.0f - HIDDEN_DROPOUT);
+
 				Float delta = (Dw_ji + Dw_kj) * (1.0f / (2.0f * MINIBATCH_SIZE));
 
 				out_weight_delta = MOMENTUM * in_prev_weight_deltas(i, j) + 

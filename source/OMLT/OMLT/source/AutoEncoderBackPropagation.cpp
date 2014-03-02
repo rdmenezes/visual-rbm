@@ -362,6 +362,8 @@ namespace OMLT
 			source.MOMENTUM = _training_config.Momentum;
 			source.L1_REGULARIZATION = _training_config.L1Regularization;
 			source.L2_REGULARIZATION = _training_config.L2Regularization;
+			source.VISIBLE_DROPOUT = _training_config.VisibleDropout;
+			source.HIDDEN_DROPOUT = _training_config.HiddenDropout;
 			source.Parse();
 
 			UpdateWeights = comp.Build(source);
