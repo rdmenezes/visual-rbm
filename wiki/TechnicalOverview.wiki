@@ -18,7 +18,8 @@ VisualRBM and associated tools have a little bit of a dependency tree:
    * OMLT
  
  * Tools
-  * OMLT 
+  * OMLT
+  * stb_image (header only C library)
 
 The tools solution depends on OMLT and everything below it.
 
