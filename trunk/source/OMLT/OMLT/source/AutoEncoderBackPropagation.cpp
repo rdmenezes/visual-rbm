@@ -266,9 +266,34 @@ namespace OMLT
 		return calc_mean(head, ErrorBuffer.Width, buff.BlockCount());
 	}
 	
-	float AutoEncoderBackPropagation::GetError(const OpenGLBuffer2D&)
+	float AutoEncoderBackPropagation::GetError(const OpenGLBuffer2D& in_example)
 	{
-		return 0.0f;
+		OpenGLBuffer2D previous = Target;
+		Target = in_example;
+
+		// copy in visible activation
+		CopyVisible->SetInput(0, Target);
+		CopyVisible->SetInput(1, VisibleEnabled);
+		CopyVisible->BindOutput(0, Visible);
+		CopyVisible->Run();
+
+		// calc hidden activation
+		CalcHidden->SetInput(0, Visible);
+		CalcHidden->SetInput(1, HiddenEnabled);
+		CalcHidden->SetInput(2, Weights0);
+		CalcHidden->BindOutput(0, Hidden);
+		CalcHidden->Run();
+
+		// calc output activation
+		CalcOutput->SetInput(0, Hidden);
+		CalcOutput->SetInput(1, Weights0);
+		CalcOutput->BindOutput(0, Output);
+		CalcOutput->Run();
+
+		float result = GetLastError();
+
+		Target = previous;
+		return result;
 	}
 
 	void AutoEncoderBackPropagation::free_kernels()

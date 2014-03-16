@@ -171,7 +171,7 @@ namespace VisualRBMInterop
 		}
 		else
 		{
-			training_data->Initialize(minibatch_size, 512);
+			training_data->Initialize(minibatch_size, 384);
 		}
 
 		if(validation_data)
@@ -182,7 +182,7 @@ namespace VisualRBMInterop
 			}
 			else
 			{
-				validation_data->Initialize(minibatch_size, 512);
+				validation_data->Initialize(minibatch_size, 384);
 			}
 		}
 	}
