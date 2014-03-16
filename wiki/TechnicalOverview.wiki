@@ -5,7 +5,7 @@ The visual-rbm reepository contains three Visual Studio 2010 solutions:
  * VisualRBM - UI frontend and CLI/Interop code interfacing with OMLT
  * Tools - Command line tools for handling IDX data files as well as the command-line trainer
 
-!VisualRBM and associated tools have a little bit of a dependency tree:
+VisualRBM and associated tools have a little bit of a dependency tree:
 
  * OMLT (native static lib)
   * [http://sourceforge.net/projects/cjson/ cJSON]  (C source, slightly modified) 
