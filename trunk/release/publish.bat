@@ -30,6 +30,6 @@ del Tools.zip
 :: create zips
 
 %ZIP% a VisualRBM.zip %BIN%\VisualRBM.exe %BIN%\VisualRBMInterop.dll
-%ZIP% a Tools.zip %BIN%\cltrain.exe %BIN%\catidx.exe %BIN%\joinidx.exe %BIN%\idxinfo.exe %BIN%\splitidx.exe %BIN%\calchidden.exe %BIN%\idx2csv.exe %BIN%\csv2idx.exe
+%ZIP% a Tools.zip %BIN%\cltrain.exe %BIN%\catidx.exe %BIN%\joinidx.exe %BIN%\idxinfo.exe %BIN%\splitidx.exe %BIN%\calchidden.exe %BIN%\idx2csv.exe %BIN%\csv2idx.exe %BIN%\image2csv.exe %BIN%\shuffleidx.exe
 
 pause
