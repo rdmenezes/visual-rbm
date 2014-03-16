@@ -12,6 +12,8 @@ This page contains an overview of the different command line tools available in 
   * [Tools#splitidx splitidx]
   * [Tools#csv2idx csv2idx]
   * [Tools#idx2csv idx2csv]
+  * [Tools#image2csv image2csv]
+  * [Tools#shuffleidx shuffleidx]
  
 ----
  
@@ -138,3 +140,30 @@ idx2csv [INPUT] [OUTPUT]
 
  * *INPUT* - IDX file to convert.
  * *OUTPUT* - The output CSV file to save (optional).
+
+----
+ 
+=== image2csv ===
+
+Converts a single image to a comma delimited list of values (on [0,1]) printed to *stdout*.  Supports images in the following formats: JPEG, PNG, TGA, PSD, GIF, HDR, and PIC.
+
+==== Usage ====
+{{{
+image2csv [INPUT]
+}}}
+
+ * *INPUT* - An image file to convert.
+
+----
+ 
+=== shuffleidx ===
+
+Shuffles an IDX file into a new random order.  Note, the PRNG used is always seeded with the same value so IDX files with the same length will always be sorted into identical random orders.
+
+==== Usage ====
+{{{
+shuffleidx [INPUT] [OUTPUT\
+}}}
+
+ * *INPUT* - IDX file to shuffle.
+ * *OUTPUT* - The output IDX file to save.
