@@ -162,7 +162,7 @@ Shuffles an IDX file into a new random order.  Note, the PRNG used is always see
 
 ==== Usage ====
 {{{
-shuffleidx [INPUT] [OUTPUT\
+shuffleidx [INPUT] [OUTPUT]
 }}}
 
  * *INPUT* - IDX file to shuffle.
