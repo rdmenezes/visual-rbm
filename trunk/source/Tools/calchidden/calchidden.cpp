@@ -108,8 +108,8 @@ int main(int argc, char** argv)
 	}
 
 	// now calculate hidden values for visible vector
-	float* visible_buffer = new float[input_count];
-	float* hidden_buffer = new float[output_count];
+	float* visible_buffer = (float*)OMLT::AlignedMalloc(sizeof(float) * input_count, 16);
+	float* hidden_buffer = (float*)OMLT::AlignedMalloc(sizeof(float) * output_count, 16);
 
 	for(uint32_t idx = 0; idx < input->GetRowCount(); idx++)
 	{
@@ -129,8 +129,8 @@ int main(int argc, char** argv)
 
 	output->Close();
 
-	delete[] visible_buffer;
-	delete[] hidden_buffer;
+	OMLT::AlignedFree(visible_buffer);
+	OMLT::AlignedFree(hidden_buffer);
 
 	result = 0;
 CLEANUP:
