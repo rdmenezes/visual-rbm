@@ -49,6 +49,9 @@ namespace SiCKL
 			BitwiseXor,
 			BitwiseNot,
 
+			LeftShift,
+			RightShift,
+
 			// Arithmetic 
 			UnaryMinus,
 			Add,
