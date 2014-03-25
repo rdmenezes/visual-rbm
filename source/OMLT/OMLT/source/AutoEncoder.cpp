@@ -117,7 +117,7 @@ namespace OMLT
 					cJSON_GetArraySize(cj_hidden_biases) == hidden_count &&
 					cJSON_GetArraySize(cj_weights) == hidden_count)
 				{
-					ae = new AutoEncoder(visible_count, hidden_count, output_type, hidden_type);
+					ae = new AutoEncoder(visible_count, hidden_count, hidden_type, output_type);
 
 					cJSON* vb_it = cJSON_CreateArrayIterator(cj_output_biases);
 
