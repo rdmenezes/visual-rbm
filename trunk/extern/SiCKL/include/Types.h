@@ -38,7 +38,9 @@
 #define BITWISE_OP(Ret, L, R)\
 	BINARY_OP(Ret, L, R, BitwiseAnd, &)\
 	BINARY_OP(Ret, L, R, BitwiseOr, |)\
-	BINARY_OP(Ret, L, R, BitwiseXor, ^)
+	BINARY_OP(Ret, L, R, BitwiseXor, ^)\
+	BINARY_OP(Ret, L, R, LeftShift, <<)\
+	BINARY_OP(Ret, L, R, RightShift, >>)
 
 #pragma endregion
 
