@@ -27,7 +27,7 @@ namespace VisualRBM
 				switch (Processor.Model)
 				{
 					case ModelType.AutoEncoder:
-						return Processor.HiddenUnits;
+						return Processor.HiddenUnits + 1;
 					case ModelType.RBM:
 						return Processor.HiddenUnits + 1;
 					default:
