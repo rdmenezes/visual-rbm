@@ -54,16 +54,16 @@ namespace OMLT
 		weight_buffer[0] = 0.0f;
 
 		// copy in visible biases
-		memcpy(weight_buffer + 1, in_rbm->visible_biases, sizeof(float) * in_rbm->visible_count);
+		memcpy(weight_buffer + 1, in_rbm->visible.biases(), sizeof(float) * in_rbm->visible_count);
 
 		// now copy in each hidden feature (as well as hidden bias)
 		for(uint32_t j = 1; j <= in_rbm->hidden_count; j++)
 		{
 			const uint32_t offset = (in_rbm->visible_count + 1) * j;
 			// bias
-			weight_buffer[offset] = in_rbm->hidden_biases[j-1];
+			weight_buffer[offset] = in_rbm->hidden.biases()[j-1];
 			// weight vector
-			memcpy(weight_buffer + offset + 1, in_rbm->hidden_features[j-1], sizeof(float) * in_rbm->visible_count);
+			memcpy(weight_buffer + offset + 1, in_rbm->hidden.feature(j-1), sizeof(float) * in_rbm->visible_count);
 		}
 
 		allocate_textures(weight_buffer);
@@ -84,7 +84,63 @@ namespace OMLT
 			_recompile_required = true;
 		}
 	}
+#if 0
+	struct uvec4
+	{
+		uint32_t X;
+		uint32_t Y;
+		uint32_t Z;
+		uint32_t W;
+	};
 
+	void NextSeed(const uvec4& in_seed, uvec4& out_seed)
+	{
+		uint32_t t = in_seed.X ^ (in_seed.X << 11u);
+		out_seed.X = in_seed.Y;
+		out_seed.Y = in_seed.Z;
+		out_seed.Z = in_seed.W;
+		out_seed.W = in_seed.W ^ (in_seed.W >> 19u) ^ t ^ (t >> 8u);
+	}
+
+
+	void NextFloat(const uvec4& in_seed, uvec4& out_seed, float& out_float)
+	{
+		NextSeed(in_seed, out_seed);
+
+		// top 24 bits 
+		uint32_t next24 = out_seed.X >> 8u;
+
+		out_float = (float)next24 / (float)(1 << 24);
+	}
+	void NextGaussian(const uvec4& in_seed, uvec4& out_seed, float& out_gaussian)
+	{
+		float u1 = 0.0f;
+		float u2 = 0.0f;
+
+		uvec4 seed0 = in_seed;
+		uvec4 seed1 = {0};
+
+		uint32_t iterations = 0;
+
+
+		// get our random values
+		while(u1 == 0.0f)
+		{
+			NextFloat(seed0, seed1, u1);
+			seed0 = seed1;
+			iterations++;
+
+		}
+
+		if(iterations > 1)
+		{
+			printf("Whoat! Iterations: %u, seeds = %08x %08x %08x %08x\n", iterations, in_seed.X, in_seed.Y, in_seed.Z, in_seed.W);
+		}
+
+		NextFloat(seed0, seed1, u1);
+		out_seed =  seed1;
+	}
+#endif
 	void ContrastiveDivergence::Train( const OpenGLBuffer2D& in_example)
 	{
 		if(_recompile_required)
@@ -256,18 +312,18 @@ namespace OMLT
 				else if(i == 0)
 				{
 					// hidden bias
-					rbm->hidden_biases[j-1] = val;
+					rbm->hidden.biases()[j-1] = val;
 				}
 				else if(j == 0)
 				{
 					// visible bias
-					rbm->visible_biases[i - 1] = val;
+					rbm->visible.biases()[i - 1] = val;
 				}
 				else
 				{
 					// regular weight
-					rbm->visible_features[i-1][j-1] = val;
-					rbm->hidden_features[j-1][i-1] = val;
+					rbm->visible.feature(i-1)[j-1] = val;
+					rbm->hidden.feature(j-1)[i-1] = val;
 				}
 			}
 		}
@@ -422,7 +478,9 @@ namespace OMLT
 
 		for(uint32_t k = 0; k < seed_count; k++)
 		{
-			result[k] = uniform(random);
+			auto u = uniform(random);
+			assert(u != 0);
+			result[k] = u;
 		}
 
 		return result;
@@ -433,22 +491,22 @@ namespace OMLT
 		std::mt19937_64 random;
 		random.seed(1);
 
-		uint32_t* visible_dropout_seed_buffer = GetSeedBuffer(_model_config.VisibleUnits, 1, random);
-		uint32_t* hidden_dropout_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits, 1, random);
-		uint32_t* hidden_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits, _minibatch_size, random);
+		uint32_t* visible_dropout_seed_buffer = GetSeedBuffer(_model_config.VisibleUnits * 4, 1, random);
+		uint32_t* hidden_dropout_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits * 4, 1, random);
+		uint32_t* hidden_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits * 4, _minibatch_size, random);
 
-		_visible_dropout_random0 = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, visible_dropout_seed_buffer);
-		_visible_dropout_random1 = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, nullptr);
-		_hidden_dropout_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt, hidden_dropout_seed_buffer);
-		_hidden_dropout_random1 = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt, nullptr);
+		_visible_dropout_random0 = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt4, visible_dropout_seed_buffer);
+		_visible_dropout_random1 = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt4, nullptr);
+		_hidden_dropout_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt4, hidden_dropout_seed_buffer);
+		_hidden_dropout_random1 = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt4, nullptr);
 
 		_enabled_visible = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, nullptr);
 		_enabled_hidden = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt, nullptr);
 
 		_visible = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
 		_hidden = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
-		_hidden_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt, hidden_seed_buffer);
-		_hidden_random1 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt, nullptr);
+		_hidden_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt4, hidden_seed_buffer);
+		_hidden_random1 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt4, nullptr);
 		_hidden_states = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
 		_visible_prime = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
 		_hidden_prime = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);

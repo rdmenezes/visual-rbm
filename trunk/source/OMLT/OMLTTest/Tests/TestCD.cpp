@@ -61,14 +61,6 @@ bool TrainRBM(int argc, char** argv)
 		return false;
 	}
 
-	IDX* out_rbm = IDX::Create(argv[3], LittleEndian, Single, in_data->GetRowLength());
-	if(out_rbm == nullptr)
-	{
-		printf("Could not create %s\n", argv[3]);
-		return false;
-	}
-
-
 	printf("Initing SiCKL\n");
 
 	// startup SiCKL
@@ -164,37 +156,6 @@ bool TrainRBM(int argc, char** argv)
 	out_recon->Close();
 	in_data->Close();
 
-	printf("Dumping RBM to disk\n");
-
-	float sum = 0.0f;
-	float sq_sum = 0.0f;
-
-	for(uint32_t j = 0; j < rbm->hidden_count; j++)
-	{
-		for(uint32_t i = 0 ; i < rbm->visible_count; i++)
-		{
-			const float& val = rbm->hidden_features[j][i];
-			sum += val;
-			sq_sum += val * val;
-		}
-	}
-
-	const uint32_t n = (rbm->hidden_count * rbm->visible_count);
-	float mean = sum / n;
-	float variance = sq_sum / n - mean * mean;
-	float stdev = std::sqrtf(variance);
-
-	float* buffer = new float[rbm->visible_count];
-	rescale(rbm->visible_biases, buffer, rbm->visible_count, mean, stdev);
-	out_rbm->AddRow(buffer);
-
-	for(uint32_t j = 0; j < rbm->hidden_count; j++)
-	{
-		rescale(rbm->hidden_features[j], buffer, rbm->visible_count, mean, stdev);
-		out_rbm->AddRow(buffer);
-	}
-	out_rbm->Close();
-
 	delete[] visible_buffer;
 	delete[] visible_recon_buffer;
 	delete[] hidden_buffer;
@@ -203,7 +164,6 @@ bool TrainRBM(int argc, char** argv)
 
 	delete out_recon;
 	delete out_features;
-	delete out_rbm;
 	delete in_data;
 
 	SiCKL::OpenGLRuntime::Finalize();

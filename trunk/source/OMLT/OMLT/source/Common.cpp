@@ -168,16 +168,14 @@ namespace OMLT
 	}
 
 	// feature map class
-	FeatureMap::FeatureMap(uint32_t in_input_length, uint32_t in_feature_count, ActivationFunction_t in_function)
+	FeatureMap::FeatureMap(uint32_t in_input_length, uint32_t in_feature_count)
 		: input_length(in_input_length),
 		feature_count(in_feature_count),
-		function(in_function),
 		_input_blocks(BlockCount(input_length)),
 		_feature_blocks(BlockCount(feature_count))
 	{
 		assert(input_length > 0);
 		assert(feature_count > 0);
-		assert(in_function > ActivationFunction::Invalid && in_function < ActivationFunction::Count);
 		// allocate space for bias vector
 		const uint32_t feature_bytes = _feature_blocks * 4 * sizeof(float);
 		_biases = (float*)AlignedMalloc(feature_bytes, 16);
@@ -226,7 +224,7 @@ namespace OMLT
 		}
 	}
 
-	void FeatureMap::CalcFeatureVector(const float* input_vector, float* output_vector) const
+	void FeatureMap::CalcFeatureVector(const float* input_vector, float* output_vector, ActivationFunction_t function) const
 	{
 		// verify alignment
 		assert((intptr_t(input_vector) % 16) == 0);

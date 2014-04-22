@@ -6,6 +6,7 @@
 
 #include "Enums.h"
 #include "Model.h"
+#include "Common.h"
 
 struct cJSON;
 namespace OMLT
@@ -13,9 +14,6 @@ namespace OMLT
 	class RestrictedBoltzmannMachine
 	{
 	public:
-		RestrictedBoltzmannMachine(uint32_t in_visible_count, uint32_t in_hidden_count, ActivationFunction_t in_visible_type, ActivationFunction_t in_hidden_type);
-		~RestrictedBoltzmannMachine();
-
 		void CalcHidden(const float* in_visible, float* out_hidden) const;
 		void CalcVisible(const float* in_hidden, float* out_visible) const;
 
@@ -30,20 +28,19 @@ namespace OMLT
 
 		ActivationFunction_t visible_type;
 		ActivationFunction_t hidden_type;
-
-		float* visible_biases;
-		float* hidden_biases;
-		// v length h features
-		float** visible_features;
-		// h length v features
-		float** hidden_features;
 	private:
-		// properly aligned scratch buffers
-		float* _visible_buffer;
-		float* _hidden_buffer;
+		// used to calculate the hidden feature vector
+		FeatureMap hidden;
+		// used to calculate visible feature vector
+		FeatureMap visible;
+		
+		RestrictedBoltzmannMachine(uint32_t in_visible_count, uint32_t in_hidden_count, ActivationFunction_t in_visible_type, ActivationFunction_t in_hidden_type);
+
 		// private parse method
 		static RestrictedBoltzmannMachine* FromJSON(struct cJSON* root);
-		friend bool Model::FromJSON(const std::string& in_json, struct Model& out_model);
+		
+		friend struct Model;
+		friend class ContrastiveDivergence;
 	};
 	typedef RestrictedBoltzmannMachine RBM;
 }

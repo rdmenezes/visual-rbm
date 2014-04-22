@@ -5,12 +5,12 @@ struct SourceCalcEnabled : public SiCKL::Source
 
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
-			CONST_DATA(Buffer2D<UInt>, in_seeds)
+			CONST_DATA(Buffer2D<UInt4>, in_seeds)
 		END_CONST_DATA
 
 		BEGIN_OUT_DATA
 			OUT_DATA(UInt, out_state)
-			OUT_DATA(UInt, out_seed)
+			OUT_DATA(UInt4, out_seed)
 		END_OUT_DATA
 
 		BEGIN_MAIN

@@ -123,9 +123,9 @@ namespace OMLT
 	struct FeatureMap
 	{
 	public:
-		FeatureMap(uint32_t input_length, uint32_t feature_count, ActivationFunction_t function);
+		FeatureMap(uint32_t input_length, uint32_t feature_count);
 		~FeatureMap();
-		void CalcFeatureVector(const float* input_vector, float* output_vector) const;
+		void CalcFeatureVector(const float* input_vector, float* output_vector, ActivationFunction_t function) const;
 		
 		inline float* biases() {return _biases;};
 		inline float* feature(uint32_t k) {assert(k < feature_count); return _features[k];}
@@ -136,7 +136,6 @@ namespace OMLT
 
 		const uint32_t input_length;
 		const uint32_t feature_count;
-		const ActivationFunction_t function;
 	private:
 
 		const uint32_t _feature_blocks;
