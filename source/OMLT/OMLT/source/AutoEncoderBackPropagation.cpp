@@ -411,15 +411,15 @@ namespace OMLT
 		std::mt19937_64 random;
 		random.seed(1);
 
-		uint32_t* visible_dropout_seed_buffer = GetSeedBuffer(_model_config.VisibleCount, 1, random);
-		uint32_t* hidden_dropout_seed_buffer = GetSeedBuffer(_model_config.HiddenCount, 1, random);
+		uint32_t* visible_dropout_seed_buffer = GetSeedBuffer(_model_config.VisibleCount * 4, 1, random);
+		uint32_t* hidden_dropout_seed_buffer = GetSeedBuffer(_model_config.HiddenCount * 4, 1, random);
 
-		VisibleRandom0 = OpenGLBuffer2D(_model_config.VisibleCount, 1, ReturnType::UInt, visible_dropout_seed_buffer);
-		VisibleRandom1 = OpenGLBuffer2D(_model_config.VisibleCount, 1, ReturnType::UInt, nullptr);
+		VisibleRandom0 = OpenGLBuffer2D(_model_config.VisibleCount, 1, ReturnType::UInt4, visible_dropout_seed_buffer);
+		VisibleRandom1 = OpenGLBuffer2D(_model_config.VisibleCount, 1, ReturnType::UInt4, nullptr);
 		VisibleEnabled = OpenGLBuffer2D(_model_config.VisibleCount, 1, ReturnType::UInt, nullptr);
 
-		HiddenRandom0 = OpenGLBuffer2D(_model_config.HiddenCount, 1, ReturnType::UInt, hidden_dropout_seed_buffer);
-		HiddenRandom1 = OpenGLBuffer2D(_model_config.HiddenCount, 1, ReturnType::UInt, nullptr);
+		HiddenRandom0 = OpenGLBuffer2D(_model_config.HiddenCount, 1, ReturnType::UInt4, hidden_dropout_seed_buffer);
+		HiddenRandom1 = OpenGLBuffer2D(_model_config.HiddenCount, 1, ReturnType::UInt4, nullptr);
 		HiddenEnabled = OpenGLBuffer2D(_model_config.HiddenCount, 1, ReturnType::UInt, nullptr);
 
 		if(weight_buffer == nullptr)

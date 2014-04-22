@@ -5,12 +5,12 @@ struct SourceCalcEnabled  : public SiCKL::Source
 
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
-			CONST_DATA(Buffer2D<UInt>, in_seeds)
+			CONST_DATA(Buffer2D<UInt4>, in_seeds)
 		END_CONST_DATA
 
 		BEGIN_OUT_DATA
 			OUT_DATA(UInt, out_state)
-			OUT_DATA(UInt, out_seed)
+			OUT_DATA(UInt4, out_seed)
 		END_OUT_DATA
 
 		BEGIN_MAIN
@@ -63,11 +63,11 @@ struct SourceCalcHiddenAndStates : public SiCKL::Source
 			CONST_DATA(Buffer2D<Float>, in_visible)
 			CONST_DATA(Buffer2D<Float>, in_weights)
 			CONST_DATA(Buffer2D<UInt>, in_enabled_hidden)
-			CONST_DATA(Buffer2D<UInt>, in_seeds)
+			CONST_DATA(Buffer2D<UInt4>, in_seeds)
 		END_CONST_DATA
 
 		BEGIN_OUT_DATA
-			OUT_DATA(UInt, out_seed)	
+			OUT_DATA(UInt4, out_seed)	
 			OUT_DATA(Float, out_hidden)
 			OUT_DATA(Float, out_state)
 		END_OUT_DATA
@@ -76,7 +76,7 @@ struct SourceCalcHiddenAndStates : public SiCKL::Source
 			const Int m = Index().Y;	// what minibatch are we on
 			const Int j = Index().X;	// which hidden unit is this
 
-			UInt seed = in_seeds(Index().X, Index().Y);
+			const auto& seed = in_seeds(Index().X, Index().Y);
 
 			If(in_enabled_hidden(j, 0) == 0u)
 				// destination is disabled
@@ -113,7 +113,7 @@ struct SourceCalcHiddenAndStates : public SiCKL::Source
 							// mean 0, variance sigmoid(x) per http://www.cs.toronto.edu/~hinton/absps/reluICML.pdf
 							// "Rectified linear units improve restricted Boltzmann machines."
 							NextGaussian(seed, out_seed, noise);
-							noise = noise * Sqrt(Sigmoid(accumulation));
+							noise = noise * Sigmoid(accumulation);
 							out_state = Max(accumulation + noise, 0.0f);
 						}
 						break;

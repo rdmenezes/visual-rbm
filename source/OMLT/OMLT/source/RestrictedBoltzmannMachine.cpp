@@ -13,247 +13,78 @@
 
 namespace OMLT
 {
-	inline void allocate_features(float**& ptr, const uint32_t width, const size_t size)
-	{
-		ptr = new float*[width];
-		for(uint32_t i = 0; i < width; i++)
-		{
-			ptr[i] = (float*)AlignedMalloc(size, 16);
-			memset(ptr[i], 0x00, size);
-		}
-	}
-
-	inline void free_features(float** const buff, uint32_t width)
-	{
-		for(uint32_t i = 0; i < width; i++)
-		{
-			AlignedFree(buff[i]);
-		}
-
-		delete[] buff;
-	}
-
 	RestrictedBoltzmannMachine::RestrictedBoltzmannMachine( uint32_t in_visible_count, uint32_t in_hidden_count, ActivationFunction_t in_visible_type, ActivationFunction_t in_hidden_type )
 		: visible_count(in_visible_count)
 		, hidden_count(in_hidden_count)
 		, visible_type(in_visible_type)
 		, hidden_type(in_hidden_type)
+		, hidden(visible_count, hidden_count)
+		, visible(hidden_count, visible_count)
 	{
-		// precompute allocation sizes
-		const size_t visible_allocsize = sizeof(float) * 4 * BlockCount(visible_count);
-		const size_t hidden_allocsize = sizeof(float) * 4 * BlockCount(hidden_count);
 
-		// biases
-		visible_biases = (float*)AlignedMalloc(visible_allocsize, 16);
-		hidden_biases = (float*)AlignedMalloc(hidden_allocsize, 16);
-
-		memset(visible_biases, 0x00, visible_allocsize);
-		memset(hidden_biases, 0x00, hidden_allocsize);
-
-		// weights
-		allocate_features(hidden_features, hidden_count, visible_allocsize);
-		allocate_features(visible_features, visible_count, hidden_allocsize);
-
-		// aligned scratch space
-		_visible_buffer = (float*)AlignedMalloc(visible_allocsize, 16);
-		_hidden_buffer = (float*)AlignedMalloc(hidden_allocsize, 16);
-
-		memset(_visible_buffer, 0x00, visible_allocsize);
-		memset(_hidden_buffer, 0x00, hidden_allocsize);
-	}
-
-	RestrictedBoltzmannMachine::~RestrictedBoltzmannMachine()
-	{
-		AlignedFree(visible_biases);
-		AlignedFree(hidden_biases);
-
-		free_features(hidden_features, hidden_count);
-		free_features(visible_features, visible_count);
-
-		AlignedFree(_visible_buffer);
-		AlignedFree(_hidden_buffer);
-	}
-
-	static void calc_activation(const float* biases, float* inout_buffer, const uint32_t blocks, ActivationFunction_t func)
-	{
-		switch(func)
-		{
-		case ActivationFunction::Linear:
-			break;
-		case ActivationFunction::RectifiedLinear:
-			extern __m128 _mm_rectifiedlinear_ps(__m128 x0);
-			for(uint32_t i = 0; i < blocks; i++)
-			{
-				// load bias and accumulation
-				__m128 bias = _mm_load_ps(biases);
-				__m128 accum = _mm_load_ps(inout_buffer);
-				
-				// add bias, calculate rectified linear
-				accum = _mm_add_ps(accum, bias);
-				__m128 activ = _mm_rectifiedlinear_ps(accum);
-
-				_mm_store_ps(inout_buffer, activ);
-
-				biases += 4;
-				inout_buffer += 4;
-			}
-			break;
-		case ActivationFunction::Sigmoid:
-			extern __m128 _mm_sigmoid_ps(__m128 x0);
-			for(uint32_t i = 0; i < blocks; i++)
-			{
-				// load bias and accumulation
-				__m128 bias = _mm_load_ps(biases);
-				__m128 accum = _mm_load_ps(inout_buffer);
-
-				// add bias, calculate sigmoid
-				accum = _mm_add_ps(accum, bias);
-				__m128 activ = _mm_sigmoid_ps(accum);
-
-				_mm_store_ps(inout_buffer, activ);
-
-				biases += 4;
-				inout_buffer += 4;
-			}
-			break;
-		}
-	}
-
-	static float calc_accumulation(const float* input_vector, const float* feature_vector, const uint32_t blockcount)
-	{
-		// calculate dot product between input ad feature vector
-		__m128 dp = _mm_setzero_ps();
-		for(uint32_t i = 0; i < blockcount; i++)
-		{
-			__m128 v = _mm_load_ps(input_vector);
-			__m128 w = _mm_load_ps(feature_vector);
-
-			dp = _mm_add_ps(dp, _mm_mul_ps(v, w));
-
-			input_vector += 4;
-			feature_vector += 4;
-		}
-
-		dp = _mm_hadd_ps(dp , dp);
-		dp = _mm_hadd_ps(dp , dp);
-
-		// store it back aligned output buffer
-		float result;
-		_mm_store_ss(&result, dp);
-
-		return result;
-	}
-
-	inline size_t DanglingBytes(const uint32_t block_count, uint32_t input_count)
-	{
-		return (block_count * 4 * sizeof(float)) - input_count * sizeof(float);
-	}
-
-	static void calc_feature_map(
-		const float* input_buffer, float* output_buffer, 
-		float* input_scratch, float* output_scratch, 
-		const uint32_t input_count, const uint32_t output_count,
-		const float* biases, float** const features, const ActivationFunction_t activation)
-	{
-		assert(((intptr_t)input_scratch % 16) == 0);
-		assert(((intptr_t)output_scratch % 16) == 0);
-
-		memcpy(input_scratch, input_buffer, sizeof(float) * input_count);
-		const uint32_t input_blockcount = BlockCount(input_count);
-		
-		// set dangling floats to 0 so we don't screw up any calculations
-		const size_t dangling_bytes = DanglingBytes(input_blockcount, input_count);
-		if(dangling_bytes > 0)
-		{
-			memset(input_scratch + input_count, 0x00, dangling_bytes);
-		}
-
-		for(uint32_t j = 0; j < output_count; j++)
-		{
-			output_scratch[j] = calc_accumulation(input_scratch, features[j], input_blockcount);
-		}
-
-		calc_activation(biases, output_scratch, BlockCount(output_count), activation);
-
-		// copy from aligned scratch space to output buffer
-		if(output_buffer != output_scratch)
-		{
-			memcpy(output_buffer, output_scratch, output_count * sizeof(float));
-		}
 	}
 
 	void RestrictedBoltzmannMachine::CalcHidden( const float* in_visible, float* out_hidden ) const
 	{
-		calc_feature_map(
-			in_visible, out_hidden, 
-			_visible_buffer, _hidden_buffer, 
-			visible_count, hidden_count, 
-			hidden_biases, hidden_features, hidden_type);
+		hidden.CalcFeatureVector(in_visible, out_hidden, hidden_type);
 	}
 
 	void RestrictedBoltzmannMachine::CalcVisible( const float* in_hidden, float* out_visible ) const
 	{
-		calc_feature_map(
-			in_hidden, out_visible,		
-			_hidden_buffer, _visible_buffer, 
-			hidden_count, visible_count,
-			visible_biases, visible_features, visible_type);
+		visible.CalcFeatureVector(in_hidden, out_visible, visible_type);
 	}
 
 	extern __m128 _mm_ln_1_plus_e_x_ps(__m128 x);
 	float RestrictedBoltzmannMachine::CalcFreeEnergy( const float* in_visible ) const
 	{
-		assert(visible_type == ActivationFunction::Sigmoid && hidden_type == ActivationFunction::Sigmoid);
+		assert(visible_type == ActivationFunction::Sigmoid || visible_type == ActivationFunction::RectifiedLinear);
+		assert(hidden_type == ActivationFunction::Sigmoid || hidden_type == ActivationFunction::RectifiedLinear);
+		
+		// free energy
+		// F(v) = - sum (v_i * a_i) - sum ln(1 + e^x_j)
+		// 
+		// v_i = visible i
+		// a_i = visible bias a
+		// x_j = b_j + sum (v_i * w_ij) ; hidden accumulation
+		// b_j = hidden bias b
 
-		// log sum calculation
-		calc_feature_map(
-			in_visible, _hidden_buffer,
-			_visible_buffer, _hidden_buffer,
-			visible_count, hidden_count,
-			hidden_biases, hidden_features, ActivationFunction::Linear);
+		float bias_sum = 0.0f;
+
+		// calc dot product between visible and visible biases
+		for(uint32_t i = 0; i < visible_count; i++)
+		{
+			bias_sum += in_visible[i] * visible.biases()[i];
+		}
+
+		// now calculate that second part
+		static AlignedMemoryBlock<float> hidden_buffer;
+		hidden_buffer.Acquire(hidden_count);
+
+		// calc hidden accumulations
+		hidden.CalcFeatureVector(in_visible, (float*)hidden_buffer, ActivationFunction::Linear);
 
 		// set the last dangling floats to -4 so that ln(1 + e^x) maps them to 0 (see _mm_ln_1_plus_e_x_ps for details)
 		// otherwise, we'll have random garbage being appended
-		const size_t hidden_blocks = BlockCount(hidden_count);
-		for(uint32_t k = hidden_count; k < 4 * hidden_blocks; k++)
+		for(uint32_t k = hidden_count; k < 4 * hidden_buffer.BlockCount(); k++)
 		{
-			_hidden_buffer[k] = -4.0f;
+			hidden_buffer[k] = -4.0f;
 		}
 
-		// calc log(1 + e^x) and add to sum
-		__m128 dp = _mm_setzero_ps();
-		for(uint32_t k = 0; k < hidden_blocks; k++)
+		// calc all the ln(1 + e^x) and add them together
+		float* head = hidden_buffer;
+		__m128 sum = _mm_setzero_ps();
+		for(uint32_t k = 0; k < hidden_buffer.BlockCount(); k++)
 		{
-			__m128 x = _mm_load_ps(_hidden_buffer + 4 * k);
-			dp = _mm_add_ps(dp, _mm_ln_1_plus_e_x_ps(x));	
+			sum = _mm_add_ps(sum, _mm_ln_1_plus_e_x_ps(_mm_load_ps(head)));
 		}
 		
-		dp = _mm_hadd_ps(dp, dp);
-		dp = _mm_hadd_ps(dp, dp);
+		sum = _mm_hadd_ps(sum, sum);
+		sum = _mm_hadd_ps(sum, sum);
 
-		float log_dp;
-		_mm_store_ss(&log_dp, dp);
+		float log_sum;
+		_mm_store_ss(&log_sum, sum);
 
-		// bias sum calculation
-		const uint32_t visible_blocks = BlockCount(visible_count);
-
-		dp = _mm_setzero_ps();
-		// calc_feature_map copies in visible_biases 
-		for(uint32_t k = 0; k < visible_blocks; k++)
-		{
-			__m128 b = _mm_load_ps(visible_biases + 4 * k);
-			__m128 vec = _mm_load_ps(_visible_buffer + 4 * k);
-
-			dp = _mm_add_ps(dp, _mm_mul_ps(b, vec));
-		}
-
-		dp = _mm_hadd_ps(dp, dp);
-		dp = _mm_hadd_ps(dp, dp);
-
-		float bias_dp;
-		_mm_store_ss(&bias_dp, dp);
-
-		return -(bias_dp + log_dp);
+		return (-bias_sum - log_sum);
 	}
 
 	std::string RestrictedBoltzmannMachine::ToJSON() const
@@ -264,15 +95,15 @@ namespace OMLT
 		cJSON_AddNumberToObject(root, "HiddenCount", hidden_count);
 		cJSON_AddStringToObject(root, "VisibleType", ActivationFunctionNames[visible_type]);
 		cJSON_AddStringToObject(root, "HiddenType", ActivationFunctionNames[hidden_type]);
-		cJSON_AddItemToObject(root, "VisibleBiases", cJSON_CreateFloatArray(visible_biases, visible_count));
-		cJSON_AddItemToObject(root, "HiddenBiases", cJSON_CreateFloatArray(hidden_biases, hidden_count));
+		cJSON_AddItemToObject(root, "VisibleBiases", cJSON_CreateFloatArray((float*)visible.biases(), visible_count));
+		cJSON_AddItemToObject(root, "HiddenBiases", cJSON_CreateFloatArray((float*)hidden.biases(), hidden_count));
 
 		cJSON* root_weights = cJSON_CreateArray();
 		cJSON_AddItemToObject(root, "Weights", root_weights);
 
 		for(uint32_t j = 0; j < hidden_count; j++)
 		{
-			cJSON_AddItemToArray(root_weights, cJSON_CreateFloatArray(hidden_features[j], visible_count));
+			cJSON_AddItemToArray(root_weights, cJSON_CreateFloatArray((float*)hidden.feature(j), visible_count));
 		}
 
 		char* json_buffer = cJSON_Print(root);
@@ -347,7 +178,7 @@ namespace OMLT
 					for(uint32_t i = 0; i < visible_count; i++)
 					{
 						cJSON_ArrayIteratorMoveNext(vb_it);
-						rbm->visible_biases[i] = (float)cJSON_ArrayIteratorCurrent(vb_it)->valuedouble;
+						rbm->visible.biases()[i] = (float)cJSON_ArrayIteratorCurrent(vb_it)->valuedouble;
 					}
 					cJSON_Delete(vb_it);
 
@@ -357,7 +188,7 @@ namespace OMLT
 					for(uint32_t j = 0; j < hidden_count; j++)
 					{
 						cJSON_ArrayIteratorMoveNext(hb_it);
-						rbm->hidden_biases[j] = (float)cJSON_ArrayIteratorCurrent(hb_it)->valuedouble;
+						rbm->hidden.biases()[j] = (float)cJSON_ArrayIteratorCurrent(hb_it)->valuedouble;
 					}
 					cJSON_Delete(hb_it);
 
@@ -381,8 +212,8 @@ namespace OMLT
 							{
 								cJSON_ArrayIteratorMoveNext(wj_it);
 								float w_ij = (float)cJSON_ArrayIteratorCurrent(wj_it)->valuedouble;
-								rbm->hidden_features[j][i] = w_ij;
-								rbm->visible_features[i][j] = w_ij;
+								rbm->hidden.feature(j)[i] = w_ij;
+								rbm->visible.feature(i)[j] = w_ij;
 							}
 							cJSON_Delete(wj_it);
 						}

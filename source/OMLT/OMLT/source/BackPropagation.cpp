@@ -374,7 +374,8 @@ namespace OMLT
 
 		return GetLastOutputError();
 	}
-
+	
+	extern uint32_t* GetSeedBuffer(uint32_t, uint32_t, std::mt19937_64&);
 	void BackPropagation::build_layer( LayerConfig in_Config, float* in_weights )
 	{
 		std::mt19937_64 random;
@@ -476,9 +477,11 @@ namespace OMLT
 		{
 			width = result->OutputUnits;
 			height = _minibatch_size;
+			uint32_t* seeds = GetSeedBuffer(width * 4, height, random);
 			result->Activation =  OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
-			result->OutputRandom0 =  OpenGLBuffer2D(width, height, ReturnType::UInt, nullptr);
-			result->OutputRandom1 =  OpenGLBuffer2D(width, height, ReturnType::UInt, nullptr);
+			result->OutputRandom0 =  OpenGLBuffer2D(width, height, ReturnType::UInt4, seeds);
+			result->OutputRandom1 =  OpenGLBuffer2D(width, height, ReturnType::UInt4, nullptr);
+			free(seeds);
 		}
 
 		// sensitivites all on their own

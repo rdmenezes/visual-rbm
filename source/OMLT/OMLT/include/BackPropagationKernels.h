@@ -4,11 +4,11 @@ struct SourceCalcEnabledUnits : public SiCKL::Source
 
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
-			CONST_DATA(Buffer2D<UInt>, in_seeds)
+			CONST_DATA(Buffer2D<UInt4>, in_seeds)
 		END_CONST_DATA
 
 		BEGIN_OUT_DATA
-			OUT_DATA(UInt, out_seed)
+			OUT_DATA(UInt4, out_seed)
 			OUT_DATA(Float, out_enabled)
 		END_OUT_DATA
 
@@ -60,12 +60,12 @@ struct SourceFeedForward : public SiCKL::Source
 			CONST_DATA(Buffer2D<Float>, in_inputs)
 			CONST_DATA(Buffer2D<Float>, in_enabled_outputs)
 			CONST_DATA(Buffer2D<Float>, in_weights);
-			CONST_DATA(Buffer2D<UInt>, in_seeds)
+			CONST_DATA(Buffer2D<UInt4>, in_seeds)
 		END_CONST_DATA
 
 		BEGIN_OUT_DATA
 			OUT_DATA(Float, out_activation)
-			OUT_DATA(UInt, out_seed)
+			OUT_DATA(UInt4, out_seed)
 		END_OUT_DATA
 
 		BEGIN_MAIN

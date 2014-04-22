@@ -10,28 +10,25 @@
 
 namespace OMLT
 {
-	extern void allocate_features(float**& ptr, const uint32_t width, const size_t size);
-	extern void free_features(float** const buff, uint32_t width);
-
 	AutoEncoder::AutoEncoder( uint32_t in_visible_count, uint32_t in_hidden_count, ActivationFunction_t in_hidden_type, ActivationFunction_t in_output_type )
 		: visible_count(in_visible_count),
 		  hidden_count(in_hidden_count),
 		  hidden_type(in_hidden_type),
 		  output_type(in_output_type),
-		  encoder(visible_count, hidden_count, hidden_type),
-		  decoder(hidden_count, visible_count, output_type)
+		  encoder(visible_count, hidden_count),
+		  decoder(hidden_count, visible_count)
 	{
 
 	}
 
 	void AutoEncoder::Encode( const float* in_raw, float* out_encoded ) const
 	{
-		encoder.CalcFeatureVector(in_raw, out_encoded);
+		encoder.CalcFeatureVector(in_raw, out_encoded, hidden_type);
 	}
 
 	void AutoEncoder::Decode( const float* in_decoded, float* out_raw ) const
 	{
-		decoder.CalcFeatureVector(in_decoded, out_raw);
+		decoder.CalcFeatureVector(in_decoded, out_raw, output_type);
 	}
 
 	std::string AutoEncoder::ToJSON() const
