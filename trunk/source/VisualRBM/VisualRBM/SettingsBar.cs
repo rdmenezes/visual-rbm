@@ -128,7 +128,7 @@ namespace VisualRBM
 							startButton.Enabled = true;
 							pauseButton.Enabled = false;
 							stopButton.Enabled = true;
-							exportButton.Enabled = true;
+							exportButton.Enabled = current_state != ProgramState.TrainerStopped;
 							break;
 						case ProgramState.TrainerStopped:
 							selectTrainingIdxButton.Enabled = true;
