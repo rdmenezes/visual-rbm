@@ -1,1 +1,12 @@
-<wiki:gadget url="http://visual-rbm.googlecode.com/svn/wiki/Downloads.xml"  width="900" height="500" border="0" /> 
+=Releases=
+
+|| *File* || *Description* || *Version* || *History* ||
+||[http://goo.gl/j8IIUg VisualRBM.zip] ||The latest VisualRBM Windows client||r309||[http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/VisualRBM.zip ...]||
+||[http://goo.gl/mK4G6Z Tools.zip] ||A set of tools for manipulating IDX data files and training RBMs from the command-line||r309||[http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/Tools.zip ...]||
+
+=Data Sets=
+|| *File* || *Description* ||
+||[http://code.google.com/p/visual-rbm/downloads/detail?name=mnist-train-labels.idx&can=2&q= mnist-train-labels.idx]||MNIST Training Labels||
+||[http://code.google.com/p/visual-rbm/downloads/detail?name=mnist-test-labels.idx&can=2&q= mnist-test-labels.idx]||MNIST Test Labels||
+||[http://code.google.com/p/visual-rbm/downloads/detail?name=mnist-train-images.idx&can=2&q= mnist-train-images.idx]||MNIST Training Images||
+||[http://code.google.com/p/visual-rbm/downloads/detail?name=mnist-test-images.idx&can=2&q= mnist-test-images.idx]||MNIST Test Images||
