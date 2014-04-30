@@ -113,7 +113,9 @@ struct SourceCalcHiddenAndStates : public SiCKL::Source
 							// mean 0, variance sigmoid(x) per http://www.cs.toronto.edu/~hinton/absps/reluICML.pdf
 							// "Rectified linear units improve restricted Boltzmann machines."
 							NextGaussian(seed, out_seed, noise);
-							noise = noise * Sigmoid(accumulation);
+							auto variance = Sigmoid(accumulation);
+							auto stddev = Sqrt(variance);
+							noise = noise * stddev;
 							out_state = Max(accumulation + noise, 0.0f);
 						}
 						break;

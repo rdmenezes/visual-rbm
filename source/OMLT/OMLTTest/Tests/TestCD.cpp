@@ -94,8 +94,8 @@ bool TrainRBM(int argc, char** argv)
 	printf("Constructing data atlas\n");
 
 	// construct our data atlas
-	DataAtlas atlas(in_data);
-	atlas.Initialize(minibatch_size, 512);
+	DataAtlas atlas(512);
+	atlas.Initialize(in_data, minibatch_size);
 
 	SiCKL::OpenGLBuffer2D training_example;
 
@@ -238,8 +238,8 @@ bool SerializeRBM(int argc, char** argv)
 
 	printf("Building data atlas\n");
 
-	DataAtlas atlas(data);
-	atlas.Initialize(minibatch_size, 512);
+	DataAtlas atlas(256);
+	atlas.Initialize(data, minibatch_size);
 
 	SiCKL::OpenGLBuffer2D training_example;
 
