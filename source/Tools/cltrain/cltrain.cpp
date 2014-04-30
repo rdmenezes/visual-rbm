@@ -275,12 +275,12 @@ template<typename MODEL, typename TRAINER>
 bool Run(MODEL* in_model, TrainingSchedule<TRAINER>* in_schedule)
 {
 	// load and initialize data
-	training_atlas = new DataAtlas(training_data);
-	training_atlas->Initialize(in_schedule->GetMinibatchSize(), 512);
+	training_atlas = new DataAtlas(384);
+	training_atlas->Initialize(training_data, in_schedule->GetMinibatchSize());
 	if(validation_data)
 	{
-		validation_atlas = new DataAtlas(validation_data);
-		validation_atlas->Initialize(in_schedule->GetMinibatchSize(), 512);
+		validation_atlas = new DataAtlas(128);
+		validation_atlas->Initialize(validation_data, in_schedule->GetMinibatchSize());
 	}
 
 	in_schedule->StartTraining();
