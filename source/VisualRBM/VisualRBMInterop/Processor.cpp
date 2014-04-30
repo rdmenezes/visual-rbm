@@ -48,6 +48,9 @@ namespace VisualRBMInterop
 
 	static ProcessorState currentState = ProcessorState::Invalid;
 
+	static IDX* training_idx = nullptr;
+	static IDX* validation_idx = nullptr;
+
 	// Backend Static Data
 	static DataAtlas* training_data = nullptr;
 	static DataAtlas* validation_data = nullptr;
@@ -165,25 +168,12 @@ namespace VisualRBMInterop
 
 	void InitializeDataAtlas()
 	{
-		if(training_data->GetBatchSize() == minibatch_size)
-		{
-			training_data->Reset();
-		}
-		else
-		{
-			training_data->Initialize(minibatch_size, 384);
-		}
+		assert(training_idx);
 
-		if(validation_data)
+		training_data->Initialize(training_idx, minibatch_size);
+		if(validation_idx)
 		{
-			if(validation_data->GetBatchSize() == minibatch_size)
-			{
-				validation_data->Reset();
-			}
-			else
-			{
-				validation_data->Initialize(minibatch_size, 384);
-			}
+			validation_data->Initialize(validation_idx, minibatch_size);
 		}
 	}
 
@@ -769,6 +759,9 @@ namespace VisualRBMInterop
 		// start with an RBMTrainer by default
 		trainer = new RBMTrainer();
 
+		training_data = new DataAtlas(384);
+		validation_data = new DataAtlas(128);
+
 		while(true)
 		{
 			Message^ msg = _message_queue->Dequeue();
@@ -786,11 +779,8 @@ namespace VisualRBMInterop
 				case MessageType::Start:
 					{
 						assert(epochs_remaining > 0);
-						assert(training_data != nullptr);
 						assert(model_type == ModelType::RBM ||
 							   model_type == ModelType::AutoEncoder);
-
-						assert(training_data != nullptr);
 
 						trainer->HandleStartMsg(msg);
 
@@ -953,15 +943,13 @@ namespace VisualRBMInterop
 			case ProcessorState::Running:
 			case ProcessorState::ScheduleRunning:
 				{
-					assert(training_data != nullptr);
-
 					float training_error = -1.0f;
 					float validation_error = -1.0f;
 
 					// get next training example
 					training_data->Next(training_example);
 					training_error = trainer->Train(training_example);
-					if(validation_data != nullptr)
+					if(validation_idx != nullptr)
 					{
 						validation_data->Next(validation_example);
 						validation_error = trainer->Validation(validation_example);
@@ -997,51 +985,38 @@ namespace VisualRBMInterop
 		IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(in_filename);
 		char* filename = static_cast<char*>(p.ToPointer());
 
-		IDX* idx = IDX::Load(filename);
+		training_idx = IDX::Load(filename);
 		System::Runtime::InteropServices::Marshal::FreeHGlobal(p);
 
 		// verify it's the right data type
-		if(idx->GetDataFormat() != DataFormat::Single)
+		if(training_idx->GetDataFormat() != DataFormat::Single)
 		{
 			ShowError("Error: IDX training data must have type 'Float' (0x0D)");
-			delete idx;
+			delete training_idx;
 			return false;
 		}
-		else if(idx->GetRowLength() >= SiCKL::OpenGLRuntime::GetMaxTextureSize())
+		else if(training_idx->GetRowLength() >= SiCKL::OpenGLRuntime::GetMaxTextureSize())
 		{
 			ShowError(String::Format("Error: IDX training data may not have more than {0} values", SiCKL::OpenGLRuntime::GetMaxTextureSize() - 1));
-			delete idx;
+			delete training_idx;
 			return false;
 		}
 
-		// clear out the old training data
-		Message^ msg = gcnew Message(MessageType::DeleteData);
-		msg["data"] = IntPtr(training_data);
-		_message_queue->Enqueue(msg);
-		while(!msg->Handled)
-		{
-			Thread::Sleep(16);
-		}
-
-		// construct data atlas
-		training_data = new DataAtlas(idx);
-
 		// get visible units required
-		visible_count = idx->GetRowLength();
-
+		visible_count = training_idx->GetRowLength();
 
 		return true;
 	}
 
 	bool Processor::SetValidationData( String^ in_filename )
 	{
-		assert(training_data != nullptr);
+		assert(training_idx != nullptr);
 
 		// clear out current validation data?
 		if(in_filename == nullptr)
 		{
-			delete validation_data;
-			validation_data = nullptr;
+			delete validation_idx;
+			validation_idx = nullptr;
 			return true;
 		}
 		// load it up
@@ -1050,35 +1025,26 @@ namespace VisualRBMInterop
 			IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(in_filename);
 			char* filename = static_cast<char*>(p.ToPointer());
 
-			IDX* idx = IDX::Load(filename);
+			validation_idx = IDX::Load(filename);
 			System::Runtime::InteropServices::Marshal::FreeHGlobal(p);
 
 			// verify it's the right data type
-			if(idx->GetDataFormat() != DataFormat::Single)
+			if(validation_idx->GetDataFormat() != DataFormat::Single)
 			{
 				ShowError("Error: IDX validation data must have type 'Float' (0x0D)");
-				delete idx;
+				delete validation_idx;
+				validation_idx = nullptr;
 				return false;
 			}
 			// ensure it's same format as training data
-			else if(idx->GetRowLength() != visible_count)
+			else if(validation_idx->GetRowLength() != visible_count)
 			{
 				ShowError(String::Format("Error: IDX validation data must have same row length ({0}) as training data", visible_count));
-				delete idx;
+				delete validation_idx;
+				validation_idx = nullptr;
 				return false;
 			}
 
-			// clear out old validation data
-			Message^ msg = gcnew Message(MessageType::DeleteData);
-			msg["data"] = IntPtr(validation_data);
-			_message_queue->Enqueue(msg);
-			while(!msg->Handled)
-			{
-				Thread::Sleep(16);
-			}
-
-			// and set new one
-			validation_data = new DataAtlas(idx);
 			return true;
 		}
 	}
