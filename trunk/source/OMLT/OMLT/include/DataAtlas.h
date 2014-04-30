@@ -8,62 +8,50 @@ namespace OMLT
 	class DataAtlas
 	{
 	public:
-		DataAtlas(IDX* in_Data);
+		// in_AtlasSize -> size of the atlas in megabytes
+		DataAtlas(uint32_t in_atlas_size);
 		~DataAtlas();
-
-		// constructs internal texture page used to store the data
-		// in_BatchSize -> number of rows in buffer returned by next
-		// in_MaxPageSize -> maximum size of _atlas in megabytes
-		void Initialize(uint32_t in_BatchSize, uint32_t in_MaxPageSize);
-		
-		// resets data atlas to read from beginning of backing IDX
-		void Reset();
-		
-		// returns size of each minibatch
-		uint32_t GetBatchSize() const
-		{
-			return _batch_height;
-		}
-
-		bool Next(SiCKL::OpenGLBuffer2D& inout_Buffer);
-		inline uint32_t GetTotalBatches() const {return _total_batches;}
-		inline bool GetIsInitialized() const {return _initialized;}
+		bool Initialize(IDX* in_data, uint32_t in_minibatch_size);
+		bool Next(SiCKL::OpenGLBuffer2D& inout_minibatch);
+		uint32_t GetTotalBatches() { return _total_rows / _minibatch_size; }
 	private:
-		void PopulateAtlasBuffer();
+		void PopulateAtlas();
 
+		// our atlas texture on the GPU
 		SiCKL::OpenGLBuffer2D _atlas;
-		SiCKL::OpenGLBuffer2D _batch;
-		
-		bool _initialized;
+		// CPU side buffer we keep around for streaming
+		float* _atlas_buffer;
+		// number of floats per dimension of _atlas
+		uint32_t _atlas_width;
+		// size of our atlas (float count)
+		uint32_t _atlas_size;
 
-		// flag is set when we need to stream in
-		// more data at the end of the page
-		bool _streaming;
-
-		// our CPU side buffer for copying in IDX
-		uint8_t* _atlas_buffer;
-		// width of our atlas in bytes
-		uint32_t _atlas_byte_width;
-		// width of our atlas in batches
-		uint32_t _atlas_batch_width;
-		// height of our atlas in batches
-		uint32_t _atlas_batch_height;
-		// width of a batch in 'cells'
-		uint32_t _batch_width;
-		// height of a batch in 'cells'
-		uint32_t _batch_height;
-
-		// the total number of batches in the IDX
-		uint32_t _total_batches;
-		// what bathc will we give in Next()
-		int32_t _current_batch;
-		// what row to start loading from in PopulateAtlas)_
-		uint32_t _current_row;
-
-		// our copy shader
-		SiCKL::OpenGLProgram* _texture_copy;
-
-		// our backing data file
+		// our backing IDX file
 		IDX* _idx;
+		// length of a single data row
+		uint32_t _row_length;
+		// maximum number of rows we can store in our atlas
+		uint32_t _max_rows;
+		// current row at head of our atlas
+		uint32_t _current_row;
+		// total number of rows in our IDX
+		uint32_t _total_rows;
+		// total number of batches in our IDX
+		uint32_t _total_batches;
+		
+		// flag determines if we are streaming from an IDX file
+		// or if all of our data is loaded
+		bool _streaming;
+		// number of rows in a mini batch
+		uint32_t _minibatch_size;
+		// batches per page
+		uint32_t _batches_per_page;
+
+		// the current minibatch we're on
+		uint32_t _current_batch;
+		// small 2d texture populated in Next();
+		SiCKL::OpenGLBuffer2D _batch;
+		// shader that copies data from our atlas to the batch
+		SiCKL::OpenGLProgram* _texture_copy;
 	};
 }
