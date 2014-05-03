@@ -38,12 +38,19 @@ namespace OMLT
 
 		struct LayerParameters
 		{
-			float LearningRate;
-			float Momentum;
-			float L1Regularization;
-			float L2Regularization;
-			float Dropout;
-			float Noise;
+			union
+			{
+				struct
+				{
+					float LearningRate;
+					float Momentum;
+					float L1Regularization;
+					float L2Regularization;
+					float Dropout;
+					float Noise;
+				};
+				float Data[6];
+			};
 		};
 
 		// config for a nn trainer

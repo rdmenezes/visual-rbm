@@ -75,6 +75,9 @@ namespace OMLT
 			_activations.back() = buffer;
 			_activations.push_back(nullptr);
 		}
+
+		_layers.push_back(in_layer);
+
 		return true;
 	}
 

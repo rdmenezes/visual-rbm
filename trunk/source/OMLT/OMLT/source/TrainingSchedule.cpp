@@ -202,7 +202,176 @@ Error:
 	template<>
 	TrainingSchedule<BackPropagation>* TrainingSchedule<BackPropagation>::FromJSON(const std::string& json)
 	{
-		return nullptr;
+		TrainingSchedule<BackPropagation>* result = nullptr;
+		BackPropagation::ModelConfig model_config;
+		uint32_t minibatch_size;
+
+		std::vector<std::pair<BackPropagation::TrainingConfig, uint32_t>> schedule;
+
+		cJSON* root = cJSON_Parse(json.c_str());
+		if(root)
+		{
+			cJSON* cj_type = cJSON_GetObjectItem(root, "Type");
+			if(!cj_type || (strcmp(cj_type->valuestring, "MLP") != 0 && strcmp(cj_type->valuestring, "MultilayerPerceptron") != 0))
+			{
+				goto Error;
+			}
+
+			cJSON* cj_layers = cJSON_GetObjectItem(root, "Layers");
+			cJSON* cj_activation_functions = cJSON_GetObjectItem(root, "ActivationFunctions");
+			cJSON* cj_minibatch_size = cJSON_GetObjectItem(root, "MinibatchSize");
+			cJSON* cj_schedule = cJSON_GetObjectItem(root, "Schedule");
+
+			// make sure we have the mandatory bits
+			if(cj_layers && cj_activation_functions &&
+			   cj_minibatch_size && cj_schedule)
+			{
+				// verify we hae the right number of layer values and activation function values
+				if(cJSON_GetArraySize(cj_layers) > 1 && cJSON_GetArraySize(cj_layers) == (cJSON_GetArraySize(cj_activation_functions) + 1))
+				{
+					// get our array iterators and populate the model config
+					cJSON* cj_layer_val;
+					cJSON* cj_func_val;
+
+					cj_layer_val = cJSON_GetArrayItem(cj_layers, 0);
+					model_config.InputCount = cj_layer_val->valueint;
+
+					// parse network structure/functions
+					for(int k = 0; k < cJSON_GetArraySize(cj_activation_functions); k++)
+					{
+						cj_layer_val = cJSON_GetArrayItem(cj_layers, k + 1);
+						cj_func_val = cJSON_GetArrayItem(cj_activation_functions, k);
+
+						if(cj_layer_val && cj_func_val)
+						{
+							BackPropagation::LayerConfig layer_config;
+							layer_config.OutputUnits = cj_layer_val->valueint;
+							layer_config.Function = ParseFunction(cj_func_val->valuestring);
+
+							if(cj_layer_val->valueint < 1)
+							{
+								goto Error;
+							}
+							if(layer_config.Function == ActivationFunction::Invalid)
+							{
+								goto Error;
+							}
+
+							model_config.LayerConfigs.push_back(layer_config);
+						}
+						else
+						{
+							goto Error;
+						}
+					}
+
+					// minibatch size
+					if(cj_minibatch_size->valueint < 1)
+					{
+						goto Error;
+					}
+					minibatch_size = cj_minibatch_size->valueint;
+
+					// parse our schedules
+					if(cJSON_GetArraySize(cj_schedule) == 0)
+					{
+						goto Error;
+					}
+
+					BackPropagation::TrainingConfig train_config;
+					uint32_t layer_count = model_config.LayerConfigs.size();
+					for(uint32_t  k = 0; k < layer_count; k++)
+					{
+						BackPropagation::LayerParameters layer_params = {0};
+						train_config.Parameters.push_back(layer_params);
+					}
+
+					// now read each traing config in the schedule
+					for(int k = 0; k < cJSON_GetArraySize(cj_schedule); k++)
+					{
+						cJSON* cj_train_config = cJSON_GetArrayItem(cj_schedule, k);
+
+						// this function will read an object and if it's an array, populate each member of the array to the appropriate layer config
+						// if it is a single value, all the values in the array are given that value
+						auto read_params = [&] (uint32_t index, const char* param) -> bool
+						{
+							cJSON* cj_param = cJSON_GetObjectItem(cj_train_config, param);
+							if(cj_param)
+							{
+								if(cj_param->type == cJSON_Array)
+								{
+									// ensure we have the right number of params
+									if(cJSON_GetArraySize(cj_param) != layer_count)
+									{
+										return false;
+									}
+
+									for(uint32_t j = 0; j < layer_count; j++)
+									{
+										cJSON* cj_val = cJSON_GetArrayItem(cj_param, j);
+										if(cj_val->type != cJSON_Number)
+										{
+											return false;
+										}
+
+										train_config.Parameters[j].Data[index] = float(cj_val->valuedouble);
+										
+									}
+								}
+								else if(cj_param->type == cJSON_Number)
+								{
+									for(uint32_t j = 0; j < layer_count; j++)
+									{
+										train_config.Parameters[j].Data[index] = float(cj_param->valuedouble);
+									}
+								}
+							}
+							return true;
+						};
+#						define GET_INDEX(NAME) (((uint32_t)( &( (BackPropagation::LayerParameters*)(void*)0)->NAME) )/sizeof(float))
+#						define READ_PARAMS(NAME) if(read_params(GET_INDEX(NAME), #NAME) == false) goto Error;
+
+						READ_PARAMS(LearningRate)
+						READ_PARAMS(Momentum)
+						READ_PARAMS(L1Regularization)
+						READ_PARAMS(L2Regularization)
+						READ_PARAMS(Dropout)
+						READ_PARAMS(Noise)
+
+						//now get the number of epochs
+						cJSON* cj_epochs = cJSON_GetObjectItem(cj_train_config, "Epochs");
+						if(cj_epochs->type != cJSON_Number || cj_epochs->valueint < 1)
+						{
+							goto Error;
+						}
+						uint32_t epochs = cj_epochs->valueint;
+						schedule.push_back(std::pair<BackPropagation::TrainingConfig, uint32_t>(train_config, epochs));
+					}
+				}
+				else
+				{
+					goto Error;
+				}
+			}
+			else
+			{
+				goto Error;
+			}
+		}
+		else
+		{
+			goto Error;
+		}
+
+		// create result here
+		result = new TrainingSchedule<BackPropagation>(model_config, minibatch_size);
+		for(uint32_t k = 0; k < schedule.size(); k++)
+		{
+			result->AddTrainingConfig(schedule[k].first, schedule[k].second);
+		}
+Error:
+		cJSON_Delete(root);
+		return result;
 	}
 
 	template<>
