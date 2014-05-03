@@ -22,5 +22,7 @@ namespace OMLT
 	typedef ActivationFunction::Enum ActivationFunction_t;
 
 	extern const char* ActivationFunctionNames[];
+
+	extern ActivationFunction_t ParseFunction(const char* name);
 	
 }

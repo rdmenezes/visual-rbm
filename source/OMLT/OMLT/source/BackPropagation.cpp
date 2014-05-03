@@ -20,6 +20,7 @@ namespace OMLT
 		for(auto it = in_config.LayerConfigs.begin(); it < in_config.LayerConfigs.end(); ++it)
 		{
 			build_layer(*it, nullptr);
+			_training_config.Parameters.push_back(LayerParameters());
 		}
 	}
 
@@ -56,6 +57,8 @@ namespace OMLT
 			// add layer and use weight buffer as initial weights
 			build_layer(layer_config, weight_buffer);
 			delete[] weight_buffer;
+
+			_training_config.Parameters.push_back(LayerParameters());
 		}
 	}
 
@@ -398,14 +401,10 @@ namespace OMLT
 
 			result->InputEnabled = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 
-			uint32_t* random_buffer = new uint32_t[width * height];
-			for(uint32_t i = 0; i < width * height; i++)
-			{
-				random_buffer[i] = uniform(random);
-			}
-			result->InputRandom0 = OpenGLBuffer2D(width, height, ReturnType::UInt, random_buffer);
+			uint32_t* random_buffer = GetSeedBuffer(width * 4, height, random);
+			result->InputRandom0 = OpenGLBuffer2D(width, height, ReturnType::UInt4, random_buffer);
+			result->InputRandom1 = OpenGLBuffer2D(width, height, ReturnType::UInt4, nullptr);
 			delete[] random_buffer;
-			result->InputRandom1 = OpenGLBuffer2D(width, height, ReturnType::UInt, nullptr);
 		}
 
 		// init weights, delta weights
