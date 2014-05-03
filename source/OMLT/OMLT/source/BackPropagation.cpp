@@ -16,7 +16,6 @@ namespace OMLT
 		, _last_label(nullptr)
 		, _copy_visible(nullptr)
 	{
-		_training_config.Initialize(in_config.LayerConfigs.size());
 		assert(in_config.LayerConfigs.size() > 0);
 		for(auto it = in_config.LayerConfigs.begin(); it < in_config.LayerConfigs.end(); ++it)
 		{
@@ -31,7 +30,6 @@ namespace OMLT
 		, _last_label(nullptr)
 		, _copy_visible(nullptr)
 	{
-		_training_config.Initialize(in_mlp->LayerCount());
 		for(uint32_t k = 0; k < in_mlp->LayerCount(); k++)
 		{
 			MLP::Layer* layer = in_mlp->GetLayer(k);
@@ -39,7 +37,6 @@ namespace OMLT
 			LayerConfig layer_config;
 			{
 				layer_config.Function = layer->function;
-				layer_config.Noisy = false;
 				layer_config.OutputUnits = layer->outputs;
 			}
 
@@ -82,33 +79,19 @@ namespace OMLT
 
 	void BackPropagation::SetTrainingConfig( const TrainingConfig& in_config)
 	{
-#if 0
-		// only set recompile flag if the new config is different
-		if(memcmp(&in_config, &_training_config, sizeof(TrainingConfig)) != 0)
-		{
-			_training_config = in_config;
-			_recompile_required = true;
-		}
-#endif
-	}
+		assert(in_config.Parameters.size() == _training_config.Parameters.size());
 
-	void BackPropagation::SetActivationFunction( uint32_t in_layer_index, ActivationFunction_t in_func )
-	{
-		assert(in_layer_index < _layers.size());
-		if(_layers[in_layer_index]->Function != in_func)
+		for(size_t k = 0; k < in_config.Parameters.size(); k++)
 		{
-			_layers[in_layer_index]->Function = in_func;
-			_recompile_required = true;
-		}
-	}
+			const auto& old_params = _training_config.Parameters[k];
+			const auto& new_params = in_config.Parameters[k];
 
-	void BackPropagation::SetNoisy( uint32_t in_layer_index, bool in_noisy )
-	{
-		assert(in_layer_index < _layers.size());
-		if(_layers[in_layer_index]->Noisy != in_noisy)
-		{
-			_layers[in_layer_index]->Noisy = in_noisy;
-			_recompile_required = true;
+			if(memcmp(&old_params, &new_params, sizeof(LayerParameters)) != 0)
+			{
+				_training_config = in_config;
+				_recompile_required = true;
+				return;
+			}
 		}
 	}
 
@@ -397,7 +380,6 @@ namespace OMLT
 		result->OutputUnits = in_Config.OutputUnits;
 	
 		result->Function = in_Config.Function;
-		result->Noisy = in_Config.Noisy;
 
 		if(_layers.size() == 0)
 		{
@@ -618,7 +600,7 @@ namespace OMLT
 			// calc enabled inputs
 			{
 				SourceCalcEnabledUnits source;
-				source.DROPOUT_PROB = _training_config.Dropout[k];
+				source.DROPOUT_PROB = _training_config.Parameters[k].Dropout;
 
 				source.Parse();
 				layer->CalcEnabledInputs = comp.Build(source);
@@ -630,9 +612,9 @@ namespace OMLT
 			{
 				SourceFeedForward source;
 				source.FUNC = layer->Function;
-				source.INPUT_DROPOUT_PROB = _training_config.Dropout[k];
+				source.INPUT_DROPOUT_PROB = _training_config.Parameters[k].Dropout;
 				source.INPUT_COUNT = layer->InputUnits;
-				source.NOISY = layer->Noisy;
+				source.NOISE_STDDEV = _training_config.Parameters[k].Noise;
 
 				source.Parse();
 				layer->FeedForward = comp.Build(source);
@@ -670,11 +652,11 @@ namespace OMLT
 			// update weights
 			{
 				SourceUpdateWeights source;
-				source.LEARNING_RATE = _training_config.LearningRate;
-				source.MOMENTUM = _training_config.Momentum;
+				source.LEARNING_RATE = _training_config.Parameters[k].LearningRate;
+				source.MOMENTUM = _training_config.Parameters[k].Momentum;
 				source.MINIBATCH_SIZE = _minibatch_size;
-				source.L1_REGULARIZATION = _training_config.L1Regularization;
-				source.L2_REGULARIZATION = _training_config.L2Regularization;
+				source.L1_REGULARIZATION = _training_config.Parameters[k].L1Regularization;
+				source.L2_REGULARIZATION = _training_config.Parameters[k].L2Regularization;
 
 				source.Parse();
 				layer->UpdateWeights = comp.Build(source);

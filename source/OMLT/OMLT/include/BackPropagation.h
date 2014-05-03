@@ -28,8 +28,6 @@ namespace OMLT
 			uint32_t OutputUnits;
 			// activation function used
 			ActivationFunction_t Function;
-			// will we add noise to accumulation
-			bool Noisy;
 		};
 
 		struct ModelConfig
@@ -38,63 +36,20 @@ namespace OMLT
 			std::vector<LayerConfig> LayerConfigs;
 		};
 
-		// config for a nn trainer
-		struct TrainingConfig
+		struct LayerParameters
 		{
 			float LearningRate;
 			float Momentum;
 			float L1Regularization;
 			float L2Regularization;
+			float Dropout;
+			float Noise;
+		};
 
-			uint32_t LayerCount;
-			float* Dropout;
-
-			TrainingConfig()
-				: LearningRate(0.0f)
-				, Momentum(0.0f)
-				, L1Regularization(0.0f)
-				, L2Regularization(0.0f)
-				, Dropout(nullptr)
-				, LayerCount(0)
-			{ }
-
-			TrainingConfig(const TrainingConfig& in_config)
-			{
-				*this = in_config;
-			}
-
-			TrainingConfig& operator=(const TrainingConfig& in_config)
-			{
-				LearningRate = in_config.LearningRate;
-				Momentum = in_config.Momentum;
-				L1Regularization = in_config.L1Regularization;
-				L2Regularization = in_config.L2Regularization;
-				LayerCount = in_config.LayerCount;
-				Dropout =  new float[LayerCount];
-				for(uint32_t k = 0; k < LayerCount; k++)
-				{
-					Dropout[k] = in_config.Dropout[k];
-				}
-
-				return *this;
-			}
-
-			void Initialize(uint32_t layer_count)
-			{
-				LayerCount = layer_count;
-				Dropout =  new float[LayerCount];
-				for(uint32_t k = 0; k < LayerCount; k++)
-				{
-					Dropout[k] = 0.0f;
-				}
-
-			}
-
-			~TrainingConfig()
-			{
-				delete[] Dropout;
-				Dropout = nullptr;
-			}
+		// config for a nn trainer
+		struct TrainingConfig
+		{
+			std::vector<LayerParameters> Parameters;
 		};
 
 		
@@ -104,8 +59,6 @@ namespace OMLT
 		~BackPropagation();
 
 		void SetTrainingConfig(const TrainingConfig&);
-		void SetActivationFunction(uint32_t in_layer_index, ActivationFunction_t in_func);
-		void SetNoisy(uint32_t in_layer_index, bool in_noisy);
 
 		void Train(const OpenGLBuffer2D& example_input, const OpenGLBuffer2D& example_label);
 
@@ -132,7 +85,6 @@ namespace OMLT
 			uint32_t OutputUnits;
 
 			ActivationFunction_t Function;
-			bool Noisy;
 
 			/* 
 			 * Inputs from previous layer
