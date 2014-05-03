@@ -53,7 +53,7 @@ struct SourceFeedForward : public SiCKL::Source
 	ActivationFunction_t FUNC;
 	float INPUT_DROPOUT_PROB;
 	uint32_t INPUT_COUNT;
-	bool NOISY;
+	float NOISE_STDDEV;
 
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
@@ -93,12 +93,11 @@ struct SourceFeedForward : public SiCKL::Source
 
 
 				// add noise if required
-				if(NOISY)
+				if(NOISE_STDDEV != 0.0f)
 				{
 					Float noise;
 					NextGaussian(in_seeds(j, m), out_seed, noise);
-
-					accumulation = accumulation + noise;
+					accumulation = accumulation + (noise * NOISE_STDDEV);
 				}
 
 				// activation function
