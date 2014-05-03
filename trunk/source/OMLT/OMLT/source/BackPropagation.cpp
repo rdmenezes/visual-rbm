@@ -51,9 +51,9 @@ namespace OMLT
 			{
 				// copy in biases
 				uint32_t offset = j * (layer->inputs + 1);
-				weight_buffer[offset] = layer->biases[j];
+				weight_buffer[offset] = layer->weights.biases()[j];
 				// and copy in weights
-				std::memcpy(weight_buffer + (offset + 1), layer->weights[j], layer->inputs * sizeof(float));
+				std::memcpy(weight_buffer + (offset + 1), layer->weights.feature(j), layer->inputs * sizeof(float));
 			}
 
 			// add layer and use weight buffer as initial weights
@@ -82,12 +82,14 @@ namespace OMLT
 
 	void BackPropagation::SetTrainingConfig( const TrainingConfig& in_config)
 	{
+#if 0
 		// only set recompile flag if the new config is different
 		if(memcmp(&in_config, &_training_config, sizeof(TrainingConfig)) != 0)
 		{
 			_training_config = in_config;
 			_recompile_required = true;
 		}
+#endif
 	}
 
 	void BackPropagation::SetActivationFunction( uint32_t in_layer_index, ActivationFunction_t in_func )
@@ -537,8 +539,8 @@ namespace OMLT
 			float* gpu_weights_head = gpu_weights;
 			for(uint32_t j = 0; j < layer->outputs; j++)
 			{
-				layer->biases[j] = gpu_weights_head[0];
-				memcpy(layer->weights[j], gpu_weights_head + 1, sizeof(float) * layer->inputs);
+				layer->weights.biases()[j] = gpu_weights_head[0];
+				memcpy(layer->weights.feature(j), gpu_weights_head + 1, sizeof(float) * layer->inputs);
 
 				gpu_weights_head += layer->inputs + 1;
 			}
@@ -548,6 +550,7 @@ namespace OMLT
 
 			free(gpu_weights);
 		}
+
 
 		return result;
 	}

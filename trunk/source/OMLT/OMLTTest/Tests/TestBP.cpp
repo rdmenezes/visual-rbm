@@ -15,6 +15,7 @@ extern void rescale(const float* in_buffer, float* out_buffer, const uint32_t co
 
 bool TrainAutoEncoder(int argc, char** argv)
 {
+#if 0
 	if(argc != 4)
 	{
 		printf("Usage: VerifyCD [in_data.idx] [out_features.idx] [out_reconstruction.idx] [out_encode_features.idx]\n");
@@ -213,6 +214,6 @@ bool TrainAutoEncoder(int argc, char** argv)
 	delete in_data;
 
 	SiCKL::OpenGLRuntime::Finalize();
-
+#endif
 	return true;
 }
