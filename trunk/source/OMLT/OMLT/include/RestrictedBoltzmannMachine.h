@@ -28,11 +28,13 @@ namespace OMLT
 
 		ActivationFunction_t visible_type;
 		ActivationFunction_t hidden_type;
-	private:
+
 		// used to calculate the hidden feature vector
 		FeatureMap hidden;
 		// used to calculate visible feature vector
 		FeatureMap visible;
+	private:
+
 		
 		RestrictedBoltzmannMachine(uint32_t in_visible_count, uint32_t in_hidden_count, ActivationFunction_t in_visible_type, ActivationFunction_t in_hidden_type);
 

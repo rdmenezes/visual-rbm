@@ -25,9 +25,11 @@ namespace OMLT
 
 		const ActivationFunction_t hidden_type;
 		const ActivationFunction_t output_type;
-	private:
+
 		FeatureMap encoder;
 		FeatureMap decoder;
+	private:
+
 		AutoEncoder(uint32_t in_visible_count, uint32_t in_hidden_count, ActivationFunction_t in_hidden_type, ActivationFunction_t in_output_type);
 
 		// private parse method
