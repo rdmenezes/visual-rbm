@@ -14,6 +14,7 @@ namespace OMLT
 	class MultilayerPerceptron
 	{
 	public:
+		MultilayerPerceptron();
 		~MultilayerPerceptron();
 		void FeedForward(float* input_vector, float* output_vector) const;
 		// feedforward to the given layer
@@ -39,8 +40,7 @@ namespace OMLT
 		// serialization
 		std::string ToJSON() const;
 		static MultilayerPerceptron* FromJSON(const std::string& in_JSON);
-private: 
-		MultilayerPerceptron();
+	private: 
 		std::vector<Layer*> _layers;
 		// properly aligned scratch buffers
 		mutable std::vector<float*> _activations;

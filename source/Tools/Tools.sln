@@ -21,6 +21,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "image2csv", "image2csv\imag
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "shuffleidx", "shuffleidx\shuffleidx.vcxproj", "{9FF6EE0A-B4FB-46B1-9064-F28119B4F744}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "buildmlp", "buildmlp\buildmlp.vcxproj", "{C40A7AE5-CC70-49A9-9DDE-DC5B1B55F2F4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -67,6 +69,10 @@ Global
 		{9FF6EE0A-B4FB-46B1-9064-F28119B4F744}.Debug|Win32.Build.0 = Debug|Win32
 		{9FF6EE0A-B4FB-46B1-9064-F28119B4F744}.Release|Win32.ActiveCfg = Release|Win32
 		{9FF6EE0A-B4FB-46B1-9064-F28119B4F744}.Release|Win32.Build.0 = Release|Win32
+		{C40A7AE5-CC70-49A9-9DDE-DC5B1B55F2F4}.Debug|Win32.ActiveCfg = Debug|Win32
+		{C40A7AE5-CC70-49A9-9DDE-DC5B1B55F2F4}.Debug|Win32.Build.0 = Debug|Win32
+		{C40A7AE5-CC70-49A9-9DDE-DC5B1B55F2F4}.Release|Win32.ActiveCfg = Release|Win32
+		{C40A7AE5-CC70-49A9-9DDE-DC5B1B55F2F4}.Release|Win32.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
