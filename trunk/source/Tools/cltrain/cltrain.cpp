@@ -315,6 +315,7 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 				break;
 			case ModelType::MLP:
 				loaded.mlp = model.mlp;
+				break;
 			default:
 				printf("Could not parse \"%s\"\n", arguments[Import]);
 				return Error;
@@ -407,6 +408,7 @@ bool Run(MODEL* in_model, TrainingSchedule<TRAINER>* in_schedule)
 		{
 			printf("epoch;training error\n");
 		}
+		fflush(stdout);
 	}
 
 	uint32_t epoch_count = 0;
@@ -443,8 +445,8 @@ bool Run(MODEL* in_model, TrainingSchedule<TRAINER>* in_schedule)
 				{
 					printf("%u;%.8f\n", epoch_count, train_error);
 				}
+				fflush(stdout);
 			}
-			fflush(stdout);
 
 			// reset error
 			train_error = validation_error = 0.0f;
