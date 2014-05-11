@@ -340,7 +340,7 @@ Error:
 
 						//now get the number of epochs
 						cJSON* cj_epochs = cJSON_GetObjectItem(cj_train_config, "Epochs");
-						if(cj_epochs->type != cJSON_Number || cj_epochs->valueint < 1)
+						if(cj_epochs == nullptr || cj_epochs->type != cJSON_Number || cj_epochs->valueint < 1)
 						{
 							goto Error;
 						}
