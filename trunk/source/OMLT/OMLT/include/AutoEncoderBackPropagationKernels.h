@@ -129,7 +129,7 @@ struct SourceCalcOutput : public SiCKL::Source
 			EndFor
 
 			// take hidden dropout into acccoount
-			accumulation = accumulation + (1.0f / (1.0f - HIDDEN_DROPOUT_PROB));
+			accumulation = accumulation * (1.0f / (1.0f - HIDDEN_DROPOUT_PROB));
 			// add bias
 			accumulation = accumulation + in_weights(k+1, 0);
 
