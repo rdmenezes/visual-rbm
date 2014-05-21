@@ -2,6 +2,7 @@
 #include <IDX.hpp>
 #include <RestrictedBoltzmannMachine.h>
 #include <AutoEncoder.h>
+#include <MultilayerPerceptron.h>
 using namespace OMLT;
 
 #include <string.h>
@@ -9,8 +10,9 @@ using namespace OMLT;
 #include <sstream>
 
 const char* Usage = 
-	"Calculates the hidden activations for an input IDX dataset and trained\n"
-	"model.\n"
+	"Calculates the appropriate output for an input IDX dataset and trained\n"
+	"model.  RBMs and AutoEncoders calculate their hidden activations while\n"
+	"an MLP will FeedForward through the entire network.\n"
 	"\n"
 	"Usage: calchidden [INPUT] [OUTPUT] [MODEL]\n"
 	"\n"
@@ -32,17 +34,17 @@ int main(int argc, char** argv)
 
 	const char* input_string = argv[1];
 	const char* output_string = argv[2];
-	const char* rbm_string = argv[3];
+	const char* model_string = argv[3];
 
-	IDX* input = NULL;
-	IDX* output = NULL;
+	IDX* input = nullptr;
+	IDX* output = nullptr;
 	std::string model_json;
 	Model model;
 	uint32_t input_count = 0;
 	uint32_t output_count = 0;
 
 	input = IDX::Load(input_string);
-	if(input == NULL)
+	if(input == nullptr)
 	{
 		printf("Could not open input IDX file \"%s\"\n", input_string);
 		goto CLEANUP;
@@ -55,11 +57,11 @@ int main(int argc, char** argv)
 	input_count = input->GetRowLength();
 
 
-	if(OMLT::ReadTextFile(rbm_string, model_json))
+	if(OMLT::ReadTextFile(model_string, model_json))
 	{
 		if(!Model::FromJSON(model_json, model))
 		{
-			printf("Could not parse model json from \"%s\"\n", rbm_string);
+			printf("Could not parse model json from \"%s\"\n", model_string);
 			goto CLEANUP;
 		}
 
@@ -72,7 +74,7 @@ int main(int argc, char** argv)
 			}
 			else
 			{
-				printf("Loaded RBM's visible unit count is %u, while input data requires %u\n", model.rbm->visible_count, input->GetRowLength());
+				printf("Loaded RBM's visible unit count is %u, while input data requires %u\n", model.rbm->visible_count, input_count);
 				goto CLEANUP;
 			}
 			break;
@@ -83,25 +85,35 @@ int main(int argc, char** argv)
 			}
 			else
 			{
-				printf("Loaded AutoEncoder's visible unit count is %u, while input data requires %u\n", model.ae->visible_count, input->GetRowLength());
+				printf("Loaded AutoEncoder's visible unit count is %u, while input data requires %u\n", model.ae->visible_count, input_count);
 				goto CLEANUP;
 			}
 			break;
+		case ModelType::MultilayerPerceptron:
+			if(model.mlp->InputLayer()->inputs == input_count)
+			{
+				output_count = model.mlp->OutputLayer()->outputs;
+			}
+			else
+			{
+				printf("Loaded Multilayer Perceptron's visible unit count is %u, while input data requires %u\n", model.mlp->InputLayer()->inputs, input_count);
+			}
+			break;
 		default:
-			printf("Loaded model must be an AutoEncoder or a RestrictedBoltzmannMachine\n");
+			printf("Did not recognize type\n");
 			goto CLEANUP;
 		}
 	}
 	else
 	{
-		printf("Could not open input model file \"%s\"\n", rbm_string);
+		printf("Could not open input model file \"%s\"\n", model_string);
 		goto CLEANUP;
 	}
 	
 
 	output = IDX::Create(output_string, input->GetEndianness(), Single, output_count);
 
-	if(output == NULL)
+	if(output == nullptr)
 	{
 		printf("Could not create output IDX file \"%s\"\n", output_string);
 		goto CLEANUP;
@@ -121,6 +133,9 @@ int main(int argc, char** argv)
 			break;
 		case ModelType::AE:
 			model.ae->Encode(visible_buffer, hidden_buffer);
+			break;
+		case ModelType::MLP:
+			model.mlp->FeedForward(visible_buffer, hidden_buffer);
 			break;
 		}
 		

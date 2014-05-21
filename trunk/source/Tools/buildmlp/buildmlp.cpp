@@ -14,41 +14,14 @@ using namespace std;
 const char* Usage =
 	"Construct a MLP from a stack of RBMs, AutoEncoders, and MLPs\n"
 	"\n"
-	"Usage: buildmlp [FLAGS] files...\n"
+	"Usage: buildmlp [OPTIONS] files... -o [OUTPUT]\n"
 	"\n"
 	"Flags:\n"
-	"  -f     Add subsequent models normally (default)\n"
-	"  -t     Transpose subsequent models before adding\n"
-	"  -o     Subsequent filename will be destination for final MLP\n"
-	"\n"
-	"If no output destination is specified, MLP will be printed to\n"
-	"stdout\n";
+	"  -f              Add subsequent models normally (default)\n"
+	"  -t              Transpose subsequent models before adding\n"
+	"  -n INDEX COUNT  Adds COUNT layers starting at layer INDEX (MLP only)\n"				
+	"  -o              Subsequent filename will be destination for final MLP\n";
 
-
-enum Flag
-{
-	Invalid = -1, Forward, Transpose, Output
-};
-
-Flag parse_flag(const char* in_flag)
-{
-	static const char* flags[] = {"-f", "-t", "-o"};
-	for(uint32_t k = 0; k < ArraySize(flags); k++)
-	{
-		if(strcmp(in_flag, flags[k]) == 0)
-		{
-			return (Flag)k;
-		}
-	}
-	return Invalid;
-}
-
-struct Layer
-{
-	string filename;
-	bool transposed;
-	Model model;
-};
 
 void copy(FeatureMap& dest, const FeatureMap& src)
 {
@@ -65,6 +38,47 @@ void copy(FeatureMap& dest, const FeatureMap& src)
 	}
 }
 
+enum Flag
+{
+	Invalid = -1, Forward, Transpose, Output, Layers, Count
+};
+
+Flag parse_flag(const char* in_flag)
+{
+	static const char* flags[] = {"-f", "-t", "-o", "-n"};
+	for(uint32_t k = 0; k < ArraySize(flags); k++)
+	{
+		if(strcmp(in_flag, flags[k]) == 0)
+		{
+			return (Flag)k;
+		}
+	}
+	return Invalid;
+}
+
+struct Layer
+{
+	string filename;
+	bool transposed;
+	Model model;
+	uint32_t idx;
+	uint32_t count;
+};
+
+enum State
+{
+	ERROR = -1,
+	START = 0,
+	FILENAME = 0,
+	F,
+	T,
+	N,
+	IDX,
+	COUNT,
+	O,
+	OUT_FILENAME,
+};
+
 int main(int argc, char** argv)
 {
 	if(argc < 2)
@@ -79,58 +93,137 @@ int main(int argc, char** argv)
 	std::vector<Layer> layers;
 	{
 		bool transposed = false;
-		bool output = false;
+		uint32_t idx = 0;
+		uint32_t count = 0;
+
+		State current_state = START;
+		State next_state;
+		Flag flag;
 		for(int32_t k = 1; k < argc; k++)
 		{
-			if(output)
+			flag = parse_flag(argv[k]);
+			
+			// figure out the next state
+			switch(current_state)
 			{
-				output = false;
+			case FILENAME:
+				switch(flag)
+				{
+				case Forward:
+					next_state = F;
+					break;
+				case Transpose:
+					next_state = T;
+					break;
+				case Layers:
+					next_state = N;
+					break;
+				case Output:
+					next_state = O;
+					break;
+				case Invalid:
+					next_state = FILENAME;
+					break;
+				default:
+					next_state = ERROR;
+					break;
+				}
+				break;
+			case F:
+				switch(flag)
+				{
+				case Layers:
+					next_state = N;
+					break;
+				case Invalid:
+					next_state = FILENAME;
+					break;
+				default:
+					next_state = ERROR;
+					break;
+				}
+				break;
+			case T:
+				switch(flag)
+				{
+				case Invalid:
+					next_state = FILENAME;
+					break;
+				default:
+					next_state = ERROR;
+				}
+				break;
+			case N:
+				next_state = IDX;
+				break;
+			case IDX:
+				next_state = COUNT;
+				break;
+			case COUNT:
+				next_state = FILENAME;
+				break;
+			case O:
+				next_state = OUT_FILENAME;
+				break;
+			case OUT_FILENAME:
+				next_state = ERROR;
+				break;
+			}
+
+			switch(next_state)
+			{
+			case ERROR:
+				printf("Error parsing command line arguments\n");
+				return -1;
+				break;
+			case FILENAME:
+				{
+					Layer lay;
+					lay.filename = argv[k];
+					lay.transposed = transposed;
+					lay.idx = idx;
+					lay.count = count;
+					layers.push_back(lay);
+					idx = count = 0;
+				}
+				break;
+			case F:
+				transposed = false;
+				break;
+			case T:
+				transposed = true;
+				break;
+			case IDX:
+				if(sscanf(argv[k], "%u", &idx) != 1)
+				{
+					printf("Could not parse \"%s\" as index\n", argv[k]);
+					return -1;
+				}
+				break;
+			case COUNT:
+				if(sscanf(argv[k], "%u", &count) != 1)
+				{
+					printf("Could not parse \"%s\" as count\n", argv[k]);
+					return -1;
+				}
+				else if(count == 0)
+				{
+					printf("Count must be a positive integer\n");
+					return -1;
+				}
+				break;
+			case OUT_FILENAME:
 				model_dest = fopen(argv[k], "wb");
-				
 				if(model_dest == nullptr)
 				{
 					printf("Could not open \"%s\" for writing\n");
 					return -1;
 				}
-			}
-			else
-			{
-				Flag f = parse_flag(argv[k]);
-				switch(f)
-				{
-				case Invalid:
-					{
-						Layer lay;
-						lay.filename = argv[k];
-						lay.transposed = transposed;
-						layers.push_back(lay);
-					}
-					break;
-				case Forward:
-					transposed = false;
-					break;
-				case Transpose:
-					transposed = true;
-					break;
-				case Output:
-					if(model_dest)
-					{
-						printf("Multiple output files specified\n");
-						return -1;
-					}
-					else
-					{
-						output = true;
-					}
-				}
-			}
-		}
-	}
+				break;
 
-	// print to stdout if no output file specified
-	if(model_dest == nullptr)
-	{
-		model_dest = stdout;
+			}
+			current_state = next_state;
+		}
 	}
 
 	// load up models
@@ -202,7 +295,20 @@ int main(int argc, char** argv)
 				}
 
 				MLP* mlp = model.mlp;
-				for(uint32_t k = 0; k < mlp->LayerCount(); k++)
+
+				uint32_t start, end;
+				if(it->count > 0)
+				{
+					start = it->idx;
+					end = start + it->count;
+				}
+				else
+				{
+					start  = 0;
+					end = mlp->LayerCount();
+				}
+				
+				for(uint32_t k = start; k < end; k++)
 				{
 					MLP::Layer* old_layer = mlp->GetLayer(k);
 					MLP::Layer* new_layer = new MLP::Layer(old_layer->inputs, old_layer->outputs, old_layer->function);
