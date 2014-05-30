@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <random>
 #include <iostream>
+#include <cmath>
 
 // windows
 #include <malloc.h>
@@ -12,6 +13,8 @@ namespace OMLT
 {
 	extern __m128 _mm_sigmoid_ps(__m128 x0);
 	extern __m128 _mm_ln_1_plus_e_x_ps(__m128 x);
+	extern __m128 _mm_exp_ps(__m128 x);
+	extern __m128 _mm_abs_ps(__m128 x);
 }
 
 inline float sign(const float x)
@@ -274,5 +277,79 @@ bool VerifyLn1PlusEx(int argc, char** argv)
 		return false;
 	}
 
+	return true;
+}
+
+
+bool VerifyExp(int argc, char** argv)
+{
+	std::mt19937_64 random;
+	random.seed(1);
+	// we're only using exp for softmax, whose accumlations are going to be in this range
+	std::uniform_real<float> uniform(-88, 0.0f);	
+
+	const uint32_t block_count = 500000;
+
+	float* buffer = (float*)_aligned_malloc(sizeof(float) * 4 * block_count, 16);
+	float* simd_result = (float*)_aligned_malloc(sizeof(float) * 4 * block_count, 16);
+	float* slow_result = (float*)_aligned_malloc(sizeof(float) * 4 * block_count, 16);
+
+	// initialize
+	for(uint32_t k = 0; k < block_count * 4; k++)
+	{
+		float f = uniform(random);
+		slow_result[k] = std::exp(f);
+		buffer[k] = f;
+	}
+
+	// calculate results
+	float* buffer_head = buffer;
+	float* simd_head = simd_result;
+	for(uint32_t k = 0; k < block_count; k++)
+	{
+		__m128 in = _mm_load_ps(buffer_head);
+		__m128 exp = OMLT::_mm_exp_ps(in);
+		_mm_store_ps(simd_head, exp);
+		buffer_head += 4;
+		simd_head += 4;
+	}
+
+	// calculate mean absolute error
+	simd_head = simd_result;
+	float* slow_head = slow_result;
+	float re;
+	{
+		__m128 err = _mm_setzero_ps();
+		for(uint32_t k = 0; k < block_count; k++)
+		{
+			__m128 simd = _mm_load_ps(simd_head);
+			__m128 slow = _mm_load_ps(slow_head);
+
+			__m128 relative_err = _mm_sub_ps(_mm_div_ps(slow, simd), _mm_set1_ps(1.0f));
+			err = _mm_add_ps(err, relative_err);
+
+			simd_head += 4;
+			slow_head += 4;
+		}
+		err = _mm_hadd_ps(err, err);
+		err = _mm_hadd_ps(err, err);
+
+		err = _mm_div_ps(err, _mm_set1_ps(block_count * 4.0f));
+		
+		_mm_store_ss(&re, err);
+
+		re *= 100;
+	}
+
+	_aligned_free(buffer);
+	_aligned_free(simd_result);
+	_aligned_free(slow_result);
+
+	printf("Average Percent Error: %.9f\n", re);
+	if(re > -3.878319636)
+	{
+		printf("Too Large\n");
+		return false;
+	}
 	return true;
 }

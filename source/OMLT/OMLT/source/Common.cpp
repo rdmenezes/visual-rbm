@@ -49,10 +49,41 @@ namespace OMLT
 
 	/// SIMD shennanigans
 
-#	define _mm_negabs_ps(x) _mm_or_ps(x, x80000000)
-#	define _mm_abs_ps(x) _mm_and_ps(x, x7FFFFFFF)
-#	define _mm_sign_ps(x) _mm_or_ps(_mm_set_ps1(1.0f), _mm_and_ps(x, x80000000))
+	__m128 _mm_negabs_ps(__m128 x)
+	{
+		union
+		{
+			float f;
+			uint32_t u;
+		};
+		// sign bit only
+		u = 0x80000000;
+		return _mm_or_ps(x, _mm_set_ps1(f));
+	}
 
+	__m128 _mm_abs_ps(__m128 x)
+	{
+		union
+		{
+			float f;
+			uint32_t u;
+		};
+		// everything but the sign bit
+		u = 0x7FFFFFFF;
+		return _mm_and_ps(x, _mm_set_ps1(f));
+	}
+
+	__m128 _mm_sign_ps(__m128 x)
+	{
+		union
+		{
+			float f;
+			uint32_t u;
+		};
+		// sign bit only
+		u = 0x80000000;
+		return _mm_or_ps(_mm_set_ps1(1.0f), _mm_and_ps(x, _mm_set_ps1(f)));
+	}
 
 	
 	__m128 _mm_rectifiedlinear_ps(__m128 x0)
@@ -67,27 +98,16 @@ namespace OMLT
 	 */
 	__m128 _mm_sigmoid_ps(__m128 x0)
 	{
-		union
-		{
-			float f;
-			uint32_t u;
-		};
-
 		 // first calculate abs
 		__m128 x;
 		__m128 sign;
 		{
-			u = 0x80000000;
-			__m128 x80000000 = _mm_set_ps1(f);
-
 			x = _mm_negabs_ps(x0);
 			{
 				// now clamp it to -4, 0
 				__m128 neg_4 = _mm_set_ps1(-4.0f);
 				x = _mm_max_ps(neg_4, x);
 				{
-					u = 0x7FFFFFFF;
-					__m128 x7FFFFFFF = _mm_set_ps1(f);
 					// and now abs it
 					x = _mm_abs_ps(x);
 				}
@@ -135,10 +155,6 @@ namespace OMLT
 		// first, set the min of x to be -4, everything to the left of that is 0 which is f(-4)
 		x = _mm_max_ps(_mm_set_ps1(-4.0f), x);
 		
-		// need this constant for _mm_sign_ps
-		u = 0x80000000;
-		__m128 x80000000 = _mm_set_ps1(f);
-
 		//y0 = (64 + x * (12 * (4+x)-x^2 * sign(x))) / 96
 
 		__m128 y0 = _mm_add_ps(_mm_set_ps1(4.0f), x);
@@ -165,6 +181,47 @@ namespace OMLT
 	__m128 _mm_noop_ps(__m128 x)
 	{
 		return x;
+	}
+
+	// returns a __m128 filled with the max value of x:
+	__m128 _mm_hmax_ps(__m128 x)
+	{
+		auto& max = x;
+		max = _mm_max_ps(max, _mm_shuffle_ps(max, max, _MM_SHUFFLE(0, 3, 2, 1)));
+		max = _mm_max_ps(max, _mm_shuffle_ps(max, max, _MM_SHUFFLE(1, 0, 3, 2)));
+		return max;
+	}
+
+	// a fast approximation of exp adopted for single precision floats
+	// A Fast, Compact Approximation of the Exponential Function
+	// http://nic.schraudolph.org/pubs/Schraudolph99.pdf
+	// absolute error increases as x increases, should only use for negative values
+	// of x
+	//
+	// exp(x) ~ reinterpret_cast<float>((int)(2^23 / ln(2) * x + 127 * 2^23))
+	// only valid on the range: (-87.336540, 88.722816)
+	__m128 _mm_exp_ps(__m128 x)
+	{
+		// clamp x within valid range
+		x = _mm_max_ps(x, _mm_set_ps1(-87.336540));
+		x = _mm_min_ps(x, _mm_set_ps1(88.722816));
+
+		// 127 * 2^23
+		__m128 b = _mm_set_ps1(1065353216);
+		// ln(2)
+		__m128 ln_2 = _mm_set_ps1(0.693147180559945309f);
+
+		auto a_times_x = _mm_mul_ps(_mm_set_ps1(1 << 23), x);
+		a_times_x = _mm_div_ps(a_times_x, ln_2);
+
+		auto sum = _mm_add_ps(a_times_x, b);
+
+		// cast to ints
+		__m128i i= _mm_cvtps_epi32(sum);
+		// reinterpret as floats
+		__m128 f = _mm_castsi128_ps(i);
+
+		return f;
 	}
 
 	// feature map class
@@ -265,6 +322,58 @@ namespace OMLT
 			break;
 		case ActivationFunction::Sigmoid:
 			CalcActivation(_accumulations, _biases, _feature_blocks, output_vector, _mm_sigmoid_ps);
+			break;
+		case ActivationFunction::Softmax:
+			CalcActivation(_accumulations, _biases, _feature_blocks, output_vector, _mm_noop_ps);
+			{
+				// to avoid overflow, we can subtract the max accumulation from all the exp(x) calls
+				// http://deeplearning.stanford.edu/wiki/index.php/Exercise:Softmax_Regression
+
+				// set dangling values to -FLT_MAX
+				for(uint32_t k = feature_count; k < _feature_blocks * 4; k++)
+				{
+					output_vector[k] = -FLT_MAX;
+				}
+
+				// calculate the max value
+				__m128 max = _mm_set1_ps(-FLT_MAX);
+				float* accumulation_head = output_vector;
+				for(uint32_t k = 0; k < _feature_blocks; k++)
+				{
+					__m128 acc = _mm_load_ps(accumulation_head);
+					max = _mm_max_ps(max, acc);
+
+					accumulation_head += 4;
+				}
+				max = _mm_hmax_ps(max);
+
+				// calculate the divisor
+				__m128 divisor = _mm_setzero_ps();
+				accumulation_head = output_vector;
+				for(uint32_t k = 0; k < _feature_blocks; k++)
+				{
+					__m128 acc = _mm_load_ps(accumulation_head);
+					__m128 val = _mm_exp_ps(_mm_sub_ps(acc, max));
+					divisor = _mm_add_ps(divisor, val);
+
+					accumulation_head += 4;
+				}
+
+				// now calculate softmax
+				accumulation_head = output_vector;
+				float* output_head = output_vector;
+				for(uint32_t k = 0; k < _feature_blocks; k++)
+				{
+					__m128 acc = _mm_load_ps(accumulation_head);
+					__m128 val = _mm_exp_ps(_mm_sub_ps(val, max));
+					val = _mm_div_ps(val, divisor);
+
+					_mm_store_ps(output_head, val);
+
+					accumulation_head += 4;
+					output_head += 4;
+				}
+			}
 			break;
 		}
 
