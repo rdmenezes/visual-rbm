@@ -11,6 +11,7 @@ typedef bool (*TestFunction)(int argc, char** argv);
 
 EXTERN(VerifySigmoid);
 EXTERN(VerifyLn1PlusEx);
+EXTERN(VerifyExp);
 EXTERN(TrainRBM);
 EXTERN(TrainAutoEncoder);
 EXTERN(SerializeRBM);
@@ -27,4 +28,5 @@ struct
 	TEST(TrainRBM),
 	TEST(TrainAutoEncoder),
 	TEST(SerializeRBM),
+	TEST(VerifyExp),
 };
