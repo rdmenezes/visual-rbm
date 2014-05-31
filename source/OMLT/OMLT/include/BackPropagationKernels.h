@@ -103,6 +103,8 @@ struct SourceFeedForward : public SiCKL::Source
 				// activation function
 				switch(FUNC)
 				{
+				case ActivationFunction::Softmax:
+					// calculate the rest in a second pass
 				case ActivationFunction::Linear:
 					out_activation = accumulation;
 					break;
@@ -117,6 +119,44 @@ struct SourceFeedForward : public SiCKL::Source
 				out_activation = 0.0f;
 				out_seed = in_seeds(j, m);
 			EndIf
+		END_MAIN
+	END_SOURCE
+};
+
+struct SourceSoftmax : public SiCKL::Source
+{
+	uint32_t ROW_LENGTH;
+	
+	BEGIN_SOURCE
+		BEGIN_CONST_DATA
+			CONST_DATA(Buffer2D<Float>, in_inputs)
+		END_CONST_DATA
+
+		BEGIN_OUT_DATA
+			OUT_DATA(Float, out_output)
+		END_OUT_DATA
+
+		BEGIN_MAIN
+			const auto row = Index().Y;
+
+			// first we need to find the max activation (for numerical stability)
+			Float max = -FLT_MAX;
+
+			ForInRange(i, 0, ROW_LENGTH)
+				max = Max(max, in_inputs(i, row));
+			EndFor
+			
+			// calculate the denominator
+			Float denominator = 0.0f;
+			ForInRange(i, 0, ROW_LENGTH)
+				denominator = denominator + Exp(in_inputs(i, row) - max);
+			EndFor
+
+			// calculate the numerator
+			Float numerator = Exp(in_inputs(Index()) - max);
+
+			// result
+			out_output = numerator / denominator;
 		END_MAIN
 	END_SOURCE
 };
@@ -169,11 +209,20 @@ struct SourceCalcTopSensitivities : public SiCKL::Source
 			Float label = in_labels(j,m);
 			Float activation = in_activations(j, m);
 
-			Float diff = label - activation;
+			if(FUNC == ActivationFunction::Softmax)
+			{
+				// cross entropy error
+				out_sensitivity = label - activation;
+			}
+			else
+			{
+				// squared error
+				Float diff = label - activation;
 
-			Float partial;
-			PartialDerivative(activation, FUNC, partial);
-			out_sensitivity = diff * partial;
+				Float partial;
+				PartialDerivative(activation, FUNC, partial);
+				out_sensitivity = diff * partial;
+			}
 
 		END_MAIN
 	END_SOURCE

@@ -11,6 +11,7 @@ namespace OMLT
 		"Linear",
 		"RectifiedLinear",
 		"Sigmoid",
+		"Softmax",
 	};
 
 	ActivationFunction_t ParseFunction(const char* name)

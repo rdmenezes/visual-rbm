@@ -168,16 +168,27 @@ namespace OMLT
 				assert(lay->OutputRandom0.Width == lay->OutputUnits);
 				assert(lay->OutputRandom0.Height == _minibatch_size);
 
-				feed_forward->BindOutput(0, lay->Activation);
+				feed_forward->BindOutput(0, lay->Activation0);
 				feed_forward->BindOutput(1, lay->OutputRandom1);
-				assert(lay->Activation.Width == lay->OutputUnits);
-				assert(lay->Activation.Height == _minibatch_size);
+				assert(lay->Activation0.Width == lay->OutputUnits);
+				assert(lay->Activation0.Height == _minibatch_size);
 				assert(lay->OutputRandom1.Width == lay->OutputRandom0.Width);
 				assert(lay->OutputRandom1.Height == lay->OutputRandom0.Height);
 
 				feed_forward->Run();
 
 				swap(lay->OutputRandom0, lay->OutputRandom1);
+			}
+
+			if(lay->Function == ActivationFunction::Softmax)
+			{
+				OpenGLProgram* softmax = lay->CalcSoftmax;
+				softmax->SetInput(0, lay->Activation0);
+				softmax->BindOutput(0, lay->Activation1);
+
+				softmax->Run();
+
+				swap(lay->Activation0, lay->Activation1);
 			}
 		}
 
@@ -189,11 +200,11 @@ namespace OMLT
 			{
 				// fill out calc_top_sensitivities (and set the training examples the labels!
 				calc_sensitivities->SetInput(0, *_last_label);
-				calc_sensitivities->SetInput(1, lay->Activation);
+				calc_sensitivities->SetInput(1, lay->Activation0);
 				assert(example_label.Width == lay->OutputUnits);
 				assert(example_label.Height == _minibatch_size);
-				assert(lay->Activation.Width == lay->OutputUnits);
-				assert(lay->Activation.Height == _minibatch_size);
+				assert(lay->Activation0.Width == lay->OutputUnits);
+				assert(lay->Activation0.Height == _minibatch_size);
 			
 				calc_sensitivities->BindOutput(0, lay->Sensitivities);
 				assert(lay->Sensitivities.Width == lay->OutputUnits);
@@ -214,7 +225,7 @@ namespace OMLT
 
 				calc_sensitivities->SetInput(0, lay->NextLayer->Weights0);
 				calc_sensitivities->SetInput(1, lay->NextLayer->Sensitivities);
-				calc_sensitivities->SetInput(2, lay->Activation);
+				calc_sensitivities->SetInput(2, lay->Activation0);
 				calc_sensitivities->SetInput(3, lay->InputEnabled);
 				assert(lay->NextLayer->Weights0.Width == (lay->OutputUnits + 1));
 
@@ -277,7 +288,7 @@ namespace OMLT
 		float* out1 = (float*)_output_buffer1;
 
 		_last_label->GetData(out0);
-		_layers.back()->Activation.GetData(out1);
+		_layers.back()->Activation0.GetData(out1);
 
 		float err = 0.0f;
 		for(uint32_t k = 0; k < count; k++)
@@ -347,10 +358,10 @@ namespace OMLT
 				assert(lay->OutputRandom0.Width == lay->OutputUnits);
 				assert(lay->OutputRandom0.Height == _minibatch_size);
 
-				feed_forward->BindOutput(0, lay->Activation);
+				feed_forward->BindOutput(0, lay->Activation0);
 				feed_forward->BindOutput(1, lay->OutputRandom1);
-				assert(lay->Activation.Width == lay->OutputUnits);
-				assert(lay->Activation.Height == _minibatch_size);
+				assert(lay->Activation0.Width == lay->OutputUnits);
+				assert(lay->Activation0.Height == _minibatch_size);
 				assert(lay->OutputRandom1.Width == lay->OutputRandom0.Width);
 				assert(lay->OutputRandom1.Height == lay->OutputRandom0.Height);
 
@@ -390,7 +401,7 @@ namespace OMLT
 		}
 		else
 		{
-			result->Input = &_layers.back()->Activation;
+			result->Input = &_layers.back()->Activation0;
 		}
 
 		uint32_t width, height;
@@ -461,7 +472,11 @@ namespace OMLT
 			width = result->OutputUnits;
 			height = _minibatch_size;
 			uint32_t* seeds = GetSeedBuffer(width * 4, height, random);
-			result->Activation =  OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
+			result->Activation0 =  OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
+			if(result->Function == ActivationFunction::Softmax)
+			{
+				result->Activation1 =  OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
+			}
 			result->OutputRandom0 =  OpenGLBuffer2D(width, height, ReturnType::UInt4, seeds);
 			result->OutputRandom1 =  OpenGLBuffer2D(width, height, ReturnType::UInt4, nullptr);
 			free(seeds);
@@ -555,7 +570,7 @@ namespace OMLT
 	{
 		assert(layer < _layers.size());	
 	
-		_layers[layer]->Activation.GetData(*output);
+		_layers[layer]->Activation0.GetData(*output);
 		return true;
 	}
 	bool BackPropagation::DumpWeightMatrix(uint32_t layer, float** weights)
@@ -619,6 +634,20 @@ namespace OMLT
 				layer->FeedForward = comp.Build(source);
 				layer->FeedForward->Initialize(layer->OutputUnits, _minibatch_size);
 				//printf("%s\n", layer->FeedForward->GetSource().c_str());
+			}
+
+			if(layer->Function == ActivationFunction::Softmax)
+			{
+				SourceSoftmax source;
+				source.ROW_LENGTH = layer->OutputUnits;
+
+				source.Parse();
+				layer->CalcSoftmax = comp.Build(source);
+				layer->CalcSoftmax->Initialize(layer->OutputUnits, _minibatch_size);
+			}
+			else
+			{
+				layer->CalcSoftmax = nullptr;
 			}
 
 			// calc sensitivies
