@@ -114,7 +114,8 @@ namespace OMLT
 			/*
 			 * Output associated data
 			 */
-			OpenGLBuffer2D Activation;
+			OpenGLBuffer2D Activation0;
+			OpenGLBuffer2D Activation1;
 			// random seeds used for Gaussian noise (if warranted)
 			OpenGLBuffer2D OutputRandom0;
 			OpenGLBuffer2D OutputRandom1;
@@ -127,6 +128,7 @@ namespace OMLT
 			// methods
 			OpenGLProgram* CalcEnabledInputs;
 			OpenGLProgram* FeedForward;
+			OpenGLProgram* CalcSoftmax;
 			OpenGLProgram* CalcSensitivity;
 			OpenGLProgram* UpdateWeights;
 		};

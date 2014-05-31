@@ -15,6 +15,8 @@ namespace OMLT
 			RectifiedLinear,
 			// sigmoid function: f(x) == 1 / (1 + exp(-x))
 			Sigmoid,
+			// softmax function: 
+			Softmax,
 			// the total number of function
 			Count,
 		};
