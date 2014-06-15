@@ -101,20 +101,7 @@ struct SourceFeedForward : public SiCKL::Source
 				}
 
 				// activation function
-				switch(FUNC)
-				{
-				case ActivationFunction::Softmax:
-					// calculate the rest in a second pass
-				case ActivationFunction::Linear:
-					out_activation = accumulation;
-					break;
-				case ActivationFunction::RectifiedLinear:
-					out_activation = Max(0.0f, accumulation);
-					break;
-				case ActivationFunction::Sigmoid:
-					out_activation = Sigmoid(accumulation);
-					break;
-				}
+				out_activation = CalcActivation(FUNC, accumulation);
 			Else
 				out_activation = 0.0f;
 				out_seed = in_seeds(j, m);
@@ -161,31 +148,6 @@ struct SourceSoftmax : public SiCKL::Source
 	END_SOURCE
 };
 
-static void PartialDerivative(const Float& activation, ActivationFunction_t func, Float& out_partial)
-{
-	switch(func)
-	{
-	case ActivationFunction::Linear:
-		{
-			out_partial = 1.0f;
-		}
-		break;
-	case ActivationFunction::RectifiedLinear:
-		{
-			out_partial = Max(0.0f, Sign(activation));
-		}
-		break;
-	case ActivationFunction::Sigmoid:
-		{
-			const Float& sigmoid = activation;
-			out_partial = ((1.0f - sigmoid) * sigmoid);
-		}
-		break;
-	default:
-		assert(false);
-	}
-}
-
 struct SourceCalcTopSensitivities : public SiCKL::Source
 {
 	ActivationFunction_t FUNC;
@@ -209,19 +171,16 @@ struct SourceCalcTopSensitivities : public SiCKL::Source
 			Float label = in_labels(j,m);
 			Float activation = in_activations(j, m);
 
+			Float diff = label - activation;
 			if(FUNC == ActivationFunction::Softmax)
 			{
 				// cross entropy error
-				out_sensitivity = label - activation;
+				out_sensitivity = diff;
 			}
 			else
 			{
 				// squared error
-				Float diff = label - activation;
-
-				Float partial;
-				PartialDerivative(activation, FUNC, partial);
-				out_sensitivity = diff * partial;
+				out_sensitivity = diff * CalcActivationPrime(FUNC, activation);
 			}
 
 		END_MAIN
@@ -262,8 +221,7 @@ struct SourceCalcSensitivities : public SiCKL::Source
 				EndFor
 
 				
-				Float partial;
-				PartialDerivative(in_activations(j, m), FUNC, partial);
+				Float partial = CalcActivationPrime(FUNC, in_activations(j, m));
 				out_sensitivity = dp * partial;
 			Else
 				out_sensitivity = 0.0f;

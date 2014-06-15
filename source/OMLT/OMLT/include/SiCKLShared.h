@@ -2,6 +2,7 @@
 
 // extern
 #include <SiCKL.h>
+using namespace SiCKL;
 
 namespace OMLT
 {

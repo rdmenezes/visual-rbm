@@ -128,14 +128,53 @@ struct SourceCalcOutput : public SiCKL::Source
 				accumulation = accumulation + (h_j * w_jk);
 			EndFor
 
-			// take hidden dropout into acccoount
+			// take hidden dropout into acccount
 			accumulation = accumulation * (1.0f / (1.0f - HIDDEN_DROPOUT_PROB));
 			// add bias
 			accumulation = accumulation + in_weights(k+1, 0);
 
+			// calc activation
 			out_activation = CalcActivation(FUNC, accumulation);
 		END_MAIN
 
+	END_SOURCE
+};
+
+struct SourceSoftmax : public SiCKL::Source
+{
+	uint32_t ROW_LENGTH;
+	
+	BEGIN_SOURCE
+		BEGIN_CONST_DATA
+			CONST_DATA(Buffer2D<Float>, in_inputs)
+		END_CONST_DATA
+
+		BEGIN_OUT_DATA
+			OUT_DATA(Float, out_output)
+		END_OUT_DATA
+
+		BEGIN_MAIN
+			const auto row = Index().Y;
+
+			// first we need to find the max activation (for numerical stability)
+			Float max = -FLT_MAX;
+
+			ForInRange(i, 0, ROW_LENGTH)
+				max = Max(max, in_inputs(i, row));
+			EndFor
+			
+			// calculate the denominator
+			Float denominator = 0.0f;
+			ForInRange(i, 0, ROW_LENGTH)
+				denominator = denominator + Exp(in_inputs(i, row) - max);
+			EndFor
+
+			// calculate the numerator
+			Float numerator = Exp(in_inputs(Index()) - max);
+
+			// result
+			out_output = numerator / denominator;
+		END_MAIN
 	END_SOURCE
 };
 
@@ -156,10 +195,20 @@ struct SourceCalcOutputSensitivities : public SiCKL::Source
 			Int k = Index().X;
 			Int m = Index().Y;
 
-			Float t_k = in_labels(k, m);
-			Float z_k = in_outputs(k, m);
+			Float label = in_labels(k, m);
+			Float activation = in_outputs(k, m);
 
-			out_sensitivity = (t_k - z_k) * CalcActivationPrime(FUNC, z_k);
+			Float diff = label - activation;
+			if(FUNC == ActivationFunction::Softmax)
+			{
+				// cross entropy error
+				out_sensitivity = diff;
+			}
+			else
+			{
+				// squared error
+				out_sensitivity = diff * CalcActivationPrime(FUNC, activation);
+			}
 
 		END_MAIN
 

@@ -22,8 +22,11 @@ namespace OMLT
 		, _calc_enabled_hidden(nullptr)
 		, _copy_visible(nullptr)
 		, _calc_hidden(nullptr)
+		, _calc_hidden_softmax(nullptr)
 		, _calc_hidden_states(nullptr)
+		, _calc_hidden_softmax_states(nullptr)
 		, _calc_visible(nullptr)
+		, _calc_visible_softmax(nullptr)
 		, _update_weights(nullptr)
 		, _calc_error(nullptr)
 		, _recompile_required(true)
@@ -37,8 +40,11 @@ namespace OMLT
 		, _calc_enabled_hidden(nullptr)
 		, _copy_visible(nullptr)
 		, _calc_hidden(nullptr)
+		, _calc_hidden_softmax(nullptr)
 		, _calc_hidden_states(nullptr)
+		, _calc_hidden_softmax_states(nullptr)
 		, _calc_visible(nullptr)
+		, _calc_visible_softmax(nullptr)
 		, _update_weights(nullptr)
 		, _calc_error(nullptr)
 		, _recompile_required(true)
@@ -171,44 +177,87 @@ namespace OMLT
 
 		_copy_visible->SetInput(0, in_example);
 		_copy_visible->SetInput(1, _enabled_visible);
-		_copy_visible->BindOutput(0, _visible);
+		_copy_visible->BindOutput(0, _visible0);
 		_copy_visible->Run();
 		
 		/// Calc Hidden and States from Visible
+		if(_model_config.HiddenType != ActivationFunction::Softmax)
+		{
+			_calc_hidden_states->SetInput(0, _visible0);
+			_calc_hidden_states->SetInput(1, _weights0);
+			_calc_hidden_states->SetInput(2, _enabled_hidden);
+			_calc_hidden_states->SetInput(3, _hidden_random0);
+			_calc_hidden_states->BindOutput(0, _hidden_random1);
+			_calc_hidden_states->BindOutput(1, _hidden0);
+			_calc_hidden_states->BindOutput(2, _hidden_states);
+			_calc_hidden_states->Run();
 
-		_calc_hidden_states->SetInput(0, _visible);
-		_calc_hidden_states->SetInput(1, _weights0);
-		_calc_hidden_states->SetInput(2, _enabled_hidden);
-		_calc_hidden_states->SetInput(3, _hidden_random0);
-		_calc_hidden_states->BindOutput(0, _hidden_random1);
-		_calc_hidden_states->BindOutput(1, _hidden);
-		_calc_hidden_states->BindOutput(2, _hidden_states);
-		_calc_hidden_states->Run();
+			swap(_hidden_random0, _hidden_random1);
+		}
+		/// Calc Hidden Softmax and States from Visible
+		else
+		{
+			_calc_hidden->SetInput(0, _visible0);
+			_calc_hidden->SetInput(1, _weights0);
+			_calc_hidden->SetInput(2, _enabled_hidden);
+			_calc_hidden->BindOutput(0, _hidden0);
+			_calc_hidden->Run();
 
-		swap(_hidden_random0, _hidden_random1);
+			_calc_hidden_softmax_states->SetInput(0, _hidden0);
+			_calc_hidden_softmax_states->SetInput(1, _hidden_random0);
+			_calc_hidden_softmax_states->BindOutput(0, _hidden_random1);
+			_calc_hidden_softmax_states->BindOutput(1, _hidden1);
+			_calc_hidden_softmax_states->BindOutput(2, _hidden_states);
+			_calc_hidden_softmax_states->Run();
+
+			swap(_hidden_random0, _hidden_random1);
+			swap(_hidden0, _hidden1);
+		}
 
 		/// Calc Visible Prime
 
 		_calc_visible->SetInput(0, _hidden_states);
 		_calc_visible->SetInput(1, _weights0);
 		_calc_visible->SetInput(2, _enabled_visible);
-		_calc_visible->BindOutput(0, _visible_prime);
+		_calc_visible->BindOutput(0, _visible_prime0);
 		_calc_visible->Run();
+
+		/// Calc Visible Softmax
+
+		if(_model_config.VisibleType == ActivationFunction::Softmax)
+		{
+			_calc_visible_softmax->SetInput(0, _visible_prime0);
+			_calc_visible_softmax->BindOutput(0, _visible_prime1);
+			_calc_visible_softmax->Run();
+
+			swap(_visible_prime0, _visible_prime1);
+		}
 
 		/// Calc Hidden Prime
 
-		_calc_hidden->SetInput(0, _visible_prime);
+		_calc_hidden->SetInput(0, _visible_prime0);
 		_calc_hidden->SetInput(1, _weights0);
 		_calc_hidden->SetInput(2, _enabled_hidden);
-		_calc_hidden->BindOutput(0, _hidden_prime);
+		_calc_hidden->BindOutput(0, _hidden_prime0);
 		_calc_hidden->Run();
+
+		/// Calc Hidden Softmax
+
+		if(_model_config.HiddenType == ActivationFunction::Softmax)
+		{
+			_calc_hidden_softmax->SetInput(0, _hidden_prime0);
+			_calc_hidden_softmax->BindOutput(0, _hidden_prime1);
+			_calc_hidden_softmax->Run();
+
+			swap(_hidden_prime0, _hidden_prime1);
+		}
 
 		/// Update Weights
 
-		_update_weights->SetInput(0, _visible);
-		_update_weights->SetInput(1, _hidden);
-		_update_weights->SetInput(2, _visible_prime);
-		_update_weights->SetInput(3, _hidden_prime);
+		_update_weights->SetInput(0, _visible0);
+		_update_weights->SetInput(1, _hidden0);
+		_update_weights->SetInput(2, _visible_prime0);
+		_update_weights->SetInput(3, _hidden_prime0);
 		_update_weights->SetInput(4, _delta_weights0);
 		_update_weights->SetInput(5, _weights0);
 		_update_weights->SetInput(6, _enabled_visible);
@@ -239,8 +288,8 @@ namespace OMLT
 	{
 		/// Calc error
 
-		_calc_error->SetInput(0, _visible);
-		_calc_error->SetInput(1, _visible_prime);
+		_calc_error->SetInput(0, _visible0);
+		_calc_error->SetInput(1, _visible_prime0);
 		_calc_error->BindOutput(0, _error);
 		_calc_error->Run();
 
@@ -256,29 +305,29 @@ namespace OMLT
 
 		_copy_visible->SetInput(0, in_example);
 		_copy_visible->SetInput(1, _enabled_visible);
-		_copy_visible->BindOutput(0, _visible);
+		_copy_visible->BindOutput(0, _visible0);
 		_copy_visible->Run();
 
 		/// Calc Hidden
 
-		_calc_hidden->SetInput(0, _visible);
+		_calc_hidden->SetInput(0, _visible0);
 		_calc_hidden->SetInput(1, _weights0);
 		_calc_hidden->SetInput(2, _enabled_hidden);
-		_calc_hidden->BindOutput(0, _hidden);
+		_calc_hidden->BindOutput(0, _hidden0);
 		_calc_hidden->Run();
 
 		/// Calc Visible Prime
 
-		_calc_visible->SetInput(0, _hidden);
+		_calc_visible->SetInput(0, _hidden0);
 		_calc_visible->SetInput(1, _weights0);
 		_calc_visible->SetInput(2, _enabled_visible);
-		_calc_visible->BindOutput(0, _visible_prime);
+		_calc_visible->BindOutput(0, _visible_prime0);
 		_calc_visible->Run();
 
 		/// Finally Calc error
 
-		_calc_error->SetInput(0, _visible);
-		_calc_error->SetInput(1, _visible_prime);
+		_calc_error->SetInput(0, _visible0);
+		_calc_error->SetInput(1, _visible_prime0);
 		_calc_error->BindOutput(0, _error);
 		_calc_error->Run();
 
@@ -336,8 +385,8 @@ namespace OMLT
 		assert(image != nullptr);
 		assert(recon != nullptr);
 
-		_visible.GetData(*image);
-		_visible_prime.GetData(*recon);
+		_visible0.GetData(*image);
+		_visible_prime0.GetData(*recon);
 
 		return true;
 	}
@@ -346,7 +395,7 @@ namespace OMLT
 	{
 		assert(activations != nullptr);
 
-		_hidden.GetData(*activations);
+		_hidden0.GetData(*activations);
 
 		return true;
 	}
@@ -367,8 +416,11 @@ namespace OMLT
 		SafeDelete(_calc_enabled_hidden);
 		SafeDelete(_copy_visible);
 		SafeDelete(_calc_hidden);
+		SafeDelete(_calc_hidden_softmax);
 		SafeDelete(_calc_hidden_states);
+		SafeDelete(_calc_hidden_softmax_states);
 		SafeDelete(_calc_visible);
+		SafeDelete(_calc_visible_softmax);
 		SafeDelete(_update_weights);
 		SafeDelete(_calc_error);
 	}
@@ -406,17 +458,34 @@ namespace OMLT
 
 		//printf("%s\n", _copy_visible->GetSource().c_str());
 
+
 		/// Calc Hidden And States
-		SourceCalcHiddenAndStates src_calc_hidden_and_states;
-		src_calc_hidden_and_states.FUNCTION = _model_config.HiddenType;
-		src_calc_hidden_and_states.VISIBLE_UNITS = _model_config.VisibleUnits;
-		src_calc_hidden_and_states.VISIBLE_DROPOUT_PROB = _training_config.VisibleDropout;
-		src_calc_hidden_and_states.Parse();
+		if(_model_config.HiddenType != ActivationFunction::Softmax)
+		{
+			SourceCalcHiddenAndStates src_calc_hidden_and_states;
+			src_calc_hidden_and_states.FUNCTION = _model_config.HiddenType;
+			src_calc_hidden_and_states.VISIBLE_UNITS = _model_config.VisibleUnits;
+			src_calc_hidden_and_states.VISIBLE_DROPOUT_PROB = _training_config.VisibleDropout;
+			src_calc_hidden_and_states.Parse();
 
-		_calc_hidden_states = compiler.Build(src_calc_hidden_and_states);
-		_calc_hidden_states->Initialize(_model_config.HiddenUnits, _minibatch_size);
+			_calc_hidden_states = compiler.Build(src_calc_hidden_and_states);
+			_calc_hidden_states->Initialize(_model_config.HiddenUnits, _minibatch_size);
 
-		//printf("%s\n", _calc_hidden_states->GetSource().c_str());
+			//printf("%s\n", _calc_hidden_states->GetSource().c_str());
+		}
+		/// Calc Hidden Softmax States
+		else
+		{
+			SourceCalcHiddenSoftmaxStates src_calc_hiddden_softmax_states;
+			src_calc_hiddden_softmax_states.ROW_LENGTH = _model_config.HiddenUnits;
+			src_calc_hiddden_softmax_states.Parse();
+
+			_calc_hidden_softmax_states = compiler.Build(src_calc_hiddden_softmax_states);
+			_calc_hidden_softmax_states->Initialize(_model_config.HiddenUnits, _minibatch_size);
+
+			//printf("%s\n", _calc_hidden_softmax_states->GetSource().c_str());
+		}
+		
 
 		/// Calc Visible
 		SourceCalcVisible src_calc_visible;
@@ -430,6 +499,18 @@ namespace OMLT
 
 		//printf("%s\n", _calc_visible->GetSource().c_str());
 
+		if(_model_config.VisibleType == ActivationFunction::Softmax)
+		{
+			SourceCalcSoftmax src_calc_visible_softmax;
+			src_calc_visible_softmax.ROW_LENGTH = _model_config.VisibleUnits;
+			src_calc_visible_softmax.Parse();
+
+			_calc_visible_softmax = compiler.Build(src_calc_visible_softmax);
+			_calc_visible_softmax->Initialize(_model_config.VisibleUnits, _minibatch_size);
+
+			//printf("%s\n", _calc_visible_softmax->GetSource().c_str());
+		}
+
 		/// Calc Hidden
 		SourceCalcHidden src_calc_hidden;
 		src_calc_hidden.FUNCTION = _model_config.HiddenType;
@@ -441,6 +522,18 @@ namespace OMLT
 		_calc_hidden->Initialize(_model_config.HiddenUnits, _minibatch_size);
 
 		//printf("%s\n", _calc_hidden->GetSource().c_str());
+
+		if(_model_config.HiddenType == ActivationFunction::Softmax)
+		{
+			SourceCalcSoftmax src_calc_hidden_softmax;
+			src_calc_hidden_softmax.ROW_LENGTH = _model_config.HiddenUnits;
+			src_calc_hidden_softmax.Parse();
+
+			_calc_hidden_softmax = compiler.Build(src_calc_hidden_softmax);
+			_calc_hidden_softmax->Initialize(_model_config.HiddenUnits, _minibatch_size);
+
+			//printf("%s\n", _calc_hidden_softmax->GetSource().c_str());
+		}
 
 		/// Update Weights
 		SourceCalcWeightUpdates src_update_weights;
@@ -503,13 +596,25 @@ namespace OMLT
 		_enabled_visible = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::UInt, nullptr);
 		_enabled_hidden = OpenGLBuffer2D(_model_config.HiddenUnits, 1, ReturnType::UInt, nullptr);
 
-		_visible = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
-		_hidden = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
+		_visible0 = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
+		_hidden0 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
 		_hidden_random0 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt4, hidden_seed_buffer);
 		_hidden_random1 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::UInt4, nullptr);
 		_hidden_states = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
-		_visible_prime = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
-		_hidden_prime = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
+		_visible_prime0 = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
+		_hidden_prime0 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
+
+		if(_model_config.VisibleType == ActivationFunction::Softmax)
+		{
+			_visible1 = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
+			_visible_prime1 = OpenGLBuffer2D(_model_config.VisibleUnits, _minibatch_size, ReturnType::Float, nullptr);
+		}
+
+		if(_model_config.HiddenType == ActivationFunction::Softmax)
+		{
+			_hidden1 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
+			_hidden_prime1 = OpenGLBuffer2D(_model_config.HiddenUnits, _minibatch_size, ReturnType::Float, nullptr);
+		}
 
 		// allocate a weight buffer and copy it to buffer
 		if(weight_buffer == nullptr)

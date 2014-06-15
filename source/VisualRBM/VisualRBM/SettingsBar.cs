@@ -305,10 +305,12 @@ namespace VisualRBM
 			visibleTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Sigmoid);
 			visibleTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Linear);
 			visibleTypeComboBox.Items.Add(VisualRBMInterop.UnitType.RectifiedLinear);
+			visibleTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Softmax);
 			// fill in hidden type combobox
 			hiddenTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Sigmoid);
 			hiddenTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Linear);
 			hiddenTypeComboBox.Items.Add(VisualRBMInterop.UnitType.RectifiedLinear);
+			hiddenTypeComboBox.Items.Add(VisualRBMInterop.UnitType.Softmax);
 
 			// setup all our tooltips
 			SetToolTip("Load training dataset", this.selectTrainingIdxButton);
