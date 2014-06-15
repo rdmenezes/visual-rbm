@@ -115,6 +115,7 @@ namespace VisualRBMInterop
 		float max_val;
 		switch(visible_type)
 		{
+		case UnitType::Softmax:
 		case UnitType::Sigmoid:
 			max_val = 1.0f;
 			break;
@@ -153,6 +154,11 @@ namespace VisualRBMInterop
 				buffer[k] = std::min(buffer[k], 1.0f);
 			}
 			break;
+		case UnitType::Softmax:
+			for(uint32_t k = 0; k < count; k++)
+			{
+				buffer[k] = std::log(buffer[k] + 1.0f) / std::log(2.0f);
+			}
 		}
 	}
 

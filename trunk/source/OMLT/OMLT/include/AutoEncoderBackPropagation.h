@@ -92,8 +92,10 @@ namespace OMLT
 		// layer buffers
 		OpenGLBuffer2D Target;
 		OpenGLBuffer2D Visible;
-		OpenGLBuffer2D Hidden;
-		OpenGLBuffer2D Output;
+		OpenGLBuffer2D Hidden0;
+		OpenGLBuffer2D Hidden1;
+		OpenGLBuffer2D Output0;
+		OpenGLBuffer2D Output1;
 
 		// sensitivities
 		OpenGLBuffer2D HiddenSensitivities;
@@ -106,7 +108,9 @@ namespace OMLT
 		OpenGLProgram* CalcEnabledHidden;
 		OpenGLProgram* CopyVisible;
 		OpenGLProgram* CalcHidden;
+		OpenGLProgram* CalcHiddenSoftmax;
 		OpenGLProgram* CalcOutput;
+		OpenGLProgram* CalcOutputSoftmax;
 		OpenGLProgram* CalcOutputSensitivities;
 		OpenGLProgram* CalcHiddenSensitivities;
 		OpenGLProgram* UpdateWeights;

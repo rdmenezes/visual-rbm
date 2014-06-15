@@ -81,13 +81,17 @@ namespace OMLT
 		OpenGLBuffer2D _enabled_visible;
 		OpenGLBuffer2D _enabled_hidden;
 
-		OpenGLBuffer2D _visible;
-		OpenGLBuffer2D _hidden;
+		OpenGLBuffer2D _visible0;
+		OpenGLBuffer2D _visible1;
+		OpenGLBuffer2D _hidden0;
+		OpenGLBuffer2D _hidden1;
 		OpenGLBuffer2D _hidden_states;
 		OpenGLBuffer2D _hidden_random0;
 		OpenGLBuffer2D _hidden_random1;
-		OpenGLBuffer2D _visible_prime;
-		OpenGLBuffer2D _hidden_prime;
+		OpenGLBuffer2D _visible_prime0;
+		OpenGLBuffer2D _visible_prime1;
+		OpenGLBuffer2D _hidden_prime0;
+		OpenGLBuffer2D _hidden_prime1;
 
 		OpenGLBuffer2D _weights0;
 		OpenGLBuffer2D _weights1;
@@ -99,8 +103,11 @@ namespace OMLT
 		OpenGLProgram* _calc_enabled_hidden;
 		OpenGLProgram* _copy_visible;
 		OpenGLProgram* _calc_hidden_states;
+		OpenGLProgram* _calc_hidden_softmax_states;
 		OpenGLProgram* _calc_visible;
+		OpenGLProgram* _calc_visible_softmax;
 		OpenGLProgram* _calc_hidden;
+		OpenGLProgram* _calc_hidden_softmax;
 		OpenGLProgram* _update_weights;
 		OpenGLProgram* _calc_error;
 

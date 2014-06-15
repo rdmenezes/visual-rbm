@@ -286,7 +286,7 @@ bool VerifyExp(int argc, char** argv)
 	std::mt19937_64 random;
 	random.seed(1);
 	// we're only using exp for softmax, whose accumlations are going to be in this range
-	std::uniform_real<float> uniform(-88, 0.0f);	
+	std::uniform_real<float> uniform(-87.336540f, 0.0f);	
 
 	const uint32_t block_count = 500000;
 

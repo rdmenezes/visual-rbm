@@ -15,7 +15,9 @@ namespace OMLT
 		  CalcEnabledHidden(nullptr),
 		  CopyVisible(nullptr),
 		  CalcHidden(nullptr),
+		  CalcHiddenSoftmax(nullptr),
 		  CalcOutput(nullptr),
+		  CalcOutputSoftmax(nullptr),
 		  CalcOutputSensitivities(nullptr),
 		  CalcHiddenSensitivities(nullptr),
 		  UpdateWeights(nullptr),
@@ -30,7 +32,9 @@ namespace OMLT
 		  CalcEnabledHidden(nullptr),
 		  CopyVisible(nullptr),
 		  CalcHidden(nullptr),
+		  CalcHiddenSoftmax(nullptr),
 		  CalcOutput(nullptr),
+		  CalcOutputSoftmax(nullptr),
 		  CalcOutputSensitivities(nullptr),
 		  CalcHiddenSensitivities(nullptr),
 		  UpdateWeights(nullptr),
@@ -123,18 +127,36 @@ namespace OMLT
 		CalcHidden->SetInput(0, Visible);
 		CalcHidden->SetInput(1, HiddenEnabled);
 		CalcHidden->SetInput(2, Weights0);
-		CalcHidden->BindOutput(0, Hidden);
+		CalcHidden->BindOutput(0, Hidden0);
 		CalcHidden->Run();
 
+		if(_model_config.HiddenType == ActivationFunction::Softmax)
+		{
+			CalcHiddenSoftmax->SetInput(0, Hidden0);
+			CalcHiddenSoftmax->BindOutput(0, Hidden1);
+			CalcHiddenSoftmax->Run();
+
+			std::swap(Hidden0, Hidden1);
+		}
+
 		// calc output activation
-		CalcOutput->SetInput(0, Hidden);
+		CalcOutput->SetInput(0, Hidden0);
 		CalcOutput->SetInput(1, Weights0);
-		CalcOutput->BindOutput(0, Output);
+		CalcOutput->BindOutput(0, Output0);
 		CalcOutput->Run();
+
+		if(_model_config.OutputType == ActivationFunction::Softmax)
+		{
+			CalcOutputSoftmax->SetInput(0, Output0);
+			CalcOutputSoftmax->BindOutput(0, Output1);
+			CalcOutputSoftmax->Run();
+
+			std::swap(Output0, Output1);
+		}
 
 		// calc output sensitivities
 		CalcOutputSensitivities->SetInput(0, Target);
-		CalcOutputSensitivities->SetInput(1, Output);
+		CalcOutputSensitivities->SetInput(1, Output0);
 		CalcOutputSensitivities->BindOutput(0, OutputSensitivities);
 		CalcOutputSensitivities->Run();
 
@@ -142,14 +164,14 @@ namespace OMLT
 		CalcHiddenSensitivities->SetInput(0, OutputSensitivities);
 		CalcHiddenSensitivities->SetInput(1, HiddenEnabled);
 		CalcHiddenSensitivities->SetInput(2, Weights0);
-		CalcHiddenSensitivities->SetInput(3, Hidden);
+		CalcHiddenSensitivities->SetInput(3, Hidden0);
 		CalcHiddenSensitivities->BindOutput(0, HiddenSensitivities);
 		CalcHiddenSensitivities->Run();
 
 		// update weights
 		UpdateWeights->SetInput(0, OutputSensitivities);
 		UpdateWeights->SetInput(1, HiddenSensitivities);
-		UpdateWeights->SetInput(2, Hidden);
+		UpdateWeights->SetInput(2, Hidden0);
 		UpdateWeights->SetInput(3, Visible);
 		UpdateWeights->SetInput(4, Weights0);
 		UpdateWeights->SetInput(5, DeltaWeights0);
@@ -206,7 +228,7 @@ namespace OMLT
 		assert(recon != nullptr);
 
 		Visible.GetData(*image);
-		Output.GetData(*recon);
+		Output0.GetData(*recon);
 
 		return true;
 	}
@@ -215,7 +237,7 @@ namespace OMLT
 	{
 		assert(activations != nullptr);
 
-		Hidden.GetData(*activations);
+		Hidden0.GetData(*activations);
 
 		return true;
 	}
@@ -255,7 +277,7 @@ namespace OMLT
 		buff.Acquire(ErrorBuffer.Width);
 
 		CalcError->SetInput(0, Target);
-		CalcError->SetInput(1, Output);
+		CalcError->SetInput(1, Output0);
 		CalcError->BindOutput(0, ErrorBuffer);
 		CalcError->Run();
 
@@ -281,13 +303,13 @@ namespace OMLT
 		CalcHidden->SetInput(0, Visible);
 		CalcHidden->SetInput(1, HiddenEnabled);
 		CalcHidden->SetInput(2, Weights0);
-		CalcHidden->BindOutput(0, Hidden);
+		CalcHidden->BindOutput(0, Hidden0);
 		CalcHidden->Run();
 
 		// calc output activation
-		CalcOutput->SetInput(0, Hidden);
+		CalcOutput->SetInput(0, Hidden0);
 		CalcOutput->SetInput(1, Weights0);
-		CalcOutput->BindOutput(0, Output);
+		CalcOutput->BindOutput(0, Output0);
 		CalcOutput->Run();
 
 		float result = GetLastError();
@@ -302,7 +324,9 @@ namespace OMLT
 		SafeDelete(CalcEnabledHidden);
 		SafeDelete(CopyVisible);
 		SafeDelete(CalcHidden);
+		SafeDelete(CalcHiddenSoftmax);
 		SafeDelete(CalcOutput);
+		SafeDelete(CalcOutputSoftmax);
 		SafeDelete(CalcOutputSensitivities);
 		SafeDelete(CalcHiddenSensitivities);
 		SafeDelete(UpdateWeights);
@@ -349,6 +373,16 @@ namespace OMLT
 			CalcHidden = comp.Build(source);
 			CalcHidden->Initialize(_model_config.HiddenCount, _minibatch_size);
 		}
+		// calc hidden softmax
+		if(_model_config.HiddenType == ActivationFunction::Softmax)
+		{
+			SourceSoftmax source;
+			source.ROW_LENGTH = _model_config.HiddenCount;
+			source.Parse();
+
+			CalcHiddenSoftmax = comp.Build(source);
+			CalcHiddenSoftmax->Initialize(_model_config.HiddenCount, _minibatch_size);
+		}
 		// calc output
 		{
 			SourceCalcOutput source;
@@ -359,6 +393,16 @@ namespace OMLT
 
 			CalcOutput = comp.Build(source);
 			CalcOutput->Initialize(_model_config.VisibleCount, _minibatch_size);
+		}
+		// calc output softmax
+		if(_model_config.OutputType == ActivationFunction::Softmax)
+		{
+			SourceSoftmax source;
+			source.ROW_LENGTH = _model_config.VisibleCount;
+			source.Parse();
+
+			CalcOutputSoftmax = comp.Build(source);
+			CalcOutputSoftmax->Initialize(_model_config.VisibleCount, _minibatch_size);
 		}
 		// calc output sensitivities
 		{
@@ -372,7 +416,7 @@ namespace OMLT
 		// calc hidden sensitivities
 		{
 			SourceCalcHiddenSensitivities source;
-			source.FUNC = _model_config.OutputType;
+			source.FUNC = _model_config.HiddenType;
 			source.VISIBLE_UNITS = _model_config.VisibleCount;
 			source.Parse();
 
@@ -460,8 +504,16 @@ namespace OMLT
 		DeltaWeights1 = OpenGLBuffer2D(_model_config.VisibleCount + 1, _model_config.HiddenCount + 1, ReturnType::Float, nullptr);
 
 		Visible = OpenGLBuffer2D(_model_config.VisibleCount, _minibatch_size, ReturnType::Float, nullptr);
-		Hidden = OpenGLBuffer2D(_model_config.HiddenCount, _minibatch_size, ReturnType::Float, nullptr);
-		Output = OpenGLBuffer2D(_model_config.VisibleCount, _minibatch_size, ReturnType::Float, nullptr);
+		Hidden0 = OpenGLBuffer2D(_model_config.HiddenCount, _minibatch_size, ReturnType::Float, nullptr);
+		if(_model_config.HiddenType == ActivationFunction::Softmax)
+		{
+			Hidden1 = OpenGLBuffer2D(_model_config.HiddenCount, _minibatch_size, ReturnType::Float, nullptr);
+		}
+		Output0 = OpenGLBuffer2D(_model_config.VisibleCount, _minibatch_size, ReturnType::Float, nullptr);
+		if(_model_config.OutputType == ActivationFunction::Softmax)
+		{
+			Output1 = OpenGLBuffer2D(_model_config.VisibleCount, _minibatch_size, ReturnType::Float, nullptr);
+		}
 
 		HiddenSensitivities = OpenGLBuffer2D(_model_config.HiddenCount, _minibatch_size, ReturnType::Float, nullptr);
 		OutputSensitivities = OpenGLBuffer2D(_model_config.VisibleCount, _minibatch_size, ReturnType::Float, nullptr);

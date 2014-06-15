@@ -46,32 +46,28 @@ namespace OMLT
 		out_gaussian = Sqrt(-2.0f * Log(u1)) * Sin(2.0f * PI * u2);
 	}
 
-
-	extern Float Linear( const Float& in_x)
-	{
-		return in_x;
-	}
-
-	extern Float Sigmoid( const Float& in_x )
+	Float Sigmoid( const Float& in_x )
 	{
 		return 1.0f / (1.0f + Exp(-in_x));
 	}
 
-	extern Float RectifiedLinear(const Float& in_x)
+	Float RectifiedLinear(const Float& in_x)
 	{
 		return Max(in_x, 0.0f);
 	}
 	
-	extern Float CalcActivation(ActivationFunction_t in_func, const Float& in_accumulation)
+	Float CalcActivation(ActivationFunction_t in_func, const Float& in_accumulation)
 	{
 		COMPUTE_ASSERT(in_func == ActivationFunction::Linear ||
 		               in_func == ActivationFunction::Sigmoid ||
-					   in_func == ActivationFunction::RectifiedLinear);
+					   in_func == ActivationFunction::RectifiedLinear ||
+					   in_func == ActivationFunction::Softmax);
 
 		switch(in_func)
 		{
+		case ActivationFunction::Softmax:
 		case ActivationFunction::Linear:
-			return Linear(in_accumulation);
+			return in_accumulation;
 		case ActivationFunction::Sigmoid:
 			return Sigmoid(in_accumulation);
 		case ActivationFunction::RectifiedLinear:
@@ -81,17 +77,19 @@ namespace OMLT
 		return Float(0.0f);
 	}
 
-	extern Float CalcActivationPrime(ActivationFunction_t in_func, const Float& in_activation)
+	Float CalcActivationPrime(ActivationFunction_t in_func, const Float& in_activation)
 	{
 		COMPUTE_ASSERT(in_func == ActivationFunction::Linear ||
 			in_func == ActivationFunction::Sigmoid ||
-			in_func == ActivationFunction::RectifiedLinear);
+			in_func == ActivationFunction::RectifiedLinear ||
+			in_func == ActivationFunction::Softmax);
 
 		switch(in_func)
 		{
 		case ActivationFunction::Linear:
 			return Float(1.0f);
 		case ActivationFunction::Sigmoid:
+		case ActivationFunction::Softmax:
 			return (1.0f - in_activation) * in_activation;
 		case ActivationFunction::RectifiedLinear:
 			return Max(0.0f, Sign(in_activation));

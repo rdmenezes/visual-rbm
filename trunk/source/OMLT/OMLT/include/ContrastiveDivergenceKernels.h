@@ -138,6 +138,59 @@ struct SourceCalcHiddenAndStates : public SiCKL::Source
 	END_SOURCE
 };
 
+struct SourceCalcHiddenSoftmaxStates : public SiCKL::Source
+{
+	uint32_t ROW_LENGTH;
+
+	BEGIN_SOURCE
+		BEGIN_CONST_DATA
+			CONST_DATA(Buffer2D<Float>, in_accumulation)
+			CONST_DATA(Buffer2D<UInt4>, in_seeds)
+		END_CONST_DATA
+
+		BEGIN_OUT_DATA
+			OUT_DATA(UInt4, out_seed)
+			OUT_DATA(Float, out_softmax)
+			OUT_DATA(Float, out_state)
+		END_OUT_DATA
+
+		BEGIN_MAIN
+			const auto row = Index().Y;
+
+			// first we need to find the max activation (for numerical stability)
+			Float max = -FLT_MAX;
+
+			ForInRange(i, 0, ROW_LENGTH)
+				max = Max(max, in_accumulation(i, row));
+			EndFor
+			
+			// calculate the denominator
+			Float denominator = 0.0f;
+			ForInRange(i, 0, ROW_LENGTH)
+				denominator = denominator + Exp(in_accumulation(i, row) - max);
+			EndFor
+
+			// calculate the numerator
+			Float numerator = Exp(in_accumulation(Index()) - max);
+
+			// result
+			out_softmax = numerator / denominator;
+
+			// now set hidden state
+			auto& seed = in_seeds(Index());
+			Float prob;
+			NextFloat(seed, out_seed, prob);
+
+			If(prob <= out_softmax)
+				out_state = 1.0f;
+			Else
+				out_state = 0.0f;
+			EndIf
+		END_MAIN
+	END_SOURCE
+};
+
+
 struct SourceCalcVisible : public SiCKL::Source
 {
 	ActivationFunction_t FUNCTION;
@@ -177,6 +230,7 @@ struct SourceCalcVisible : public SiCKL::Source
 
 				switch(FUNCTION)
 				{
+				case ActivationFunction::Softmax:
 				case ActivationFunction::Linear:
 					{
 						out_visible = accumulation;
@@ -195,6 +249,44 @@ struct SourceCalcVisible : public SiCKL::Source
 				}
 			EndIf
 
+		END_MAIN
+	END_SOURCE
+};
+
+struct SourceCalcSoftmax : public SiCKL::Source
+{
+	uint32_t ROW_LENGTH;
+	
+	BEGIN_SOURCE
+		BEGIN_CONST_DATA
+			CONST_DATA(Buffer2D<Float>, in_inputs)
+		END_CONST_DATA
+
+		BEGIN_OUT_DATA
+			OUT_DATA(Float, out_output)
+		END_OUT_DATA
+
+		BEGIN_MAIN
+			const auto row = Index().Y;
+
+			// first we need to find the max activation (for numerical stability)
+			Float max = -FLT_MAX;
+
+			ForInRange(i, 0, ROW_LENGTH)
+				max = Max(max, in_inputs(i, row));
+			EndFor
+			
+			// calculate the denominator
+			Float denominator = 0.0f;
+			ForInRange(i, 0, ROW_LENGTH)
+				denominator = denominator + Exp(in_inputs(i, row) - max);
+			EndFor
+
+			// calculate the numerator
+			Float numerator = Exp(in_inputs(Index()) - max);
+
+			// result
+			out_output = numerator / denominator;
 		END_MAIN
 	END_SOURCE
 };
@@ -238,6 +330,7 @@ struct SourceCalcHidden : public SiCKL::Source
 
 				switch(FUNCTION)
 				{
+					case ActivationFunction::Softmax:
 					case ActivationFunction::Linear:
 						{
 							out_hidden = accumulation;

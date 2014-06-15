@@ -22,6 +22,7 @@ namespace VisualRBMInterop
 		Linear,
 		RectifiedLinear,
 		Sigmoid,
+		Softmax,
 	};
 
 	public ref class Processor
