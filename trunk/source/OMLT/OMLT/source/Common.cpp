@@ -358,6 +358,8 @@ namespace OMLT
 
 					accumulation_head += 4;
 				}
+				divisor = _mm_hadd_ps(divisor, divisor);
+				divisor = _mm_hadd_ps(divisor, divisor);
 
 				// now calculate softmax
 				accumulation_head = output_vector;
@@ -365,7 +367,7 @@ namespace OMLT
 				for(uint32_t k = 0; k < _feature_blocks; k++)
 				{
 					__m128 acc = _mm_load_ps(accumulation_head);
-					__m128 val = _mm_exp_ps(_mm_sub_ps(val, max));
+					__m128 val = _mm_exp_ps(_mm_sub_ps(acc, max));
 					val = _mm_div_ps(val, divisor);
 
 					_mm_store_ps(output_head, val);
