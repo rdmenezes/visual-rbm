@@ -1,8 +1,8 @@
 VisualRBM and associated tools makes use of three different filetypes:
 
- * IDX (.idx) - binary data format used to store training data for VisualRBM
- * Model (.json) - JSON format used to store a model (RBM, !AutoEncoder, etc) trained by VisualRBM
- * Schedule (.json) - JSON format used to represent a training schedule used by VisualRBM and cltrain
+ * [https://code.google.com/p/visual-rbm/wiki/FileFormats#IDX IDX (.idx)] - binary data format used to store training data for VisualRBM
+ * [https://code.google.com/p/visual-rbm/wiki/FileFormats#Model Model (.json)] - JSON format used to store a model (RBM, !AutoEncoder, etc) trained by VisualRBM
+ * [https://code.google.com/p/visual-rbm/wiki/FileFormats#Schedule Schedule (.json)] - JSON format used to represent a training schedule used by VisualRBM and cltrain
 
 -----
 
@@ -44,8 +44,10 @@ Since version r268, VisualRBM serializes trained models as a JSON object.  Each 
 
 }}}
 
-Currently, allowed values for Type are "!RestrictedBoltzmannMachine" and "!MultilayerPerceptron."  
-
+Currently, the following models are supported:
+ * [https://code.google.com/p/visual-rbm/wiki/FileFormats#RestrictedBoltzmannMachine RestrictedBoltzmannMachine]
+ * [https://code.google.com/p/visual-rbm/wiki/FileFormats#AutoEncoder AutoEncoder]
+ * [https://code.google.com/p/visual-rbm/wiki/FileFormats#MultilayerPerceptron MultilayerPerceptron]
 
 == !RestrictedBoltzmannMachine ==
 
@@ -66,7 +68,31 @@ The RBM format is fairly simple and has the following format:
 
 }}}
 
-!VisibleCount and !HiddenCount must be positive non-zero integers.  !VisibleType and !HiddenType must each be one of: "Linear," "Sigmoid," or "!RectifiedLinear."  !VisibleBiases and !HiddenBiases are arrays of numbers representing the bias vectors.  Weights is a length HiddenCount array of length !VisibleCount arrays of numbers representing the weights.
+!VisibleCount and !HiddenCount must be positive non-zero integers.  !VisibleType and !HiddenType must each be one of:
+ * Linear
+ * Sigmoid
+ * !RectifiedLinear
+ * Softmax
+!VisibleBiases and !HiddenBiases are arrays of numbers representing the bias vectors.  Weights is a length !HiddenCount array of length !VisibleCount arrays of numbers representing the weights.
+
+== !AutoEncoder==
+
+The !AutoEncoder's file format is simalar to the RBM:
+
+{{{
+{
+	"Type" : "AutoEncoder",
+	"VisibleCount" : ...,
+	"HiddenCount" : ...,
+	"HiddenType" : ...,
+	"OutputType" : ...,
+	"HiddenBiases" : [...],
+	"OutputBiases" : [...],
+	"Weights" : [[...],[...],...]
+}
+}}}
+
+!OutputType replaces !VisibleType while !OutputBiases replace !VisibleBiases.  !AutoEncoder supports all the same functions as the RBM.
 
 == !MultilayerPerceptron ==
 
@@ -95,9 +121,7 @@ Layers is an array of JSON objects which represent each layer of the MLP.  A lay
 
 }}}
 
-Inputs and Outputs must be positive non-zero integers.  Function must be one of: "Linear", "Sigmoid", or "!RectifiedLinear."  Biases is an array of numbers representing the output bias vector, while Weights is a length Outputs array of length Inputs arrays of numbers representing the weights.
-
-Currently, VisualRBM serializes out the !AutoEncoder model as a !MultilayerPerceptron.  This will change in the next release !AutoEncoder support with tied weights is implemeented.  At that point, the !AutoEncoder's JSON format will be basically identical to that of the RBM.
+Inputs and Outputs must be positive non-zero integers.  Function must be one those mentioned above.  Biases is an array of numbers representing the output bias vector, while Weights is a length Outputs array of length Inputs arrays of numbers representing the weights.
 
 ----
 
@@ -125,17 +149,127 @@ The training schedule allows the user to specify a model configuration and train
 }
 }}}
 
-The Type value is common for all schedule files, and must be either "!RestrictedBoltzmannMachine" or "!AutoEncoder."  The root object must also contain all of the values found in a Model JSON file for your given type (apart from any learned weights).  That is, an RBM or an !AutoEncoder must include a !VisibleCount, !HiddenCount, !VisibleType and !HiddenType.  A schedule for training a !MultilayerPerceptron would require an array of Layer objects containing Inputs, Outputs and Function fields.
+All training parameters default to 0.  For each object in the *Schedule* array, the *Epochs* parameter must be specified as a positive integer.  Some example training schedules follow:
 
-The Schedule array contains a list of objects which contain training parameters.  !AutoEncoders and RBMs use the same set of training parameters:
+=== Example RBM Schedule ===
+{{{
+{
+        "Type": "RBM",
+	"VisibleCount" : 784,
+        "HiddenCount": 100,
+        "VisibleType": "Sigmoid",
+        "HiddenType": "Sigmoid",
+        "MinibatchSize": 10,
+        "Schedule":
+        [
+                {
+                        "LearningRate":0.01,
+                        "Momentum":0.5,
+                        "L1":0.0,
+                        "L2":0.0,
+                        "VisibleDropout":0.1,
+                        "HiddenDropout":0.5,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.6,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.7,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.8,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.9,
+                        "Epochs":60
+                }
+        ]
+}
+}}}
 
- * !LearningRate
- * Momentum
- * L1
- * L2
- * !VisibleDropout
- * !HiddenDropout
+=== Example !AutoEncoder Schedule ===
+{{{
+{
+        "Type": "AutoEncoder",
+	"VisibleCount" : 784,
+        "HiddenCount": 100,
+        "OutputType": "Sigmoid",
+        "HiddenType": "Sigmoid",
+        "MinibatchSize": 10,
+        "Schedule":
+        [
+                {
+                        "LearningRate":0.01,
+                        "Momentum":0.5,
+                        "L1":0.0,
+                        "L2":0.0,
+                        "VisibleDropout":0.1,
+                        "HiddenDropout":0.5,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.6,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.7,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.8,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.9,
+                        "Epochs":60
+                }
+        ]
+}
+}}}
 
-Training parameters can be omitted if they do not need to change.
+=== Example MLP Schedule ===
 
-The Epochs parameter in each Schedule object defines the number of epochs (must be an integer) to train while using the current set of training parameters.
+MLP schedules are a bit more complicated and powerful than those for single layer models.  Each parameter training parameter can optionally be specified on a per layer level.  
+
+For instance, the following schedule specifies dropout probability of 0.1 on the input layer, 0.5 on the first hidden layer, and 0.5 on the second hidden layer.  Likewise, unit accumulation Noise has been verbosely set to have standard deviation 0.0 for the first hidden layer, the second hidden layer, and the output layer.
+
+{{{
+{
+	"Type" : "MLP",
+	"Layers" : [784, 500, 500, 10],
+	"ActivationFunctions" : ["Sigmoid", "Sigmoid", "Softmax"],
+	"MinibatchSize" : 10,
+	"Schedule":
+	[
+		{
+			"LearningRate" : 0.05,
+			"Momentum" : 0.5,
+			"L1" : 0.0,
+			"L2" : 0.0,
+			"Dropout" : [0.1, 0.5, 0.5],
+			"Noise" : [0.0, 0.0, 0.0],
+			"Epochs" : 10
+		},
+		{
+			"Momentum" : 0.6,
+			"Epochs" : 10
+		},
+		{
+			"Momentum" : 0.7,
+			"Epochs" : 10
+		},
+		{
+			"Momentum" : 0.8,
+			"Epochs" : 10
+		},
+		{
+			"Momentum" : 0.9,
+			"Epochs" : 60
+		}
+	]	
+}
+}}}
