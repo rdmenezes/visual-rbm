@@ -109,7 +109,8 @@ namespace OMLT
 		OpenGLProgram* _calc_hidden;
 		OpenGLProgram* _calc_hidden_softmax;
 		OpenGLProgram* _update_weights;
-		OpenGLProgram* _calc_error;
+		
+		ErrorCalculator* _error_calculator;
 
 		// kernel sources definitions
 #		include "ContrastiveDivergenceKernels.h"

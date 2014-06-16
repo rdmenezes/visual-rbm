@@ -138,9 +138,7 @@ namespace OMLT
 		OpenGLBuffer2D _input_buffer;
 		OpenGLProgram* _copy_visible;
 
-		// used for error calculations
-		AlignedMemoryBlock<float> _output_buffer0;
-		AlignedMemoryBlock<float> _output_buffer1;
+		ErrorCalculator* _error_calculator;
 
 		const uint32_t _input_units;
 		const uint32_t _minibatch_size;

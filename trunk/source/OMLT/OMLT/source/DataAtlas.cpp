@@ -58,7 +58,10 @@ bool OMLT::DataAtlas::Initialize(IDX* in_data, uint32_t in_minibatch_size)
 	{
 		_streaming = true;
 	}
-
+	else
+	{
+		_streaming = false;
+	}
 	
 	if(_streaming)
 	{

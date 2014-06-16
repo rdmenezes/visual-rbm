@@ -21,7 +21,7 @@ namespace OMLT
 		  CalcOutputSensitivities(nullptr),
 		  CalcHiddenSensitivities(nullptr),
 		  UpdateWeights(nullptr),
-		  CalcError(nullptr)
+		  _error_calculator(nullptr)
 	{
 		allocate_textures(nullptr);
 	}
@@ -38,7 +38,7 @@ namespace OMLT
 		  CalcOutputSensitivities(nullptr),
 		  CalcHiddenSensitivities(nullptr),
 		  UpdateWeights(nullptr),
-		  CalcError(nullptr)
+		  _error_calculator(nullptr)
 	{
 		_model_config.VisibleCount = in_autoencoder->visible_count;
 		_model_config.HiddenCount = in_autoencoder->hidden_count;
@@ -251,41 +251,9 @@ namespace OMLT
 		return true;
 	}
 
-	static float calc_mean(float* buffer, uint32_t count, uint32_t blocks)
-	{
-		__m128 sum = _mm_setzero_ps();
-		for(uint32_t k = 0; k < blocks; k++)
-		{
-			__m128 err = _mm_load_ps(buffer);
-			buffer += 4;
-			sum = _mm_add_ps(sum, err);
-		}
-
-		sum = _mm_hadd_ps(sum, sum);
-		sum = _mm_hadd_ps(sum, sum);
-
-		float result;
-		_mm_store_ss(&result, sum);
-		result /= count;
-
-		return result;
-	}
-
 	float AutoEncoderBackPropagation::GetLastError()
 	{
-		static AlignedMemoryBlock<float> buff;
-		buff.Acquire(ErrorBuffer.Width);
-
-		CalcError->SetInput(0, Target);
-		CalcError->SetInput(1, Output0);
-		CalcError->BindOutput(0, ErrorBuffer);
-		CalcError->Run();
-
-		float* head = buff;
-		ErrorBuffer.GetData(head);
-		
-
-		return calc_mean(head, ErrorBuffer.Width, buff.BlockCount());
+		return _error_calculator->CalcError(Target, Output0);
 	}
 	
 	float AutoEncoderBackPropagation::GetError(const OpenGLBuffer2D& in_example)
@@ -330,6 +298,8 @@ namespace OMLT
 		SafeDelete(CalcOutputSensitivities);
 		SafeDelete(CalcHiddenSensitivities);
 		SafeDelete(UpdateWeights);
+		
+		SafeDelete(_error_calculator);
 	}
 
 	void AutoEncoderBackPropagation::build_kernels()
@@ -439,14 +409,7 @@ namespace OMLT
 			UpdateWeights->Initialize(_model_config.VisibleCount + 1, _model_config.HiddenCount + 1);
 		}
 
-		{
-			SourceCalcErrorVector source;
-			source.MINIBATCH_SIZE = _minibatch_size;
-			source.Parse();
-
-			CalcError = comp.Build(source);
-			CalcError->Initialize(_model_config.VisibleCount, 1);
-		}
+		_error_calculator = new ErrorCalculator(_minibatch_size, _model_config.VisibleCount, _model_config.OutputType == ActivationFunction::Softmax ? ErrorFunction::CrossEntropy : ErrorFunction::SquareError);
 	}
 
 	extern uint32_t* GetSeedBuffer(uint32_t, uint32_t, std::mt19937_64&);
@@ -517,8 +480,6 @@ namespace OMLT
 
 		HiddenSensitivities = OpenGLBuffer2D(_model_config.HiddenCount, _minibatch_size, ReturnType::Float, nullptr);
 		OutputSensitivities = OpenGLBuffer2D(_model_config.VisibleCount, _minibatch_size, ReturnType::Float, nullptr);
-
-		ErrorBuffer = OpenGLBuffer2D(_model_config.VisibleCount, 1, ReturnType::Float, nullptr);
 
 		free(visible_dropout_seed_buffer);
 		free(hidden_dropout_seed_buffer);

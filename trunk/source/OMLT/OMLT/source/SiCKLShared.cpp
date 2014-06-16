@@ -1,15 +1,15 @@
-// extern
 #include <SiCKL.h>
 using namespace SiCKL;
 
 #include "Enums.h"
+#include "SiCKLShared.h"
 
 namespace OMLT
 {
 
 	/// SiCKL Kernel Methods
 
-	extern void NextSeed(const SiCKL::UInt4& in_seed, SiCKL::UInt4& out_seed)
+	 void NextSeed(const SiCKL::UInt4& in_seed, SiCKL::UInt4& out_seed)
 	{
 		UInt t = in_seed.X ^ (in_seed.X << 11u);
 		out_seed.X = in_seed.Y;
@@ -17,7 +17,7 @@ namespace OMLT
 		out_seed.Z = in_seed.W;
 		out_seed.W = in_seed.W ^ (in_seed.W >> 19u) ^ t ^ (t >> 8u);
 	}
-	extern void NextFloat(const SiCKL::UInt4& in_seed, SiCKL::UInt4& out_seed, SiCKL::Float& out_float)
+	 void NextFloat(const SiCKL::UInt4& in_seed, SiCKL::UInt4& out_seed, SiCKL::Float& out_float)
 	{
 		NextSeed(in_seed, out_seed);
 
@@ -26,7 +26,7 @@ namespace OMLT
 
 		out_float = (Float)next24 / (float)(1 << 24);
 	}
-	extern void NextGaussian(const SiCKL::UInt4& in_seed, SiCKL::UInt4& out_seed, SiCKL::Float& out_gaussian)
+	 void NextGaussian(const SiCKL::UInt4& in_seed, SiCKL::UInt4& out_seed, SiCKL::Float& out_gaussian)
 	{
 		Float u1 = 0.0f;
 		Float u2 = 0.0f;
@@ -96,5 +96,102 @@ namespace OMLT
 		}
 
 		return Float(0.0f);
+	}
+
+	ErrorCalculator::ErrorCalculator(uint32_t minibatch_size, uint32_t data_width, ErrorFunction_t error_function)
+	{
+		struct SourceCalcErrorVector : public SiCKL::Source
+		{
+			int32_t DATA_WIDTH;
+			ErrorFunction_t ERROR_FUNC;
+
+			BEGIN_SOURCE
+				BEGIN_CONST_DATA
+					CONST_DATA(Buffer2D<Float>, in_calculated)
+					CONST_DATA(Buffer2D<Float>, in_labels)
+				END_CONST_DATA
+
+				BEGIN_OUT_DATA
+					OUT_DATA(Float, out_error)
+				END_OUT_DATA
+
+				BEGIN_MAIN
+					Int batch = Index().X;
+					out_error = 0.0f;
+					ForInRange(k, 0, DATA_WIDTH)
+						const Float z = in_calculated(k, batch);
+						const Float t = in_labels(k, batch);
+
+						if(ERROR_FUNC == ErrorFunction::SquareError)
+						{
+							const Float diff = z - t;
+							out_error = out_error + (diff * diff);
+						}
+						else if(ERROR_FUNC == ErrorFunction::CrossEntropy)
+						{
+							out_error = out_error - t * Log(Max(z, 1.1754943508e-38f));
+						}
+						else
+						{
+							assert(false);
+						}
+					EndFor
+
+					// average together
+					out_error = out_error * (1.0f / DATA_WIDTH);
+
+				END_MAIN
+			END_SOURCE
+		} source;
+
+		source.DATA_WIDTH = data_width;
+		source.ERROR_FUNC = error_function;
+		source.Parse();
+		
+		OpenGLCompiler compiler;
+
+		_calc_error = compiler.Build(source);
+		_calc_error->Initialize(minibatch_size, 1);
+
+		_error_texture = OpenGLBuffer2D(minibatch_size, 1, ReturnType::Float, nullptr);
+
+		_error_buffer.Acquire(minibatch_size);
+	}
+
+	ErrorCalculator::~ErrorCalculator()
+	{
+		delete _calc_error;
+	}
+
+	float ErrorCalculator::CalcError(const OpenGLBuffer2D& calculated, const OpenGLBuffer2D& expected)
+	{
+		// calc error
+		_calc_error->SetInput(0, calculated);
+		_calc_error->SetInput(1, expected);
+		_calc_error->BindOutput(0, _error_texture);
+		_calc_error->Run();
+
+		// dump to CPU
+		float* head = _error_buffer;
+		_calc_error->GetOutput(0, head);
+
+		// calculate the last bit
+		__m128 sum = _mm_setzero_ps();
+
+		for(uint32_t k =0 ; k < _error_buffer.BlockCount(); k++)
+		{
+			sum = _mm_add_ps(sum, _mm_load_ps(head));
+
+			head += 4;
+		}
+
+		sum = _mm_hadd_ps(sum, sum);
+		sum = _mm_hadd_ps(sum, sum);
+
+		float result;
+		_mm_store_ss(&result, sum);
+
+		result /= _error_texture.Width;
+		return result;
 	}
 }
