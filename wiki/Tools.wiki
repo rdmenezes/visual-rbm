@@ -5,6 +5,7 @@ This page contains an overview of the different command line tools available in 
  * [Tools#Model_Tools Model Tools]
   * [Tools#cltrain cltrain]
   * [Tools#calchidden calchidden]
+  * [Tools#buildmlp buildmlp]
  * [Tools#IDX_Tools IDX Tools]
   * [Tools#idxinfo idxinfo]
   * [Tools#catidx catidx]
@@ -21,7 +22,7 @@ This page contains an overview of the different command line tools available in 
 
 === cltrain ===
 
-Used to train a model from the command line.  Should be a bit faster than using the frontend, as there should be fewer GPU->CPU transfers (since there is no visualization to be done).
+Used to train a model from the command line.  Should be a bit faster than using the frontend, as there should be fewer GPU->CPU transfers (since there is no visualization to be done).  Quiet mode can also be specified which does not show the ongoing training error, and does not perform ANY GPU->CPU transfers.
 
 ==== Usage ====
 
@@ -30,11 +31,13 @@ cltrain [ARGS]
 }}}
 
  * Required Arguments
-  * -train=*IDX* - Specifies the input IDX dataset to use during training
-  * -sched=*SCHEDULE* - Specifies the training schedule file (in the format specified on the [FileFormats] wiki page) to use during training.
+  * -trainingData=*IDX* - Specifies the training data file.
+  * -trainingLabels=*IDX* - Specifies the training label file (for MLP training only)
+  * -schedule=*SCHEDULE* - Specifies the training schedule file (in the format specified on the [FileFormats] wiki page) to use during training.
   * -export=*OUT* - Specifies where to save the final model once training completes.
  * Optional Arguments
-  * -valid=*IDX* - Specifies an optional validation IDX dataset
+  * -validationData=*IDX* - Specifies an optional validation IDX dataset
+  * -validationLabels=*IDX* - Specifies an optional validation label file (for MLP training only)
   * -import=*MODEL* - Specifies an initial set of weights to start from (rather than randomly initialization the weights).
   * -quiet - Suppresses all stdout output and omits any reconstruction error calculations.
 
@@ -42,18 +45,48 @@ cltrain [ARGS]
 
 === calchidden ===
 
-Used to calculate the hidden probabilities of an RBM or AutoEncoder over an entire IDX dataset.  The output IDX can be used as training data for another model.
+Used to calculate the hidden activations of an RBM or AutoEncoder over an entire IDX dataset.  Alternatively, calculates the output activations of an MLP over an entire IDX dataset.
 
 ==== Usage ====
 
 {{{
-calchidden [INPUT] [OUTPUT] [RBM] [DROPOUT]
+calchidden [INPUT] [OUTPUT] [RBM]
 }}}
 
  * *INPUT* - The input IDX dataset.
  * *OUTPUT* - Destination to save the calculated hidden units.
  * *MODEL* - The trained model to use.
  
+----
+
+=== buildmlp===
+
+Constructs a MLP from a stack of RBM, AutoEncoder, and MLP model files.
+
+==== Usage ====
+
+{{{
+buildmlp [OPTIONS] files... -o [OUTPUT]
+}}}
+
+ * *OPTIONS*
+  * *-f* - Adds subsequent models normally (default)
+  * *-t* - Transpose subsequent models before adding (RBM and AutoEncoder only)
+  * *-n INDEX COUNT* - Adds *COUNT* layers from an MLP starting at layer *INDEX* (MLP only)
+ * *OUTPUT* - Filename to save new MLP model.
+
+==== Examples ====
+{{{
+# constructs an autoencoder from a stack of 2 RBMs
+buildmlp rbm1.json rbm2.json -t rbm2.json rbm1.json -o autoencoder.json
+
+# pull out just the encoding half of above autoencoder
+buildmlp -n 0 2 autoencoder.json -o encoder.json
+
+# pull out just the decoding half of aboe autoencoder
+buildmlp -n 2 2 autoencoder.json -o decoder.json
+}}}
+
 == IDX Tools ==
 
 === idxinfo ===
