@@ -28,7 +28,7 @@ namespace OMLT
 		, _calc_visible(nullptr)
 		, _calc_visible_softmax(nullptr)
 		, _update_weights(nullptr)
-		, _calc_error(nullptr)
+		, _error_calculator(nullptr)
 		, _recompile_required(true)
 	{
 		allocate_textures(nullptr);
@@ -46,7 +46,7 @@ namespace OMLT
 		, _calc_visible(nullptr)
 		, _calc_visible_softmax(nullptr)
 		, _update_weights(nullptr)
-		, _calc_error(nullptr)
+		, _error_calculator(nullptr)
 		, _recompile_required(true)
 	{
 		assert(in_rbm != nullptr);
@@ -270,33 +270,11 @@ namespace OMLT
 		swap(_weights0, _weights1);
 
 		/// Done!
-
-	}
-
-	float TotalError(float* buffer, uint32_t count, uint32_t height)
-	{
-		float result = 0.0f;
-		for(uint32_t k = 0; k < count; k++)
-		{
-			result += buffer[k];
-		}
-
-		return result / float(count * height);
 	}
 
 	float ContrastiveDivergence::GetLastReconstructionError()
 	{
-		/// Calc error
-
-		_calc_error->SetInput(0, _visible0);
-		_calc_error->SetInput(1, _visible_prime0);
-		_calc_error->BindOutput(0, _error);
-		_calc_error->Run();
-
-		float* ptr = _error_buffer;
-		_calc_error->GetOutput(0, ptr);
-
-		return TotalError(ptr, _model_config.VisibleUnits, _minibatch_size);
+		return _error_calculator->CalcError(_visible0, _visible_prime0);
 	}
 
 	float ContrastiveDivergence::GetReconstructionError( const OpenGLBuffer2D& in_example)
@@ -324,17 +302,7 @@ namespace OMLT
 		_calc_visible->BindOutput(0, _visible_prime0);
 		_calc_visible->Run();
 
-		/// Finally Calc error
-
-		_calc_error->SetInput(0, _visible0);
-		_calc_error->SetInput(1, _visible_prime0);
-		_calc_error->BindOutput(0, _error);
-		_calc_error->Run();
-
-		float* ptr = _error_buffer;
-		_calc_error->GetOutput(0, ptr);
-
-		return TotalError(ptr, _model_config.VisibleUnits, _minibatch_size);
+		return GetLastReconstructionError();
 	}
 
 	RestrictedBoltzmannMachine* ContrastiveDivergence::GetRestrictedBoltzmannMachine() const
@@ -422,7 +390,8 @@ namespace OMLT
 		SafeDelete(_calc_visible);
 		SafeDelete(_calc_visible_softmax);
 		SafeDelete(_update_weights);
-		SafeDelete(_calc_error);
+		
+		SafeDelete(_error_calculator);
 	}
 
 	void ContrastiveDivergence::build_kernels()
@@ -549,15 +518,7 @@ namespace OMLT
 
 		//printf("%s\n", _update_weights->GetSource().c_str());
 
-		/// Calc Error
-		SourceCalcErrorVector src_calc_error;
-		src_calc_error.MINIBATCH_SIZE = _minibatch_size;
-		src_calc_error.Parse();
-
-		_calc_error = compiler.Build(src_calc_error);
-		_calc_error->Initialize(_model_config.VisibleUnits, 1);
-
-		//printf("%s\n", _calc_error->GetSource().c_str());
+		_error_calculator = new ErrorCalculator(_minibatch_size, _model_config.VisibleUnits, _model_config.VisibleType == ActivationFunction::Softmax ? ErrorFunction::CrossEntropy : ErrorFunction::SquareError);
 	}
 
 	// free result when done

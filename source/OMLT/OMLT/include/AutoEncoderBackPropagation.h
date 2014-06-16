@@ -101,9 +101,6 @@ namespace OMLT
 		OpenGLBuffer2D HiddenSensitivities;
 		OpenGLBuffer2D OutputSensitivities;
 
-		// error buffer
-		OpenGLBuffer2D ErrorBuffer;
-
 		OpenGLProgram* CalcEnabledVisible;
 		OpenGLProgram* CalcEnabledHidden;
 		OpenGLProgram* CopyVisible;
@@ -114,8 +111,9 @@ namespace OMLT
 		OpenGLProgram* CalcOutputSensitivities;
 		OpenGLProgram* CalcHiddenSensitivities;
 		OpenGLProgram* UpdateWeights;
-		OpenGLProgram* CalcError;
 
+		ErrorCalculator* _error_calculator;
+		
 		void free_kernels();
 		void build_kernels();
 		void allocate_textures(float* weight_buffer);

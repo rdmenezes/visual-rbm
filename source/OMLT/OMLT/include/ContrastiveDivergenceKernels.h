@@ -473,30 +473,3 @@ struct SourceCalcWeightUpdates : public SiCKL::Source
 		END_MAIN
 	END_SOURCE
 };
-
-struct SourceCalcErrorVector : public SiCKL::Source
-{
-	int32_t MINIBATCH_SIZE;
-
-	BEGIN_SOURCE
-		BEGIN_CONST_DATA
-			CONST_DATA(Buffer2D<Float>, in_visible)
-			CONST_DATA(Buffer2D<Float>, in_visible_recon)
-		END_CONST_DATA
-
-		BEGIN_OUT_DATA
-			OUT_DATA(Float, out_square_error)
-		END_OUT_DATA
-
-		BEGIN_MAIN
-			out_square_error = 0.0f;
-			ForInRange(k, 0, MINIBATCH_SIZE)
-				const Float v = in_visible(Index().X, k);
-				const Float v_prime = in_visible_recon(Index().X, k);
-				const Float diff = v - v_prime;
-
-				out_square_error = out_square_error + (diff * diff);
-			EndFor
-		END_MAIN
-	END_SOURCE
-};

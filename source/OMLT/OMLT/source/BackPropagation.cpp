@@ -15,6 +15,7 @@ namespace OMLT
 		, _recompile_required(true)
 		, _last_label(nullptr)
 		, _copy_visible(nullptr)
+		, _error_calculator(nullptr)
 	{
 		assert(in_config.LayerConfigs.size() > 0);
 		for(auto it = in_config.LayerConfigs.begin(); it < in_config.LayerConfigs.end(); ++it)
@@ -30,6 +31,7 @@ namespace OMLT
 		, _recompile_required(true)
 		, _last_label(nullptr)
 		, _copy_visible(nullptr)
+		, _error_calculator(nullptr)
 	{
 		for(uint32_t k = 0; k < in_mlp->LayerCount(); k++)
 		{
@@ -280,25 +282,7 @@ namespace OMLT
 
 	float BackPropagation::GetLastOutputError()
 	{
-		uint32_t count = _minibatch_size * _input_units;
-		_output_buffer0.Acquire(count);
-		_output_buffer1.Acquire(count);
-
-		float* out0 = (float*)_output_buffer0;
-		float* out1 = (float*)_output_buffer1;
-
-		_last_label->GetData(out0);
-		_layers.back()->Activation0.GetData(out1);
-
-		float err = 0.0f;
-		for(uint32_t k = 0; k < count; k++)
-		{
-			float val = out0[k] - out1[k];
-			err += val * val;
-		}
-		err /= count;
-
-		return err;
+		return _error_calculator->CalcError(_layers.back()->Activation0, *_last_label);
 	}
 
 	float BackPropagation::GetOutputError(const OpenGLBuffer2D& example_input, const OpenGLBuffer2D& example_output)
@@ -592,6 +576,8 @@ namespace OMLT
 			SafeDelete(layer->UpdateWeights);
 		}
 		SafeDelete(_copy_visible);
+
+		SafeDelete(_error_calculator);
 	}
 
 	void BackPropagation::build_kernels()
@@ -707,5 +693,7 @@ namespace OMLT
 				delete[] enabled;
 			}
 		}
+
+		_error_calculator = new ErrorCalculator(_minibatch_size, _layers.back()->OutputUnits, _layers.back()->Function == ActivationFunction::Softmax ? ErrorFunction::CrossEntropy : ErrorFunction::SquareError);
 	}
 }

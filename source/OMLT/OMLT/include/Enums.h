@@ -22,9 +22,21 @@ namespace OMLT
 		};
 	}
 	typedef ActivationFunction::Enum ActivationFunction_t;
-
 	extern const char* ActivationFunctionNames[];
-
 	extern ActivationFunction_t ParseFunction(const char* name);
 	
+	namespace ErrorFunction
+	{
+		// t : label
+		// z : calculated
+		enum Enum
+		{
+			Invalid = -1,
+			// (t - z)^2
+			SquareError,
+			// -t * ln(z)
+			CrossEntropy,
+		};
+	}
+	typedef ErrorFunction::Enum ErrorFunction_t;
 }
