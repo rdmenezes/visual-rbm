@@ -226,19 +226,25 @@ int main(int argc, char** argv)
 		}
 	}
 
+	if(model_dest == nullptr)
+	{
+		printf("No output file specified\n");
+		return -1;
+	}
+
 	// load up models
 	for(auto it = layers.begin(); it < layers.end(); ++it)
 	{
 		string json;
 		if(ReadTextFile(it->filename, json) == false)
 		{
-			printf("Could not load model \"%s\"\n", it->filename);
+			printf("Could not load model \"%s\"\n", it->filename.c_str());
 			return -1;
 		}
 
 		if(Model::FromJSON(json, it->model) == false)
 		{
-			printf("Could not parse model \"%s\"\n", it->filename);
+			printf("Could not parse model \"%s\"\n", it->filename.c_str());
 			return -1;
 		}
 	}

@@ -81,16 +81,27 @@ namespace VisualRBM
 			}
 		}
 
+		static string BuildFormat(float f)
+		{
+			return String.Format("F{0}", (int)(6 - Math.Log10(f)));
+		}
+
 		void RBMProcessor_EpochCompleted(uint epoch, uint total)
 		{
 			total_training_error /= Processor.MinibatchCount;
 			total_validation_error /= Processor.MinibatchCount;
 
 
-			if(total_validation_error > 0.0)
-				(this.ParentForm as Main).trainingLog.AddLog("Epoch {0}; Training Error={1}; Validation Error={2}", epoch, total_training_error, total_validation_error);
+			if (total_validation_error > 0.0)
+			{
+				string format = String.Format("Epoch {{0}}; Training Error={{1:{0}}}; Validation Error={{2:{1}}}", BuildFormat(total_training_error), BuildFormat(total_validation_error));
+				(this.ParentForm as Main).trainingLog.AddLog(format, epoch, total_training_error, total_validation_error);
+			}
 			else
-				(this.ParentForm as Main).trainingLog.AddLog("Epoch {0}; Training Error={1}", epoch, total_training_error);
+			{
+				string format = String.Format("Epoch {{0}}; Training Error={{1:{0}}}", BuildFormat(total_training_error));
+				(this.ParentForm as Main).trainingLog.AddLog(format, epoch, total_training_error);
+			}
 
 			total_training_error = total_validation_error = 0.0f;
 		}
