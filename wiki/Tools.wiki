@@ -45,7 +45,7 @@ cltrain [ARGS]
 
 === calchidden ===
 
-Used to calculate the hidden activations of an RBM or AutoEncoder over an entire IDX dataset.  Alternatively, calculates the output activations of an MLP over an entire IDX dataset.
+Used to calculate the hidden activations of an RBM or !AutoEncoder over an entire IDX dataset.  Alternatively, calculates the output activations of an MLP over an entire IDX dataset.
 
 ==== Usage ====
 
@@ -61,7 +61,7 @@ calchidden [INPUT] [OUTPUT] [RBM]
 
 === buildmlp===
 
-Constructs a MLP from a stack of RBM, AutoEncoder, and MLP model files.
+Constructs a MLP from a stack of RBM, !AutoEncoder, and MLP model files.
 
 ==== Usage ====
 
@@ -71,7 +71,7 @@ buildmlp [OPTIONS] files... -o [OUTPUT]
 
  * *OPTIONS*
   * *-f* - Adds subsequent models normally (default)
-  * *-t* - Transpose subsequent models before adding (RBM and AutoEncoder only)
+  * *-t* - Transpose subsequent models before adding (RBM and !AutoEncoder only)
   * *-n INDEX COUNT* - Adds *COUNT* layers from an MLP starting at layer *INDEX* (MLP only)
  * *OUTPUT* - Filename to save new MLP model.
 
