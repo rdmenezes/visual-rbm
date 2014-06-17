@@ -3,7 +3,7 @@
 ::  500-500 RBM with Rectified Linear Visible and Hiddden Units
 ::  500-10 single layer MLP with Softmax output
 :: After initialization, the network is fine tuned with backpropagation
-:: Finally, the networks estimates for the labels on the test set are calculated and saved to test-estimates.idx
+:: Finally, the network's estimates for the labels on the test set are calculated and saved to test-estimates.idx
 
 :: train the first layer
 cltrain -trainingData=mnist-train-images.idx -schedule=layer1-schedule.json -export=layer1.json

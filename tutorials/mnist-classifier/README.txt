@@ -1,6 +1,6 @@
-This script assumes that the VisualRBM Tools are in a directory your %PATH%
-variable.  We also assume that the folowing MNIST data files are located in the same
-directory as the schedule files and the run.bat file:
+This script assumes that the VisualRBM Tools are in a directory listed in your global 
+%PATH% variable.  We also assume that the folowing MNIST data files are located in the 
+same directory as the schedule files and the run.bat file:
 	
 	mnist-train-images.idx
 	mnist-train-labels.idx
