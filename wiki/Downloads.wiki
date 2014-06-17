@@ -10,3 +10,7 @@
 ||[http://code.google.com/p/visual-rbm/downloads/detail?name=mnist-test-labels.idx&can=2&q= mnist-test-labels.idx]||MNIST Test Labels||
 ||[http://code.google.com/p/visual-rbm/downloads/detail?name=mnist-train-images.idx&can=2&q= mnist-train-images.idx]||MNIST Training Images||
 ||[http://code.google.com/p/visual-rbm/downloads/detail?name=mnist-test-images.idx&can=2&q= mnist-test-images.idx]||MNIST Test Images||
+
+=Tutorials=
+|| *File* || *Description* ||
+|| [http://goo.gl/giyPLH mnist-classifier.zip] || Pretrain and tune a 784-500-500-10 MLP to classify MNIST digits ||
