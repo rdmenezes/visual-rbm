@@ -1,0 +1,36 @@
+{
+        "Type": "RestrictedBoltzmannMachine",
+	"VisibleCount" : 500,
+        "HiddenCount": 500,
+        "VisibleType": "RectifiedLinear",
+        "HiddenType": "RectifiedLinear",
+        "MinibatchSize": 10,
+        "Schedule":
+        [
+                {
+                        "LearningRate":0.01,
+                        "Momentum":0.5,
+                        "L1":0.0,
+                        "L2":0.0,
+                        "VisibleDropout":0.5,
+                        "HiddenDropout":0.5,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.6,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.7,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.8,
+                        "Epochs":10
+                },
+                {
+                        "Momentum":0.9,
+                        "Epochs":60
+                }
+        ]
+}
