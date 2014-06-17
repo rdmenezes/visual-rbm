@@ -1,8 +1,8 @@
 =Releases=
 
 || *File* || *Description* || *Version* || *History* ||
-||[http://goo.gl/j8IIUg VisualRBM.zip] ||The latest VisualRBM Windows client||r309||[http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/VisualRBM.zip ...]||
-||[http://goo.gl/mK4G6Z Tools.zip] ||A set of tools for manipulating IDX data files and training RBMs from the command-line||r309||[http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/Tools.zip ...]||
+||[http://goo.gl/2QLeZZ VisualRBM.zip] ||The latest VisualRBM Windows client||r333||[http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/VisualRBM.zip ...]||
+||[http://goo.gl/0EEyw0 Tools.zip] ||A set of tools for manipulating IDX data files and training RBMs from the command-line||r333||[http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/Tools.zip ...]||
 
 =Data Sets=
 || *File* || *Description* ||
