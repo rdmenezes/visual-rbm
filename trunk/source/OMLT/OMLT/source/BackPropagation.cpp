@@ -161,12 +161,12 @@ namespace OMLT
 			{
 				feed_forward->SetInput(0, *lay->Input);
 				feed_forward->SetInput(1, *lay->OutputEnabled);
-				feed_forward->SetInput(2, lay->Weights0);
+				feed_forward->SetInput(2, lay->NesterovWeight);
 				feed_forward->SetInput(3, lay->OutputRandom0);
 				assert(lay->Input->Width == lay->InputUnits);
 				assert(lay->Input->Height == _minibatch_size);
-				assert(lay->Weights0.Width == (lay->InputUnits + 1));
-				assert(lay->Weights0.Height == lay->OutputUnits);
+				assert(lay->NesterovWeight.Width == (lay->InputUnits + 1));
+				assert(lay->NesterovWeight.Height == lay->OutputUnits);
 				assert(lay->OutputRandom0.Width == lay->OutputUnits);
 				assert(lay->OutputRandom0.Height == _minibatch_size);
 
@@ -225,11 +225,11 @@ namespace OMLT
 				// fill out whatever
 				calc_sensitivities = lay->CalcSensitivity;
 
-				calc_sensitivities->SetInput(0, lay->NextLayer->Weights0);
+				calc_sensitivities->SetInput(0, lay->NextLayer->NesterovWeight);
 				calc_sensitivities->SetInput(1, lay->NextLayer->Sensitivities);
 				calc_sensitivities->SetInput(2, lay->Activation0);
 				calc_sensitivities->SetInput(3, lay->InputEnabled);
-				assert(lay->NextLayer->Weights0.Width == (lay->OutputUnits + 1));
+				assert(lay->NextLayer->NesterovWeight.Width == (lay->OutputUnits + 1));
 
 				calc_sensitivities->BindOutput(0, lay->Sensitivities);
 				assert(lay->Sensitivities.Width == lay->OutputUnits);
@@ -252,6 +252,7 @@ namespace OMLT
 			update_weights->SetInput(3, *lay->OutputEnabled);
 			update_weights->SetInput(4, lay->Weights0);
 			update_weights->SetInput(5, lay->DeltaWeights0);
+			update_weights->SetInput(6, lay->MeanSquareDelta0);
 			assert(lay->Sensitivities.Width == lay->OutputUnits);
 			assert(lay->Sensitivities.Height == _minibatch_size);
 			assert(lay->Input->Width == lay->InputUnits);
@@ -267,16 +268,18 @@ namespace OMLT
 		
 			update_weights->BindOutput(0, lay->Weights1);
 			update_weights->BindOutput(1, lay->DeltaWeights1);
+			update_weights->BindOutput(2, lay->NesterovWeight);
+			update_weights->BindOutput(3, lay->MeanSquareDelta1);
 			assert(lay->Weights1.Width == (lay->InputUnits + 1));
 			assert(lay->Weights1.Height == lay->OutputUnits);
 			assert(lay->DeltaWeights1.Width == lay->Weights1.Width);
 			assert(lay->DeltaWeights1.Height == lay->Weights1.Height);
 
-
 			update_weights->Run();
 
 			swap(lay->Weights0, lay->Weights1);
 			swap(lay->DeltaWeights0, lay->DeltaWeights1);
+			swap(lay->MeanSquareDelta0, lay->MeanSquareDelta1);
 		}
 	}
 
@@ -441,8 +444,11 @@ namespace OMLT
 				result->Weights0 = OpenGLBuffer2D(width, height, ReturnType::Float, in_weights);
 			}
 			result->Weights1 = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
+			result->NesterovWeight = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 			result->DeltaWeights0 = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 			result->DeltaWeights1 = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
+			result->MeanSquareDelta0 = OpenGLBuffer2D(width, height, ReturnType::Float2, nullptr);
+			result->MeanSquareDelta1 = OpenGLBuffer2D(width, height, ReturnType::Float2, nullptr);
 			result->OutputEnabled = nullptr;
 
 			if(_layers.size() > 0)
@@ -671,6 +677,8 @@ namespace OMLT
 				source.MINIBATCH_SIZE = _minibatch_size;
 				source.L1_REGULARIZATION = _training_config.Parameters[k].L1Regularization;
 				source.L2_REGULARIZATION = _training_config.Parameters[k].L2Regularization;
+				source.ADADELTA_DECAY = _training_config.Parameters[k].AdadeltaDecay;
+
 
 				source.Parse();
 				layer->UpdateWeights = comp.Build(source);

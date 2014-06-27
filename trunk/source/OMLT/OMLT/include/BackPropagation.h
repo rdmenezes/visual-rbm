@@ -48,9 +48,20 @@ namespace OMLT
 					float L2Regularization;
 					float Dropout;
 					float Noise;
+					float AdadeltaDecay;
 				};
-				float Data[6];
+				float Data[7];
 			};
+			LayerParameters() 
+				: LearningRate(0.0f)
+				, Momentum(0.0f)
+				, L1Regularization(0.0f)
+				, L2Regularization(0.0f)
+				, Dropout(0.0f)
+				, Noise(0.0f)
+				, AdadeltaDecay(1.0f)
+			{ }
+				
 		};
 
 		// config for a nn trainer
@@ -107,8 +118,11 @@ namespace OMLT
 			 */
 			OpenGLBuffer2D Weights0;
 			OpenGLBuffer2D Weights1;
+			OpenGLBuffer2D NesterovWeight;
 			OpenGLBuffer2D DeltaWeights0;
 			OpenGLBuffer2D DeltaWeights1;
+			OpenGLBuffer2D MeanSquareDelta0;
+			OpenGLBuffer2D MeanSquareDelta1;
 			OpenGLBuffer2D* OutputEnabled;
 
 			/*

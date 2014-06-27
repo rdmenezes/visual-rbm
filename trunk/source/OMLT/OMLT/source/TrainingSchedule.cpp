@@ -282,7 +282,7 @@ Error:
 					uint32_t layer_count = model_config.LayerConfigs.size();
 					for(uint32_t  k = 0; k < layer_count; k++)
 					{
-						BackPropagation::LayerParameters layer_params = {0};
+						BackPropagation::LayerParameters layer_params;;
 						train_config.Parameters.push_back(layer_params);
 					}
 
@@ -293,7 +293,7 @@ Error:
 
 						// this function will read an object and if it's an array, populate each member of the array to the appropriate layer config
 						// if it is a single value, all the values in the array are given that value
-						auto read_params = [&] (uint32_t index, const char* param) -> bool
+						auto read_params = [&] (uint32_t index, const char* param, float min, float max) -> bool
 						{
 							cJSON* cj_param = cJSON_GetObjectItem(cj_train_config, param);
 							if(cj_param)
@@ -314,7 +314,14 @@ Error:
 											return false;
 										}
 
-										train_config.Parameters[j].Data[index] = float(cj_val->valuedouble);
+										float val = float(cj_val->valuedouble);
+
+										if(val < min || val > max)
+										{
+											return false;
+										}
+
+										train_config.Parameters[j].Data[index] = val; 
 										
 									}
 								}
@@ -322,21 +329,29 @@ Error:
 								{
 									for(uint32_t j = 0; j < layer_count; j++)
 									{
-										train_config.Parameters[j].Data[index] = float(cj_param->valuedouble);
+										float val = float(cj_param->valuedouble);
+										
+										if(val < min || val > max)
+										{
+											return false;
+										}
+
+										train_config.Parameters[j].Data[index] = val;
 									}
 								}
 							}
 							return true;
 						};
 #						define GET_INDEX(NAME) (((uint32_t)( &( (BackPropagation::LayerParameters*)(void*)0)->NAME) )/sizeof(float))
-#						define READ_PARAMS(NAME) if(read_params(GET_INDEX(NAME), #NAME) == false) goto Error;
+#						define READ_PARAMS(NAME, MIN, MAX) if(read_params(GET_INDEX(NAME), #NAME, MIN, MAX) == false) goto Error;
 
-						READ_PARAMS(LearningRate)
-						READ_PARAMS(Momentum)
-						READ_PARAMS(L1Regularization)
-						READ_PARAMS(L2Regularization)
-						READ_PARAMS(Dropout)
-						READ_PARAMS(Noise)
+						READ_PARAMS(LearningRate, 0.0f, FLT_MAX)
+						READ_PARAMS(Momentum, 0.0f, 1.0f)
+						READ_PARAMS(L1Regularization, 0.0f, FLT_MAX)
+						READ_PARAMS(L2Regularization, 0.0f, FLT_MAX)
+						READ_PARAMS(Dropout, 0.0f, 1.0f)
+						READ_PARAMS(Noise, 0.0f, FLT_MAX)
+						READ_PARAMS(AdadeltaDecay, 0.0f, 1.0f)
 
 						//now get the number of epochs
 						cJSON* cj_epochs = cJSON_GetObjectItem(cj_train_config, "Epochs");
