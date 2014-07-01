@@ -616,5 +616,6 @@ namespace OMLT
 			memcpy(in_row_dimensions, _row_dimensions, _row_dimensions_count * sizeof(uint32_t));
 		}	
 		inline Endianness GetEndianness() const {return _idx_endianness;}
+		inline uint32_t GetDatasetSize() const {return uint32_t((GetRowLengthBytes() * GetRowCount()) / (1024L * 1024L) + 1);}
 	};
 }

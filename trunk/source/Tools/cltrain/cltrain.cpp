@@ -344,6 +344,52 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	return Success;
 }
 
+// all sizes are in megabytes
+void GetOptimalParitioning(uint32_t total_atlas_size, uint32_t a_size, uint32_t b_size, uint32_t& out_a_atlas_size, uint32_t& out_b_atlas_size)
+{
+	float f_a_size = a_size / float(total_atlas_size);
+	float f_b_size = b_size / float(total_atlas_size);
+
+	// trival case, both fit in memory just fine
+	if((a_size + b_size) < total_atlas_size)
+	{
+		out_a_atlas_size = a_size;
+		out_b_atlas_size = b_size;
+	}
+	// if we're both more than 3/4 the size of our total size, split the memory 50:50
+	else if(f_a_size > 0.75f && f_b_size > 0.75f)
+	{
+		out_a_atlas_size = out_b_atlas_size = 256;
+	}
+	// with one large and one small, stick small one entirely into memory
+	else if(f_a_size > 0.75f && f_b_size <= 0.75f)
+	{
+		out_b_atlas_size = b_size;
+		out_a_atlas_size = 512 - out_b_atlas_size;
+	}
+	// same as before but swapped
+	else if(f_a_size <= 0.75f && f_b_size > 0.75f)
+	{
+		out_a_atlas_size = a_size;
+		out_b_atlas_size = 512 - out_a_atlas_size;
+	}
+	// finally, if both are smaller than the 3/4 total memory, put the smaller
+	// one entirely in memory and give the other one the rest
+	else
+	{
+		if(f_a_size > f_b_size)
+		{
+			out_b_atlas_size = b_size;
+			out_a_atlas_size = 512 - out_b_atlas_size;
+		}
+		else
+		{
+			out_a_atlas_size = a_size;
+			out_b_atlas_size = 512 - out_a_atlas_size;
+		}
+	}
+}
+
 DataAtlas* training_data_atlas = nullptr;
 DataAtlas* training_label_atlas = nullptr;
 DataAtlas* validation_data_atlas = nullptr;
@@ -360,13 +406,23 @@ TRAINER* GetTrainer() { return nullptr;}
 template<typename TRAINER>
 void InitDataAtlas(uint32_t minibatch_size)
 {
-	// load and initialize data
-	training_data_atlas = new DataAtlas(384);
-	training_data_atlas->Initialize(training_data, minibatch_size);
 	if(validation_data)
 	{
-		validation_data_atlas = new DataAtlas(128);
+		uint32_t training_atlas_size, validation_atlas_size;
+		GetOptimalParitioning(512, training_data->GetDatasetSize(), validation_data->GetDatasetSize(), training_atlas_size, validation_atlas_size);
+
+		// load and initialize data
+		training_data_atlas = new DataAtlas(training_atlas_size);
+		training_data_atlas->Initialize(training_data, minibatch_size);
+
+		validation_data_atlas = new DataAtlas(validation_atlas_size);
 		validation_data_atlas->Initialize(validation_data, minibatch_size);
+	}
+	else
+	{
+		uint32_t training_atlas_size = training_data->GetDatasetSize() > 512 ? 512 : training_data->GetDatasetSize();
+		training_data_atlas = new DataAtlas(training_atlas_size);
+		training_data_atlas->Initialize(training_data, minibatch_size);
 	}
 }
 
@@ -646,17 +702,35 @@ BP* GetTrainer() {return trainer.bp;}
 template<>
 void InitDataAtlas<BP>(uint32_t minibatch_size)
 {
-	// load and initialize data
-	training_data_atlas = new DataAtlas(128);
-	training_data_atlas->Initialize(training_data, minibatch_size);
-	training_label_atlas = new DataAtlas(128);
-	training_label_atlas->Initialize(training_labels, minibatch_size);
 	if(validation_data)
 	{
-		validation_data_atlas = new DataAtlas(128);
+		// load and initialize data
+		uint32_t training_data_atlas_size, training_label_atlas_size;
+		GetOptimalParitioning(256, training_data->GetDatasetSize(), training_labels->GetDatasetSize(), training_data_atlas_size, training_label_atlas_size);
+
+		training_data_atlas = new DataAtlas(training_data_atlas_size);
+		training_data_atlas->Initialize(training_data, minibatch_size);
+		training_label_atlas = new DataAtlas(training_label_atlas_size);
+		training_label_atlas->Initialize(training_labels, minibatch_size);
+
+		uint32_t validation_data_atlas_size, validation_label_atlas_size;
+		GetOptimalParitioning(256, validation_data->GetDatasetSize(), validation_labels->GetDatasetSize(), validation_data_atlas_size, validation_label_atlas_size);
+
+		validation_data_atlas = new DataAtlas(validation_data_atlas_size);
 		validation_data_atlas->Initialize(validation_data, minibatch_size);
-		validation_label_atlas = new DataAtlas(128);
+		validation_label_atlas = new DataAtlas(validation_label_atlas_size);
 		validation_label_atlas->Initialize(validation_labels, minibatch_size);
+	}
+	else
+	{
+		// load and initialize data
+		uint32_t training_data_atlas_size, training_label_atlas_size;
+		GetOptimalParitioning(512, training_data->GetDatasetSize(), training_labels->GetDatasetSize(), training_data_atlas_size, training_label_atlas_size);
+
+		training_data_atlas = new DataAtlas(training_data_atlas_size);
+		training_data_atlas->Initialize(training_data, minibatch_size);
+		training_label_atlas = new DataAtlas(training_label_atlas_size);
+		training_label_atlas->Initialize(training_labels, minibatch_size);
 	}
 }
 
