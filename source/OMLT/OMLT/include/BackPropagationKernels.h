@@ -26,28 +26,6 @@ struct SourceCalcEnabledUnits : public SiCKL::Source
 	END_SOURCE
 };
 
-struct SourceCopyVisible : public SiCKL::Source
-{
-	BEGIN_SOURCE
-		BEGIN_CONST_DATA
-			CONST_DATA(Buffer2D<Float>, in_enabled)
-			CONST_DATA(Buffer2D<Float>, in_visible)
-		END_CONST_DATA
-
-		BEGIN_OUT_DATA
-			OUT_DATA(Float, out_visible)
-		END_OUT_DATA
-
-		BEGIN_MAIN
-			If(in_enabled(Index().X, 0) == 1.0f)
-				out_visible = in_visible(Index());
-			Else
-				out_visible = 0.0f;
-			EndIf
-		END_MAIN
-	END_SOURCE
-};
-
 struct SourceFeedForward : public SiCKL::Source
 {
 	ActivationFunction_t FUNC;
@@ -58,7 +36,7 @@ struct SourceFeedForward : public SiCKL::Source
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
 			CONST_DATA(Buffer2D<Float>, in_inputs)
-			CONST_DATA(Buffer2D<Float>, in_enabled_outputs)
+			CONST_DATA(Buffer2D<Float>, in_enabled_inputs)
 			CONST_DATA(Buffer2D<Float>, in_weights);
 			CONST_DATA(Buffer2D<UInt4>, in_seeds)
 		END_CONST_DATA
@@ -75,37 +53,35 @@ struct SourceFeedForward : public SiCKL::Source
 			// output vector we're calculating
 			Int m = Index().Y;
 
-			If(in_enabled_outputs(j, 0) == 1.0f)
-				// bias
-				Float accumulation = 0.0f;
-				// calculate dot product between feature and input vector
-				ForInRange(i, 0, INPUT_COUNT)
-					Float input = in_inputs(i, m);
-					// offset i by 1 because of bias column
-					Float w_ij = in_weights(i + 1, j);
+			// bias
+			Float accumulation = 0.0f;
+			// calculate dot product between feature and input vector
+			ForInRange(i, 0, INPUT_COUNT)
+				// get our input
+				Float input = in_inputs(i, m);
+				// get whether the input is enabled
+				Float input_enabled = in_enabled_inputs(i, 0);
+				// get weight, offset i by 1 because of bias column
+				Float w_ij = in_weights(i + 1, j);
 
-					accumulation = accumulation + (input * w_ij);
-				EndFor
-				// take input dropout into account
-				accumulation = accumulation * (1.0f / (1.0f - INPUT_DROPOUT_PROB));
-				// finally add bias
-				accumulation = accumulation + in_weights(0, j);
+				accumulation = accumulation + (input * input_enabled * w_ij);
+			EndFor
+			// take input dropout and dropconnect into account
+			accumulation = accumulation * (1.0f / (1.0f - INPUT_DROPOUT_PROB));
+			// finally add bias
+			accumulation = accumulation + in_weights(0, j);
 
 
-				// add noise if required
-				if(NOISE_STDDEV != 0.0f)
-				{
-					Float noise;
-					NextGaussian(in_seeds(j, m), out_seed, noise);
-					accumulation = accumulation + (noise * NOISE_STDDEV);
-				}
+			// add noise if required
+			if(NOISE_STDDEV != 0.0f)
+			{
+				Float noise;
+				NextGaussian(in_seeds(j, m), out_seed, noise);
+				accumulation = accumulation + (noise * NOISE_STDDEV);
+			}
 
-				// activation function
-				out_activation = CalcActivation(FUNC, accumulation);
-			Else
-				out_activation = 0.0f;
-				out_seed = in_seeds(j, m);
-			EndIf
+			// activation function
+			out_activation = CalcActivation(FUNC, accumulation);
 		END_MAIN
 	END_SOURCE
 };
