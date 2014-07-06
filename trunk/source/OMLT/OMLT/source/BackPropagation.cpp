@@ -14,7 +14,6 @@ namespace OMLT
 		, _minibatch_size(in_minibatchsize)
 		, _recompile_required(true)
 		, _last_label(nullptr)
-		, _copy_visible(nullptr)
 		, _error_calculator(nullptr)
 	{
 		assert(in_config.LayerConfigs.size() > 0);
@@ -30,7 +29,6 @@ namespace OMLT
 		, _minibatch_size(in_minibatchsize)
 		, _recompile_required(true)
 		, _last_label(nullptr)
-		, _copy_visible(nullptr)
 		, _error_calculator(nullptr)
 	{
 		for(uint32_t k = 0; k < in_mlp->LayerCount(); k++)
@@ -77,9 +75,6 @@ namespace OMLT
 		{
 			delete *it;
 		}
-
-		// and delete the orphaned compute programs
-		delete _copy_visible;
 	}
 
 	void BackPropagation::SetTrainingConfig( const TrainingConfig& in_config)
@@ -142,15 +137,8 @@ namespace OMLT
 			}
 		}
 
-		// copy in example input (with dropout) to our buffer
-		{
-			_copy_visible->SetInput(0, _layers.front()->InputEnabled);
-			_copy_visible->SetInput(1, example_input);
-			_copy_visible->BindOutput(0, _input_buffer);
-
-			_copy_visible->Run();
-			_layers.front()->Input = &_input_buffer;
-		}
+		// set our example input as the input for the first layer
+		_layers.front()->Input = (OpenGLBuffer2D*)&example_input;
 
 		// feed forward
 		for(auto it = _layers.begin(); it != _layers.end(); ++it)
@@ -160,7 +148,7 @@ namespace OMLT
 			OpenGLProgram* feed_forward = lay->FeedForward;
 			{
 				feed_forward->SetInput(0, *lay->Input);
-				feed_forward->SetInput(1, *lay->OutputEnabled);
+				feed_forward->SetInput(1, lay->InputEnabled);
 				feed_forward->SetInput(2, lay->NesterovWeight);
 				feed_forward->SetInput(3, lay->OutputRandom0);
 				assert(lay->Input->Width == lay->InputUnits);
@@ -169,6 +157,8 @@ namespace OMLT
 				assert(lay->NesterovWeight.Height == lay->OutputUnits);
 				assert(lay->OutputRandom0.Width == lay->OutputUnits);
 				assert(lay->OutputRandom0.Height == _minibatch_size);
+				assert(lay->InputEnabled.Width == lay->InputUnits);
+				assert(lay->InputEnabled.Height == 1);
 
 				feed_forward->BindOutput(0, lay->Activation0);
 				feed_forward->BindOutput(1, lay->OutputRandom1);
@@ -317,16 +307,7 @@ namespace OMLT
 			}
 		}
 
-		// copy in example input (with dropout) to our buffer
-		{
-			_copy_visible->SetInput(0, _layers.front()->InputEnabled);
-			_copy_visible->SetInput(1, example_input);
-			_copy_visible->BindOutput(0, _input_buffer);
-
-			_copy_visible->Run();
-			_layers.front()->Input = &_input_buffer;
-		}
-
+		// feed forward
 		// feed forward
 		for(auto it = _layers.begin(); it != _layers.end(); ++it)
 		{
@@ -335,15 +316,17 @@ namespace OMLT
 			OpenGLProgram* feed_forward = lay->FeedForward;
 			{
 				feed_forward->SetInput(0, *lay->Input);
-				feed_forward->SetInput(1, *lay->OutputEnabled);
-				feed_forward->SetInput(2, lay->Weights0);
+				feed_forward->SetInput(1, lay->InputEnabled);
+				feed_forward->SetInput(2, lay->NesterovWeight);
 				feed_forward->SetInput(3, lay->OutputRandom0);
 				assert(lay->Input->Width == lay->InputUnits);
 				assert(lay->Input->Height == _minibatch_size);
-				assert(lay->Weights0.Width == (lay->InputUnits + 1));
-				assert(lay->Weights0.Height == lay->OutputUnits);
+				assert(lay->NesterovWeight.Width == (lay->InputUnits + 1));
+				assert(lay->NesterovWeight.Height == lay->OutputUnits);
 				assert(lay->OutputRandom0.Width == lay->OutputUnits);
 				assert(lay->OutputRandom0.Height == _minibatch_size);
+				assert(lay->InputEnabled.Width == lay->InputUnits);
+				assert(lay->InputEnabled.Height == 1);
 
 				feed_forward->BindOutput(0, lay->Activation0);
 				feed_forward->BindOutput(1, lay->OutputRandom1);
@@ -355,6 +338,17 @@ namespace OMLT
 				feed_forward->Run();
 
 				swap(lay->OutputRandom0, lay->OutputRandom1);
+			}
+
+			if(lay->Function == ActivationFunction::Softmax)
+			{
+				OpenGLProgram* softmax = lay->CalcSoftmax;
+				softmax->SetInput(0, lay->Activation0);
+				softmax->BindOutput(0, lay->Activation1);
+
+				softmax->Run();
+
+				swap(lay->Activation0, lay->Activation1);
 			}
 		}
 
@@ -408,6 +402,7 @@ namespace OMLT
 		// init weights, delta weights
 		// weight format: j rows, each containing i + 1 values, first value in each row is bias
 		{
+			// first column contains biases
 			width = result->InputUnits + 1;
 			height = result->OutputUnits;
 
@@ -488,14 +483,6 @@ namespace OMLT
 		if(_layers.size() > 0)
 		{
 			_layers.back()->NextLayer = result;
-		}
-
-		if(_layers.size() == 0)
-		{
-			width = result->InputUnits;
-			height = _minibatch_size;
-
-			_input_buffer = OpenGLBuffer2D(width, height, ReturnType::Float, nullptr);
 		}
 
 		// finally, append our newly created layer to the list
@@ -581,23 +568,12 @@ namespace OMLT
 			SafeDelete(layer->CalcSensitivity);
 			SafeDelete(layer->UpdateWeights);
 		}
-		SafeDelete(_copy_visible);
-
 		SafeDelete(_error_calculator);
 	}
 
 	void BackPropagation::build_kernels()
 	{
 		OpenGLCompiler comp;
-
-		// copy example unit to separate buffer
-		{
-			SourceCopyVisible source;
-			source.Parse();
-
-			_copy_visible = comp.Build(source);
-			_copy_visible->Initialize(_layers.front()->InputUnits, _minibatch_size);
-		}
 
 		for(uint32_t  k = 0; k < _layers.size(); k++)
 		{
@@ -689,6 +665,7 @@ namespace OMLT
 
 		{
 			Layer* last_layer = _layers.back();
+			// the last layer is always all enabled
 			if(last_layer->OutputEnabled == nullptr)
 			{
 				float* enabled = new float[last_layer->OutputUnits];

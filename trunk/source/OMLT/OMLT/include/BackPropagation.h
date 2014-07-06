@@ -148,10 +148,6 @@ namespace OMLT
 		};
 		const OpenGLBuffer2D* _last_label;
 
-		// buffer and program for dropping out input units
-		OpenGLBuffer2D _input_buffer;
-		OpenGLProgram* _copy_visible;
-
 		ErrorCalculator* _error_calculator;
 
 		const uint32_t _input_units;
