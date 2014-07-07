@@ -20,7 +20,6 @@ namespace OMLT
 		, _minibatch_size(in_minibatch_size)
 		, _calc_enabled_visible(nullptr)
 		, _calc_enabled_hidden(nullptr)
-		, _copy_visible(nullptr)
 		, _calc_hidden(nullptr)
 		, _calc_hidden_softmax(nullptr)
 		, _calc_hidden_states(nullptr)
@@ -38,7 +37,6 @@ namespace OMLT
 		: _minibatch_size(in_minibatch_size)
 		, _calc_enabled_visible(nullptr)
 		, _calc_enabled_hidden(nullptr)
-		, _copy_visible(nullptr)
 		, _calc_hidden(nullptr)
 		, _calc_hidden_softmax(nullptr)
 		, _calc_hidden_states(nullptr)
@@ -90,63 +88,7 @@ namespace OMLT
 			_recompile_required = true;
 		}
 	}
-#if 0
-	struct uvec4
-	{
-		uint32_t X;
-		uint32_t Y;
-		uint32_t Z;
-		uint32_t W;
-	};
 
-	void NextSeed(const uvec4& in_seed, uvec4& out_seed)
-	{
-		uint32_t t = in_seed.X ^ (in_seed.X << 11u);
-		out_seed.X = in_seed.Y;
-		out_seed.Y = in_seed.Z;
-		out_seed.Z = in_seed.W;
-		out_seed.W = in_seed.W ^ (in_seed.W >> 19u) ^ t ^ (t >> 8u);
-	}
-
-
-	void NextFloat(const uvec4& in_seed, uvec4& out_seed, float& out_float)
-	{
-		NextSeed(in_seed, out_seed);
-
-		// top 24 bits 
-		uint32_t next24 = out_seed.X >> 8u;
-
-		out_float = (float)next24 / (float)(1 << 24);
-	}
-	void NextGaussian(const uvec4& in_seed, uvec4& out_seed, float& out_gaussian)
-	{
-		float u1 = 0.0f;
-		float u2 = 0.0f;
-
-		uvec4 seed0 = in_seed;
-		uvec4 seed1 = {0};
-
-		uint32_t iterations = 0;
-
-
-		// get our random values
-		while(u1 == 0.0f)
-		{
-			NextFloat(seed0, seed1, u1);
-			seed0 = seed1;
-			iterations++;
-
-		}
-
-		if(iterations > 1)
-		{
-			printf("Whoat! Iterations: %u, seeds = %08x %08x %08x %08x\n", iterations, in_seed.X, in_seed.Y, in_seed.Z, in_seed.W);
-		}
-
-		NextFloat(seed0, seed1, u1);
-		out_seed =  seed1;
-	}
-#endif
 	void ContrastiveDivergence::Train( const OpenGLBuffer2D& in_example)
 	{
 		if(_recompile_required)
@@ -156,6 +98,8 @@ namespace OMLT
 
 			_recompile_required = false;
 		}
+
+		_visible0 = in_example;
 
 		/// Calculate Enabled Units
 
@@ -173,19 +117,12 @@ namespace OMLT
 		swap(_visible_dropout_random0, _visible_dropout_random1);
 		swap(_hidden_dropout_random0, _hidden_dropout_random1);
 
-		/// Copy in Visible Data
-
-		_copy_visible->SetInput(0, in_example);
-		_copy_visible->SetInput(1, _enabled_visible);
-		_copy_visible->BindOutput(0, _visible0);
-		_copy_visible->Run();
-		
 		/// Calc Hidden and States from Visible
 		if(_model_config.HiddenType != ActivationFunction::Softmax)
 		{
 			_calc_hidden_states->SetInput(0, _visible0);
 			_calc_hidden_states->SetInput(1, _weights0);
-			_calc_hidden_states->SetInput(2, _enabled_hidden);
+			_calc_hidden_states->SetInput(2, _enabled_visible);
 			_calc_hidden_states->SetInput(3, _hidden_random0);
 			_calc_hidden_states->BindOutput(0, _hidden_random1);
 			_calc_hidden_states->BindOutput(1, _hidden0);
@@ -199,7 +136,7 @@ namespace OMLT
 		{
 			_calc_hidden->SetInput(0, _visible0);
 			_calc_hidden->SetInput(1, _weights0);
-			_calc_hidden->SetInput(2, _enabled_hidden);
+			_calc_hidden->SetInput(2, _calc_enabled_visible);
 			_calc_hidden->BindOutput(0, _hidden0);
 			_calc_hidden->Run();
 
@@ -218,7 +155,7 @@ namespace OMLT
 
 		_calc_visible->SetInput(0, _hidden_states);
 		_calc_visible->SetInput(1, _weights0);
-		_calc_visible->SetInput(2, _enabled_visible);
+		_calc_visible->SetInput(2, _enabled_hidden);
 		_calc_visible->BindOutput(0, _visible_prime0);
 		_calc_visible->Run();
 
@@ -237,7 +174,7 @@ namespace OMLT
 
 		_calc_hidden->SetInput(0, _visible_prime0);
 		_calc_hidden->SetInput(1, _weights0);
-		_calc_hidden->SetInput(2, _enabled_hidden);
+		_calc_hidden->SetInput(2, _enabled_visible);
 		_calc_hidden->BindOutput(0, _hidden_prime0);
 		_calc_hidden->Run();
 
@@ -279,18 +216,11 @@ namespace OMLT
 
 	float ContrastiveDivergence::GetReconstructionError( const OpenGLBuffer2D& in_example)
 	{
-		/// Copy example in and dropout data (using precalculated enabled visibles)
-
-		_copy_visible->SetInput(0, in_example);
-		_copy_visible->SetInput(1, _enabled_visible);
-		_copy_visible->BindOutput(0, _visible0);
-		_copy_visible->Run();
-
 		/// Calc Hidden
 
 		_calc_hidden->SetInput(0, _visible0);
 		_calc_hidden->SetInput(1, _weights0);
-		_calc_hidden->SetInput(2, _enabled_hidden);
+		_calc_hidden->SetInput(2, _enabled_visible);
 		_calc_hidden->BindOutput(0, _hidden0);
 		_calc_hidden->Run();
 
@@ -298,7 +228,7 @@ namespace OMLT
 
 		_calc_visible->SetInput(0, _hidden0);
 		_calc_visible->SetInput(1, _weights0);
-		_calc_visible->SetInput(2, _enabled_visible);
+		_calc_visible->SetInput(2, _enabled_hidden);
 		_calc_visible->BindOutput(0, _visible_prime0);
 		_calc_visible->Run();
 
@@ -382,7 +312,6 @@ namespace OMLT
 		// delete our kernels
 		SafeDelete(_calc_enabled_visible);
 		SafeDelete(_calc_enabled_hidden);
-		SafeDelete(_copy_visible);
 		SafeDelete(_calc_hidden);
 		SafeDelete(_calc_hidden_softmax);
 		SafeDelete(_calc_hidden_states);
@@ -417,16 +346,6 @@ namespace OMLT
 		_calc_enabled_hidden->Initialize(_model_config.HiddenUnits, 1);
 
 		//printf("%s\n", _calc_enabled_hidden->GetSource().c_str());
-
-		/// Copy Visible
-		SourceCopyVisible src_copy_visible;
-		src_copy_visible.Parse();
-
-		_copy_visible = compiler.Build(src_copy_visible);
-		_copy_visible->Initialize(_model_config.VisibleUnits, _minibatch_size);
-
-		//printf("%s\n", _copy_visible->GetSource().c_str());
-
 
 		/// Calc Hidden And States
 		if(_model_config.HiddenType != ActivationFunction::Softmax)

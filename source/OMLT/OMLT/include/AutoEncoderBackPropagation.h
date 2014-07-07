@@ -103,7 +103,6 @@ namespace OMLT
 
 		OpenGLProgram* CalcEnabledVisible;
 		OpenGLProgram* CalcEnabledHidden;
-		OpenGLProgram* CopyVisible;
 		OpenGLProgram* CalcHidden;
 		OpenGLProgram* CalcHiddenSoftmax;
 		OpenGLProgram* CalcOutput;

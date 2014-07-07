@@ -13,7 +13,6 @@ namespace OMLT
 		  _minibatch_size(in_minibatch_size),
 		  CalcEnabledVisible(nullptr),
 		  CalcEnabledHidden(nullptr),
-		  CopyVisible(nullptr),
 		  CalcHidden(nullptr),
 		  CalcHiddenSoftmax(nullptr),
 		  CalcOutput(nullptr),
@@ -30,7 +29,6 @@ namespace OMLT
 		: _minibatch_size(in_minibatch_size),
 		  CalcEnabledVisible(nullptr),
 		  CalcEnabledHidden(nullptr),
-		  CopyVisible(nullptr),
 		  CalcHidden(nullptr),
 		  CalcHiddenSoftmax(nullptr),
 		  CalcOutput(nullptr),
@@ -100,6 +98,7 @@ namespace OMLT
 		}
 
 		Target = in_example;
+		Visible = in_example;
 
 		// calc enabled visible units
 		CalcEnabledVisible->SetInput(0, VisibleRandom0);
@@ -117,15 +116,9 @@ namespace OMLT
 
 		swap(HiddenRandom0, HiddenRandom1);
 		
-		// copy in visible activation
-		CopyVisible->SetInput(0, Target);
-		CopyVisible->SetInput(1, VisibleEnabled);
-		CopyVisible->BindOutput(0, Visible);
-		CopyVisible->Run();
-
 		// calc hidden activation
 		CalcHidden->SetInput(0, Visible);
-		CalcHidden->SetInput(1, HiddenEnabled);
+		CalcHidden->SetInput(1, VisibleEnabled);
 		CalcHidden->SetInput(2, Weights0);
 		CalcHidden->BindOutput(0, Hidden0);
 		CalcHidden->Run();
@@ -141,7 +134,8 @@ namespace OMLT
 
 		// calc output activation
 		CalcOutput->SetInput(0, Hidden0);
-		CalcOutput->SetInput(1, Weights0);
+		CalcOutput->SetInput(1, HiddenEnabled);
+		CalcOutput->SetInput(2, Weights0);
 		CalcOutput->BindOutput(0, Output0);
 		CalcOutput->Run();
 
@@ -162,7 +156,7 @@ namespace OMLT
 
 		// calc hidden sensitivities
 		CalcHiddenSensitivities->SetInput(0, OutputSensitivities);
-		CalcHiddenSensitivities->SetInput(1, HiddenEnabled);
+		CalcHiddenSensitivities->SetInput(1, VisibleEnabled);
 		CalcHiddenSensitivities->SetInput(2, Weights0);
 		CalcHiddenSensitivities->SetInput(3, Hidden0);
 		CalcHiddenSensitivities->BindOutput(0, HiddenSensitivities);
@@ -261,24 +255,37 @@ namespace OMLT
 		OpenGLBuffer2D previous = Target;
 		Target = in_example;
 
-		// copy in visible activation
-		CopyVisible->SetInput(0, Target);
-		CopyVisible->SetInput(1, VisibleEnabled);
-		CopyVisible->BindOutput(0, Visible);
-		CopyVisible->Run();
-
 		// calc hidden activation
 		CalcHidden->SetInput(0, Visible);
-		CalcHidden->SetInput(1, HiddenEnabled);
+		CalcHidden->SetInput(1, VisibleEnabled);
 		CalcHidden->SetInput(2, Weights0);
 		CalcHidden->BindOutput(0, Hidden0);
 		CalcHidden->Run();
 
+		if(_model_config.HiddenType == ActivationFunction::Softmax)
+		{
+			CalcHiddenSoftmax->SetInput(0, Hidden0);
+			CalcHiddenSoftmax->BindOutput(0, Hidden1);
+			CalcHiddenSoftmax->Run();
+
+			std::swap(Hidden0, Hidden1);
+		}
+
 		// calc output activation
 		CalcOutput->SetInput(0, Hidden0);
-		CalcOutput->SetInput(1, Weights0);
+		CalcOutput->SetInput(1, HiddenEnabled);
+		CalcOutput->SetInput(2, Weights0);
 		CalcOutput->BindOutput(0, Output0);
 		CalcOutput->Run();
+
+		if(_model_config.OutputType == ActivationFunction::Softmax)
+		{
+			CalcOutputSoftmax->SetInput(0, Output0);
+			CalcOutputSoftmax->BindOutput(0, Output1);
+			CalcOutputSoftmax->Run();
+
+			std::swap(Output0, Output1);
+		}
 
 		float result = GetLastError();
 
@@ -290,7 +297,6 @@ namespace OMLT
 	{
 		SafeDelete(CalcEnabledVisible);
 		SafeDelete(CalcEnabledHidden);
-		SafeDelete(CopyVisible);
 		SafeDelete(CalcHidden);
 		SafeDelete(CalcHiddenSoftmax);
 		SafeDelete(CalcOutput);
@@ -323,14 +329,6 @@ namespace OMLT
 
 			CalcEnabledHidden = comp.Build(source);
 			CalcEnabledHidden->Initialize(_model_config.HiddenCount, 1);
-		}
-		// copy visible into a buffer
-		{
-			SourceCopyVisible source;
-			source.Parse();
-
-			CopyVisible = comp.Build(source);
-			CopyVisible->Initialize(_model_config.VisibleCount, _minibatch_size);
 		}
 		// calc hidden
 		{

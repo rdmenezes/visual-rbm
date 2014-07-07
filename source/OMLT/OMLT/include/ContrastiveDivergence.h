@@ -101,7 +101,6 @@ namespace OMLT
 
 		OpenGLProgram* _calc_enabled_visible;
 		OpenGLProgram* _calc_enabled_hidden;
-		OpenGLProgram* _copy_visible;
 		OpenGLProgram* _calc_hidden_states;
 		OpenGLProgram* _calc_hidden_softmax_states;
 		OpenGLProgram* _calc_visible;

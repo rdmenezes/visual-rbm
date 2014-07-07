@@ -28,29 +28,6 @@ struct SourceCalcEnabled : public SiCKL::Source
 		END_SOURCE	
 };
 
-struct SourceCopyVisible : public SiCKL::Source
-{
-	BEGIN_SOURCE
-		BEGIN_CONST_DATA
-			CONST_DATA(Buffer2D<Float>, in_data)
-			CONST_DATA(Buffer2D<UInt>, in_enabled_visible)
-		END_CONST_DATA
-
-		BEGIN_OUT_DATA
-			OUT_DATA(Float, result)
-		END_OUT_DATA
-
-		BEGIN_MAIN
-			If(in_enabled_visible(Index().X, 0) == 1u)
-				result = in_data(Index().X, Index().Y);
-			Else
-				result = 0.0f;
-			EndIf
-		END_MAIN
-
-	END_SOURCE
-};
-
 struct SourceCalcHidden : public SiCKL::Source
 {
 	ActivationFunction_t FUNC;
@@ -60,7 +37,7 @@ struct SourceCalcHidden : public SiCKL::Source
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
 			CONST_DATA(Buffer2D<Float>, in_visible)
-			CONST_DATA(Buffer2D<UInt>, in_enabled_hidden)
+			CONST_DATA(Buffer2D<UInt>, in_enabled_visible)
 			CONST_DATA(Buffer2D<Float>, in_weights)
 		END_CONST_DATA
 
@@ -74,25 +51,20 @@ struct SourceCalcHidden : public SiCKL::Source
 			// hidden vector we are calculating
 			Int m = Index().Y;
 
-			If(in_enabled_hidden(j, 0) == 0u)
-				// destination is disabled
-				out_activation = 0.0f;
-			Else
-				Float accumulation = 0.0f;
+			Float accumulation = 0.0f;
 
-				ForInRange(i, 0, VISIBLE_UNITS)
-					Float v_i = in_visible(i, m);
-					Float w_ij = in_weights(i+1, j+1);
-					accumulation  = accumulation + (v_i * w_ij);
-				EndFor
-				// take input dropout into account
-				accumulation = accumulation * (1.0f / (1.0f - VISIBLE_DROPOUT_PROB));
-				// add bias
-				accumulation = accumulation + in_weights(0, j+1);
+			ForInRange(i, 0, VISIBLE_UNITS)
+				Float v_i = in_visible(i, m);
+				Float w_ij = in_weights(i+1, j+1);
+				Float enabled = in_enabled_visible(i, 0);
+				accumulation  = accumulation + (v_i * w_ij * enabled);
+			EndFor
+			// take input dropout into account
+			accumulation = accumulation * (1.0f / (1.0f - VISIBLE_DROPOUT_PROB));
+			// add bias
+			accumulation = accumulation + in_weights(0, j+1);
 
-				out_activation = CalcActivation(FUNC, accumulation);
-			EndIf
-
+			out_activation = CalcActivation(FUNC, accumulation);
 		END_MAIN
 
 	END_SOURCE
@@ -107,6 +79,7 @@ struct SourceCalcOutput : public SiCKL::Source
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
 			CONST_DATA(Buffer2D<Float>, in_hidden)
+			CONST_DATA(Buffer2D<UInt>, in_enabled_hidden)
 			CONST_DATA(Buffer2D<Float>, in_weights)
 		END_CONST_DATA
 
@@ -125,7 +98,8 @@ struct SourceCalcOutput : public SiCKL::Source
 			ForInRange(j, 0, HIDDEN_UNITS)
 				Float h_j = in_hidden(j, m);
 				Float w_jk = in_weights(k+1, j+1);
-				accumulation = accumulation + (h_j * w_jk);
+				Float enabled = in_enabled_hidden(j, 0);
+				accumulation = accumulation + (h_j * w_jk * enabled);
 			EndFor
 
 			// take hidden dropout into acccount
@@ -222,7 +196,7 @@ struct SourceCalcHiddenSensitivities : public SiCKL::Source
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
 			CONST_DATA(Buffer2D<Float>, in_output_sensitivities)
-			CONST_DATA(Buffer2D<UInt>, in_enabled_hidden)
+			CONST_DATA(Buffer2D<UInt>, in_enabled_visible)
 			CONST_DATA(Buffer2D<Float>, in_weights)
 			CONST_DATA(Buffer2D<Float>, in_hidden)
 		END_CONST_DATA
@@ -235,21 +209,18 @@ struct SourceCalcHiddenSensitivities : public SiCKL::Source
 			Int j = Index().X;
 			Int m = Index().Y;
 
-			If(in_enabled_hidden(j, 0) == 1u)
-				Float dp = 0.0f;
-				ForInRange(k, 0, VISIBLE_UNITS)
-					Float d_k = in_output_sensitivities(k, m);
-					Float w_kj = in_weights(k+1, j+1);
-					dp = dp + (w_kj * d_k);
-				EndFor
 
-				out_sensitivitiy = dp * CalcActivationPrime(FUNC, in_hidden(j, m));
+			Float dp = 0.0f;
+			ForInRange(k, 0, VISIBLE_UNITS)
+				Float d_k = in_output_sensitivities(k, m);
+				Float w_kj = in_weights(k+1, j+1);
+				Float enabled = in_enabled_visible(k, 0);
+				dp = dp + (w_kj * d_k);
+			EndFor
 
-			Else
-				out_sensitivitiy = 0.0f;
-			EndIf
+			out_sensitivitiy = dp * CalcActivationPrime(FUNC, in_hidden(j, m));
 
-		END_MAIN
+			END_MAIN
 
 	END_SOURCE
 };
