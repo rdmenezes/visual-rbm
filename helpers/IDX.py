@@ -36,6 +36,19 @@ class IDX:
 	def __exit__(self, type, value, traceback):
 		self.close()
 
+	def __iter__(self):
+		self.__current_index = 0
+		return self
+
+	def next(self):
+		if self.__current_index == self.row_count():
+			raise StopIteration
+		else:
+			result = self.read_row(self.__current_index)
+			self.__current_index += 1
+			return result
+
+
 # public:
 	# close an idx file
 	def close(self):
