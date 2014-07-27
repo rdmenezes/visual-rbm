@@ -119,7 +119,7 @@ namespace OMLT
 		// calc hidden activation
 		CalcHidden->SetInput(0, Visible);
 		CalcHidden->SetInput(1, VisibleEnabled);
-		CalcHidden->SetInput(2, Weights0);
+		CalcHidden->SetInput(2, NesterovWeight);
 		CalcHidden->BindOutput(0, Hidden0);
 		CalcHidden->Run();
 
@@ -135,7 +135,7 @@ namespace OMLT
 		// calc output activation
 		CalcOutput->SetInput(0, Hidden0);
 		CalcOutput->SetInput(1, HiddenEnabled);
-		CalcOutput->SetInput(2, Weights0);
+		CalcOutput->SetInput(2, NesterovWeight);
 		CalcOutput->BindOutput(0, Output0);
 		CalcOutput->Run();
 
@@ -157,7 +157,7 @@ namespace OMLT
 		// calc hidden sensitivities
 		CalcHiddenSensitivities->SetInput(0, OutputSensitivities);
 		CalcHiddenSensitivities->SetInput(1, VisibleEnabled);
-		CalcHiddenSensitivities->SetInput(2, Weights0);
+		CalcHiddenSensitivities->SetInput(2, NesterovWeight);
 		CalcHiddenSensitivities->SetInput(3, Hidden0);
 		CalcHiddenSensitivities->BindOutput(0, HiddenSensitivities);
 		CalcHiddenSensitivities->Run();
@@ -169,12 +169,16 @@ namespace OMLT
 		UpdateWeights->SetInput(3, Visible);
 		UpdateWeights->SetInput(4, Weights0);
 		UpdateWeights->SetInput(5, DeltaWeights0);
+		UpdateWeights->SetInput(6, MeanSquareDelta0);
 		UpdateWeights->BindOutput(0, Weights1);
 		UpdateWeights->BindOutput(1, DeltaWeights1);
+		UpdateWeights->BindOutput(2, MeanSquareDelta1);
+		UpdateWeights->BindOutput(3, NesterovWeight);
 		UpdateWeights->Run();
 
 		swap(Weights0, Weights1);
 		swap(DeltaWeights0, DeltaWeights1);
+		swap(MeanSquareDelta0, MeanSquareDelta1);
 	}
 
 	AutoEncoder* AutoEncoderBackPropagation::GetAutoEncoder() const
@@ -401,6 +405,7 @@ namespace OMLT
 			source.L2_REGULARIZATION = _training_config.L2Regularization;
 			source.VISIBLE_DROPOUT = _training_config.VisibleDropout;
 			source.HIDDEN_DROPOUT = _training_config.HiddenDropout;
+			source.ADADELTA_DECAY = _training_config.AdadeltaDecay;
 			source.Parse();
 
 			UpdateWeights = comp.Build(source);
@@ -463,6 +468,9 @@ namespace OMLT
 		Weights1 = OpenGLBuffer2D(_model_config.VisibleCount + 1, _model_config.HiddenCount + 1, ReturnType::Float, nullptr);
 		DeltaWeights0 = OpenGLBuffer2D(_model_config.VisibleCount + 1, _model_config.HiddenCount + 1, ReturnType::Float, nullptr);
 		DeltaWeights1 = OpenGLBuffer2D(_model_config.VisibleCount + 1, _model_config.HiddenCount + 1, ReturnType::Float, nullptr);
+		NesterovWeight = OpenGLBuffer2D(_model_config.VisibleCount + 1, _model_config.HiddenCount + 1, ReturnType::Float, nullptr);
+		MeanSquareDelta0 = OpenGLBuffer2D(_model_config.VisibleCount + 1, _model_config.HiddenCount + 1, ReturnType::Float2, nullptr);
+		MeanSquareDelta1 = OpenGLBuffer2D(_model_config.VisibleCount + 1, _model_config.HiddenCount + 1, ReturnType::Float2, nullptr);
 
 		Visible = OpenGLBuffer2D(_model_config.VisibleCount, _minibatch_size, ReturnType::Float, nullptr);
 		Hidden0 = OpenGLBuffer2D(_model_config.HiddenCount, _minibatch_size, ReturnType::Float, nullptr);

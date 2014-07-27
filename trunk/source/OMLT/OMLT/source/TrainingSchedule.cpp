@@ -495,6 +495,7 @@ Error:
 					cJSON* cj_l2 = cJSON_GetObjectItem(cj_train_config, "L2Regularization");
 					cJSON* cj_visible_dropout = cJSON_GetObjectItem(cj_train_config, "VisibleDropout");
 					cJSON* cj_hidden_dropout = cJSON_GetObjectItem(cj_train_config, "HiddenDropout");
+					cJSON* cj_adadelta_decay = cJSON_GetObjectItem(cj_train_config, "AdadeltaDecay");
 
 					// epochs is the only thing required
 					if(cj_epochs && cj_epochs->valueint > 0)
@@ -573,6 +574,13 @@ Error:
 						else
 						{
 							goto Error;
+						}
+					}
+					if(cj_adadelta_decay)
+					{
+						if(cj_adadelta_decay->valuedouble >= 0.0 && cj_adadelta_decay->valuedouble < 1.0)
+						{
+							train_config.AdadeltaDecay = (float)cj_hidden_dropout->valuedouble;
 						}
 					}
 

@@ -77,6 +77,7 @@ namespace OMLT
 	ContrastiveDivergence::~ContrastiveDivergence()
 	{
 		free_kernels();
+		delete _error_calculator;
 	}
 
 	void ContrastiveDivergence::SetTrainingConfig( const TrainingConfig& in_config)
@@ -323,8 +324,6 @@ namespace OMLT
 		SafeDelete(_calc_visible);
 		SafeDelete(_calc_visible_softmax);
 		SafeDelete(_update_weights);
-
-		SafeDelete(_error_calculator);
 	}
 
 	void ContrastiveDivergence::build_kernels()
@@ -441,8 +440,6 @@ namespace OMLT
 		_update_weights->Initialize(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1);
 
 		//printf("%s\n", _update_weights->GetSource().c_str());
-
-		_error_calculator = new ErrorCalculator(_minibatch_size, _model_config.VisibleUnits, _model_config.VisibleType == ActivationFunction::Softmax ? ErrorFunction::CrossEntropy : ErrorFunction::SquareError);
 	}
 
 	// free result when done
@@ -543,14 +540,11 @@ namespace OMLT
 		_mean_square_delta0 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float2, nullptr);
 		_mean_square_delta1 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float2, nullptr);
 
-		_error = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::Float, nullptr);
-
 		// free freshly allocated seed buffers
 		free(visible_dropout_seed_buffer);
 		free(hidden_dropout_seed_buffer);
 		free(hidden_seed_buffer);
 
-		// acquire memory for our error buffer 
-		_error_buffer.Acquire(_model_config.VisibleUnits);
+		_error_calculator = new ErrorCalculator(_minibatch_size, _model_config.VisibleUnits, _model_config.VisibleType == ActivationFunction::Softmax ? ErrorFunction::CrossEntropy : ErrorFunction::SquareError);
 	}
 }

@@ -35,6 +35,7 @@ namespace OMLT
 			float L2Regularization;
 			float VisibleDropout;
 			float HiddenDropout;
+			float AdadeltaDecay;
 
 			TrainingConfig() 
 				: LearningRate(0.0f)
@@ -43,6 +44,7 @@ namespace OMLT
 				, L2Regularization(0.0f)
 				, VisibleDropout(0.0f)
 				, HiddenDropout(0.0f)
+				, AdadeltaDecay(1.0f)
 			{ }
 		};
 		AutoEncoderBackPropagation(const ModelConfig&, uint32_t in_minibatch_size);
@@ -88,6 +90,9 @@ namespace OMLT
 		OpenGLBuffer2D Weights1;
 		OpenGLBuffer2D DeltaWeights0;
 		OpenGLBuffer2D DeltaWeights1;
+		OpenGLBuffer2D NesterovWeight;
+		OpenGLBuffer2D MeanSquareDelta0;
+		OpenGLBuffer2D MeanSquareDelta1;
 
 		// layer buffers
 		OpenGLBuffer2D Target;
