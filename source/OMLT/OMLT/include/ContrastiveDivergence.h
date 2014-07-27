@@ -36,6 +36,8 @@ namespace OMLT
 			float L2Regularization;
 			float VisibleDropout;
 			float HiddenDropout;
+			float AdadeltaDecay;
+			float MaxNorm;
 
 			TrainingConfig() 
 				: LearningRate(0.0f)
@@ -44,6 +46,8 @@ namespace OMLT
 				, L2Regularization(0.0f)
 				, VisibleDropout(0.0f)
 				, HiddenDropout(0.0f)
+				, AdadeltaDecay(1.0f)
+				, MaxNorm(4.0f)
 			{ }
 		};
 
@@ -97,6 +101,10 @@ namespace OMLT
 		OpenGLBuffer2D _weights1;
 		OpenGLBuffer2D _delta_weights0;
 		OpenGLBuffer2D _delta_weights1;
+		OpenGLBuffer2D _nesterov_weight;
+		OpenGLBuffer2D _mean_square_delta0;
+		OpenGLBuffer2D _mean_square_delta1;
+
 		OpenGLBuffer2D _error;
 
 		OpenGLProgram* _calc_enabled_visible;
@@ -108,7 +116,7 @@ namespace OMLT
 		OpenGLProgram* _calc_hidden;
 		OpenGLProgram* _calc_hidden_softmax;
 		OpenGLProgram* _update_weights;
-		
+
 		ErrorCalculator* _error_calculator;
 
 		// kernel sources definitions
