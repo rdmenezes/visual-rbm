@@ -121,7 +121,7 @@ namespace OMLT
 		if(_model_config.HiddenType != ActivationFunction::Softmax)
 		{
 			_calc_hidden_states->SetInput(0, _visible0);
-			_calc_hidden_states->SetInput(1, _weights0);
+			_calc_hidden_states->SetInput(1, _nesterov_weight);
 			_calc_hidden_states->SetInput(2, _enabled_visible);
 			_calc_hidden_states->SetInput(3, _hidden_random0);
 			_calc_hidden_states->BindOutput(0, _hidden_random1);
@@ -135,7 +135,7 @@ namespace OMLT
 		else
 		{
 			_calc_hidden->SetInput(0, _visible0);
-			_calc_hidden->SetInput(1, _weights0);
+			_calc_hidden->SetInput(1, _nesterov_weight);
 			_calc_hidden->SetInput(2, _calc_enabled_visible);
 			_calc_hidden->BindOutput(0, _hidden0);
 			_calc_hidden->Run();
@@ -154,7 +154,7 @@ namespace OMLT
 		/// Calc Visible Prime
 
 		_calc_visible->SetInput(0, _hidden_states);
-		_calc_visible->SetInput(1, _weights0);
+		_calc_visible->SetInput(1, _nesterov_weight);
 		_calc_visible->SetInput(2, _enabled_hidden);
 		_calc_visible->BindOutput(0, _visible_prime0);
 		_calc_visible->Run();
@@ -173,7 +173,7 @@ namespace OMLT
 		/// Calc Hidden Prime
 
 		_calc_hidden->SetInput(0, _visible_prime0);
-		_calc_hidden->SetInput(1, _weights0);
+		_calc_hidden->SetInput(1, _nesterov_weight);
 		_calc_hidden->SetInput(2, _enabled_visible);
 		_calc_hidden->BindOutput(0, _hidden_prime0);
 		_calc_hidden->Run();
@@ -199,12 +199,16 @@ namespace OMLT
 		_update_weights->SetInput(5, _weights0);
 		_update_weights->SetInput(6, _enabled_visible);
 		_update_weights->SetInput(7, _enabled_hidden);
+		_update_weights->SetInput(8, _mean_square_delta0);
 		_update_weights->BindOutput(0, _delta_weights1);
 		_update_weights->BindOutput(1, _weights1);
+		_update_weights->BindOutput(2, _mean_square_delta1);
+		_update_weights->BindOutput(3, _nesterov_weight);
 		_update_weights->Run();
 
 		swap(_delta_weights0, _delta_weights1);
 		swap(_weights0, _weights1);
+		swap(_mean_square_delta0, _mean_square_delta1);
 
 		/// Done!
 	}
@@ -319,7 +323,7 @@ namespace OMLT
 		SafeDelete(_calc_visible);
 		SafeDelete(_calc_visible_softmax);
 		SafeDelete(_update_weights);
-		
+
 		SafeDelete(_error_calculator);
 	}
 
@@ -430,6 +434,7 @@ namespace OMLT
 		src_update_weights.MOMENTUM = _training_config.Momentum;
 		src_update_weights.L1_REGULARIZATION = _training_config.L1Regularization;
 		src_update_weights.L2_REGULARIZATION = _training_config.L2Regularization;
+		src_update_weights.ADADELTA_DECAY = _training_config.AdadeltaDecay;
 		src_update_weights.Parse();
 
 		_update_weights = compiler.Build(src_update_weights);
@@ -534,6 +539,9 @@ namespace OMLT
 		_weights1 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float, nullptr);
 		_delta_weights0 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float, nullptr);
 		_delta_weights1 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float, nullptr);
+		_nesterov_weight = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float, nullptr);
+		_mean_square_delta0 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float2, nullptr);
+		_mean_square_delta1 = OpenGLBuffer2D(_model_config.VisibleUnits + 1, _model_config.HiddenUnits + 1, ReturnType::Float2, nullptr);
 
 		_error = OpenGLBuffer2D(_model_config.VisibleUnits, 1, ReturnType::Float, nullptr);
 

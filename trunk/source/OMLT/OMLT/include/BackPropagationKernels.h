@@ -237,15 +237,19 @@ struct SourceUpdateWeights : public SiCKL::Source
 		END_OUT_DATA
 
 		BEGIN_MAIN
-			Int& j = Index().X;
-			Int& k = Index().Y;
+			const Int& j = Index().X;
+			const Int& k = Index().Y;
 
 			// epsilon for calculating Adadelta scaling factor
 			const float eps = 1.0e-6f;
 
 			// calculate weight derivatives
 			Float delta_w = 0.0f;
+			Float weight_decay = 0.0f;
 			Bool dropped_out = false;
+
+			const Float prev_weight = in_prev_weights(Index());
+
 			// bias update
 			If(j == 0 && in_enabled_outputs(k, 0) == 1.0f)
 
@@ -264,6 +268,35 @@ struct SourceUpdateWeights : public SiCKL::Source
 					d_k_y_j = d_k_y_j + (d_k * y_j);
 				EndFor
 				delta_w = d_k_y_j;
+
+				/// L1/L2 regularization
+
+				const Float prev_weight = in_prev_weights(Index());
+
+				// only L1
+				if(L1_REGULARIZATION != 0.0f && L2_REGULARIZATION == 0.0f)
+				{
+					Float l1 = Sign(prev_weight) * L1_REGULARIZATION;
+					weight_decay = l1;
+				}
+				// only L2
+				else if(L1_REGULARIZATION == 0.0f && L2_REGULARIZATION != 0.0f)
+				{
+					Float l2 = prev_weight * L2_REGULARIZATION;
+					weight_decay = l2;
+				} 
+				// both L1 and L2
+				else if(L1_REGULARIZATION != 0.0f && L2_REGULARIZATION != 0.0f)
+				{
+					Float l1 = Sign(prev_weight) * L1_REGULARIZATION;
+					Float l2 = prev_weight * L2_REGULARIZATION;
+					weight_decay = l1 + l2;
+				}
+				// neither
+				else
+				{
+					weight_decay = 0.0f;
+				}
 			// no update because dropout
 			Else
 				dropped_out = true;
@@ -279,42 +312,13 @@ struct SourceUpdateWeights : public SiCKL::Source
 			
 				out_mean_square_derivative = (1.0f - ADADELTA_DECAY) * (delta_w*delta_w) + ADADELTA_DECAY * prev_mean_square_derivative;
 
-				// calculate weight decay
-				auto& prev_weight = in_prev_weights(Index());
-				Float weight_decay = 0.0f;
-				{
-					// Regularization logic (we don't want to do weight decay on biases)
-					// only L1
-					if(L1_REGULARIZATION != 0.0f && L2_REGULARIZATION == 0.0f)
-					{
-						Float l1 = Sign(prev_weight) * L1_REGULARIZATION;
-						// j == 0 for bias, so Sign(j) == 0 which negates weight decay term
-						weight_decay = l1 * (Float)Sign(j);
-					}
-					// only L2
-					else if(L1_REGULARIZATION == 0.0f && L2_REGULARIZATION != 0.0f)
-					{
-						Float l2 = prev_weight * L2_REGULARIZATION;
-						weight_decay = l2 * (Float)Sign(j);
-					}
-					// both L1 and L2
-					else if(L1_REGULARIZATION != 0.0f && L2_REGULARIZATION != 0.0f)
-					{
-						Float l1 = Sign(prev_weight) * L1_REGULARIZATION;
-						Float l2 = prev_weight * L2_REGULARIZATION;
-
-						weight_decay = (l1 + l2) * (Float)Sign(j);
-					}
-				}
-
 				// calculate weight delta
 				auto& prev_weight_delta = in_prev_weight_deltas(Index());
 				auto& prev_mean_square_delta = in_prev_mean_square(Index()).Y;
 			
 				Float adadelta_factor = Sqrt(prev_mean_square_delta + eps) / Sqrt(out_mean_square_derivative + eps);
 
-				out_weight_delta = LEARNING_RATE * adadelta_factor * (delta_w - weight_decay);
-
+				out_weight_delta = MOMENTUM * prev_weight_delta + LEARNING_RATE * adadelta_factor * (delta_w - weight_decay);
 				// calculate mean square weight delta
 				auto& out_mean_square_delta = out_mean_square.Y;
 			
