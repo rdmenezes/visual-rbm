@@ -37,7 +37,6 @@ namespace OMLT
 			float VisibleDropout;
 			float HiddenDropout;
 			float AdadeltaDecay;
-			float MaxNorm;
 
 			TrainingConfig() 
 				: LearningRate(0.0f)
@@ -47,7 +46,6 @@ namespace OMLT
 				, VisibleDropout(0.0f)
 				, HiddenDropout(0.0f)
 				, AdadeltaDecay(1.0f)
-				, MaxNorm(4.0f)
 			{ }
 		};
 
@@ -105,8 +103,6 @@ namespace OMLT
 		OpenGLBuffer2D _mean_square_delta0;
 		OpenGLBuffer2D _mean_square_delta1;
 
-		OpenGLBuffer2D _error;
-
 		OpenGLProgram* _calc_enabled_visible;
 		OpenGLProgram* _calc_enabled_hidden;
 		OpenGLProgram* _calc_hidden_states;
@@ -125,8 +121,6 @@ namespace OMLT
 		void free_kernels();
 		void build_kernels();
 		void allocate_textures(float* weight_buffer);
-
-		AlignedMemoryBlock<float> _error_buffer;
 	};
 
 	typedef ContrastiveDivergence CD;

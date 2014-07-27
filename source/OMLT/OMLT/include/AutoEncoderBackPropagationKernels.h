@@ -234,6 +234,8 @@ struct SourceUpdateWeights : public SiCKL::Source
 	float L2_REGULARIZATION;
 	float VISIBLE_DROPOUT;
 	float HIDDEN_DROPOUT;
+	float ADADELTA_DECAY;
+
 	BEGIN_SOURCE
 		BEGIN_CONST_DATA
 			CONST_DATA(Buffer2D<Float>, in_output_sensitivities)
@@ -242,11 +244,14 @@ struct SourceUpdateWeights : public SiCKL::Source
 			CONST_DATA(Buffer2D<Float>, in_visible)
 			CONST_DATA(Buffer2D<Float>, in_prev_weights)
 			CONST_DATA(Buffer2D<Float>, in_prev_weight_deltas)
+			CONST_DATA(Buffer2D<Float2>, in_mean_square)
 		END_CONST_DATA
 
 		BEGIN_OUT_DATA
 			OUT_DATA(Float, out_weight)
 			OUT_DATA(Float, out_weight_delta)
+			OUT_DATA(Float2, out_mean_square)
+			OUT_DATA(Float, out_nesterov_weight)
 		END_OUT_DATA
 
 		BEGIN_MAIN
@@ -257,32 +262,34 @@ struct SourceUpdateWeights : public SiCKL::Source
 			auto& j = Index().Y;
 			auto& k = Index().X;
 
+			// epsilon for calculating Adadelta scaling factor
+			const float eps = 1.0e-6f;
+
+			Float delta_w = 0.0f;
+			Float weight_decay = 0.0f;
+
+			const Float prev_weight = in_prev_weights(i, j);
+
 			If(j == 0 && k == 0)
 				// top left corner, not a weight
-				out_weight_delta = 0.0f;
-				out_weight = 0.0f;
+				delta_w = 0.0f;
+				weight_decay = 0.0f;
 			ElseIf(j == 0)
 				// output bias
 				Float Dw_kj = 0.0f;
 				ForInRange(m, 0, MINIBATCH_SIZE)
 					Dw_kj = Dw_kj + d_k(k-1, m);
 				EndFor
-				Dw_kj = Dw_kj * (1.0f / MINIBATCH_SIZE);
 
-				out_weight_delta = MOMENTUM * in_prev_weight_deltas(k, j) + 
-					(1.0f - MOMENTUM) * Dw_kj;
-				out_weight = in_prev_weights(k, j) + LEARNING_RATE * out_weight_delta;
+				delta_w = Dw_kj;
 			ElseIf(k == 0)
 				// hidden bias
 				Float Dw_ji = 0.0f;
 				ForInRange(m, 0, MINIBATCH_SIZE)
 					Dw_ji = Dw_ji + d_j(j-1, m);
 				EndFor
-				Dw_ji = Dw_ji * (1.0f / MINIBATCH_SIZE);
 
-				out_weight_delta = MOMENTUM * in_prev_weight_deltas(i, j) + 
-					(1.0f - MOMENTUM) * Dw_ji;
-				out_weight = in_prev_weights(i, j) + LEARNING_RATE * out_weight_delta;
+				delta_w = Dw_ji;
 			Else
 				Float Dw_ji = 0.0f;
 				Float Dw_kj = 0.0f;
@@ -296,43 +303,63 @@ struct SourceUpdateWeights : public SiCKL::Source
 				Dw_ji = Dw_ji / (1.0f - VISIBLE_DROPOUT);
 				Dw_kj = Dw_kj / (1.0f - HIDDEN_DROPOUT);
 
-				Float delta = (Dw_ji + Dw_kj) * (1.0f / (2.0f * MINIBATCH_SIZE));
+				delta_w = (Dw_ji + Dw_kj) / 2.0f;
 
-				out_weight_delta = MOMENTUM * in_prev_weight_deltas(i, j) + 
-				(1.0f - MOMENTUM) * delta;
-
-
-				Float prev_weight = in_prev_weights(i, j);
-				// Regularization logic (we don't want to do weight decay on biases)
+				/// L1/L2 regularization
 
 				// only L1
 				if(L1_REGULARIZATION != 0.0f && L2_REGULARIZATION == 0.0f)
 				{
 					Float l1 = Sign(prev_weight) * L1_REGULARIZATION;
-
-					out_weight = prev_weight + LEARNING_RATE * (out_weight_delta - l1);
+					weight_decay = l1;
 				}
 				// only L2
 				else if(L1_REGULARIZATION == 0.0f && L2_REGULARIZATION != 0.0f)
 				{
 					Float l2 = prev_weight * L2_REGULARIZATION;
-
-					out_weight = prev_weight + LEARNING_RATE * (out_weight_delta - l2);
-				}
+					weight_decay = l2;
+				} 
 				// both L1 and L2
 				else if(L1_REGULARIZATION != 0.0f && L2_REGULARIZATION != 0.0f)
 				{
 					Float l1 = Sign(prev_weight) * L1_REGULARIZATION;
 					Float l2 = prev_weight * L2_REGULARIZATION;
-
-					out_weight = prev_weight + LEARNING_RATE * (out_weight_delta - l1 - l2);
+					weight_decay = l1 + l2;
 				}
-				// no L1 or L2 regularization
+				// neither
 				else
 				{
-					out_weight = prev_weight + LEARNING_RATE * out_weight_delta;
+					weight_decay = 0.0f;
 				}
 			EndIf
+
+			delta_w = delta_w * (1.0f / float(MINIBATCH_SIZE));
+
+			// calculate mean square weight derivative
+			auto& out_mean_square_derivative = out_mean_square.X;
+			auto& prev_mean_square_derivative = in_mean_square(Index()).X;
+
+			out_mean_square_derivative = (1.0f - ADADELTA_DECAY) * (delta_w*delta_w) + ADADELTA_DECAY * prev_mean_square_derivative;
+
+			// calculate weight delta
+			auto& prev_delta = in_prev_weight_deltas(Index());
+			auto& prev_mean_square_delta = in_mean_square(Index()).Y;
+
+			Float adadelta_factor = Sqrt(prev_mean_square_delta + eps) / Sqrt(out_mean_square_derivative + eps);
+
+			out_weight_delta = MOMENTUM * prev_delta + LEARNING_RATE * adadelta_factor * (delta_w - weight_decay);
+
+			// calculate mean square weight delta
+			auto& out_mean_square_delta = out_mean_square.Y;
+
+			out_mean_square_delta = (1.0f - ADADELTA_DECAY) * (out_weight_delta * out_weight_delta) + ADADELTA_DECAY * prev_mean_square_delta;
+
+			// update the weight
+			out_weight = prev_weight + out_weight_delta;
+
+			// calculate the weight for t + 1/2 for nesterov momentum
+			out_nesterov_weight = out_weight + MOMENTUM * out_weight_delta;
+
 		END_MAIN
 	END_SOURCE
 };
