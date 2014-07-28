@@ -26,6 +26,13 @@ namespace OMLT
 			ActivationFunction_t VisibleType;
 			uint32_t HiddenUnits;
 			ActivationFunction_t HiddenType;
+
+			ModelConfig()
+				: VisibleUnits(0)
+				, VisibleType(ActivationFunction::Invalid)
+				, HiddenUnits(0)
+				, HiddenType(ActivationFunction::Invalid)
+			{ }
 		};
 
 		struct TrainingConfig
@@ -49,8 +56,8 @@ namespace OMLT
 			{ }
 		};
 
-		ContrastiveDivergence(const ModelConfig, uint32_t in_minibatch_size);
-		ContrastiveDivergence(RestrictedBoltzmannMachine* in_rbm, uint32_t in_minibatch_size);
+		ContrastiveDivergence(const ModelConfig, uint32_t in_minibatch_size, int32_t in_seed);
+		ContrastiveDivergence(RestrictedBoltzmannMachine* in_rbm, uint32_t in_minibatch_size, int32_t in_seed);
 		~ContrastiveDivergence();
 
 		void SetTrainingConfig(const TrainingConfig&);
@@ -120,7 +127,7 @@ namespace OMLT
 		// recompile kernel programs as necessary
 		void free_kernels();
 		void build_kernels();
-		void allocate_textures(float* weight_buffer);
+		void allocate_textures(float* weight_buffer, int32_t seed);
 	};
 
 	typedef ContrastiveDivergence CD;

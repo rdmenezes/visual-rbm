@@ -8,7 +8,7 @@ using std::swap;
 
 namespace OMLT
 {
-	AutoEncoderBackPropagation::AutoEncoderBackPropagation(const ModelConfig& in_model_config, uint32_t in_minibatch_size)
+	AutoEncoderBackPropagation::AutoEncoderBackPropagation(const ModelConfig& in_model_config, uint32_t in_minibatch_size, int32_t in_seed)
 		: _model_config(in_model_config),
 		  _minibatch_size(in_minibatch_size),
 		  CalcEnabledVisible(nullptr),
@@ -22,10 +22,10 @@ namespace OMLT
 		  UpdateWeights(nullptr),
 		  _error_calculator(nullptr)
 	{
-		allocate_textures(nullptr);
+		allocate_textures(nullptr, in_seed);
 	}
 
-	AutoEncoderBackPropagation::AutoEncoderBackPropagation(const AutoEncoder* in_autoencoder, uint32_t in_minibatch_size)
+	AutoEncoderBackPropagation::AutoEncoderBackPropagation(const AutoEncoder* in_autoencoder, uint32_t in_minibatch_size, int32_t in_seed)
 		: _minibatch_size(in_minibatch_size),
 		  CalcEnabledVisible(nullptr),
 		  CalcEnabledHidden(nullptr),
@@ -67,7 +67,7 @@ namespace OMLT
 			}
 		}
 
-		allocate_textures(weight_buffer);
+		allocate_textures(weight_buffer, in_seed);
 
 		delete[] weight_buffer;
 	}
@@ -416,10 +416,10 @@ namespace OMLT
 	}
 
 	extern uint32_t* GetSeedBuffer(uint32_t, uint32_t, std::mt19937_64&);
-	void AutoEncoderBackPropagation::allocate_textures(float* weight_buffer)
+	void AutoEncoderBackPropagation::allocate_textures(float* weight_buffer, int32_t seed)
 	{
 		std::mt19937_64 random;
-		random.seed(1);
+		random.seed(static_cast<uint32_t>(seed));
 
 		uint32_t* visible_dropout_seed_buffer = GetSeedBuffer(_model_config.VisibleCount * 4, 1, random);
 		uint32_t* hidden_dropout_seed_buffer = GetSeedBuffer(_model_config.HiddenCount * 4, 1, random);

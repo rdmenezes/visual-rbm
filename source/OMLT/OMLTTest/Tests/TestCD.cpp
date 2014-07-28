@@ -101,7 +101,7 @@ bool TrainRBM(int argc, char** argv)
 
 	printf("Constructing Contrastive Divergence algorithm\n");
 
-	ContrastiveDivergence cd(model_config, minibatch_size);
+	ContrastiveDivergence cd(model_config, minibatch_size, 1);
 
 	printf("Training\n");
 
@@ -233,7 +233,7 @@ bool SerializeRBM(int argc, char** argv)
 
 	printf("Constructing CD trainer\n");
 
-	ContrastiveDivergence cd1(model_config, minibatch_size);
+	ContrastiveDivergence cd1(model_config, minibatch_size, 1);
 	cd1.SetTrainingConfig(train_config);
 
 	printf("Building data atlas\n");
@@ -267,7 +267,7 @@ bool SerializeRBM(int argc, char** argv)
 	
 	printf("Creating new CD\n");
 
-	ContrastiveDivergence cd2(rbm, minibatch_size);
+	ContrastiveDivergence cd2(rbm, minibatch_size, 1);
 
 	printf("Dumping re-serialized RBM from texture memory\n");
 

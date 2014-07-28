@@ -15,7 +15,7 @@ using std::swap;
 
 namespace OMLT
 {
-	ContrastiveDivergence::ContrastiveDivergence( const ModelConfig in_config, uint32_t in_minibatch_size)
+	ContrastiveDivergence::ContrastiveDivergence( const ModelConfig in_config, uint32_t in_minibatch_size, int32_t in_seed)
 		: _model_config(in_config)
 		, _minibatch_size(in_minibatch_size)
 		, _calc_enabled_visible(nullptr)
@@ -30,10 +30,10 @@ namespace OMLT
 		, _error_calculator(nullptr)
 		, _recompile_required(true)
 	{
-		allocate_textures(nullptr);
+		allocate_textures(nullptr, in_seed);
 	}
 
-	ContrastiveDivergence::ContrastiveDivergence( RestrictedBoltzmannMachine* in_rbm, uint32_t in_minibatch_size )
+	ContrastiveDivergence::ContrastiveDivergence( RestrictedBoltzmannMachine* in_rbm, uint32_t in_minibatch_size, int32_t in_seed )
 		: _minibatch_size(in_minibatch_size)
 		, _calc_enabled_visible(nullptr)
 		, _calc_enabled_hidden(nullptr)
@@ -70,7 +70,7 @@ namespace OMLT
 			memcpy(weight_buffer + offset + 1, in_rbm->hidden.feature(j-1), sizeof(float) * in_rbm->visible_count);
 		}
 
-		allocate_textures(weight_buffer);
+		allocate_textures(weight_buffer, in_seed);
 		delete[] weight_buffer;
 	}
 
@@ -461,10 +461,10 @@ namespace OMLT
 		return result;
 	}
 
-	void ContrastiveDivergence::allocate_textures(float* weight_buffer)
+	void ContrastiveDivergence::allocate_textures(float* weight_buffer, int32_t seed)
 	{	
 		std::mt19937_64 random;
-		random.seed(1);
+		random.seed(static_cast<uint32_t>(seed));
 
 		uint32_t* visible_dropout_seed_buffer = GetSeedBuffer(_model_config.VisibleUnits * 4, 1, random);
 		uint32_t* hidden_dropout_seed_buffer = GetSeedBuffer(_model_config.HiddenUnits * 4, 1, random);

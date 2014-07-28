@@ -25,6 +25,13 @@ namespace OMLT
 			uint32_t HiddenCount;
 			ActivationFunction_t HiddenType;
 			ActivationFunction_t OutputType;
+
+			ModelConfig()
+				: VisibleCount(0)
+				, HiddenCount(0)
+				, HiddenType(ActivationFunction::Invalid)
+				, OutputType(ActivationFunction::Invalid)
+			{ }
 		};
 
 		struct TrainingConfig
@@ -47,8 +54,8 @@ namespace OMLT
 				, AdadeltaDecay(1.0f)
 			{ }
 		};
-		AutoEncoderBackPropagation(const ModelConfig&, uint32_t in_minibatch_size);
-		AutoEncoderBackPropagation(const AutoEncoder* in_autoencoder, uint32_t in_minibatch_size);
+		AutoEncoderBackPropagation(const ModelConfig&, uint32_t in_minibatch_size, int32_t in_seed);
+		AutoEncoderBackPropagation(const AutoEncoder* in_autoencoder, uint32_t in_minibatch_size, int32_t in_seed);
 		~AutoEncoderBackPropagation();
 
 		void SetTrainingConfig(const TrainingConfig&);
@@ -120,6 +127,6 @@ namespace OMLT
 		
 		void free_kernels();
 		void build_kernels();
-		void allocate_textures(float* weight_buffer);
+		void allocate_textures(float* weight_buffer, int32_t seed);
 	};
 }

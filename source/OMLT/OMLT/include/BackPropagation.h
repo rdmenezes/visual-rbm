@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <vector>
 #include <assert.h>
+#include <random>
 using std::vector;
 
 // sickl header
@@ -28,12 +29,21 @@ namespace OMLT
 			uint32_t OutputUnits;
 			// activation function used
 			ActivationFunction_t Function;
+
+			LayerConfig()
+				: OutputUnits(0)
+				, Function(ActivationFunction::Invalid)
+			{ }
 		};
 
 		struct ModelConfig
 		{
 			uint32_t InputCount;
 			std::vector<LayerConfig> LayerConfigs;
+
+			ModelConfig()
+				: InputCount(0)
+			{ }
 		};
 
 		struct LayerParameters
@@ -71,8 +81,8 @@ namespace OMLT
 		};
 
 		
-		BackPropagation(const ModelConfig, uint32_t in_minibatchsize);
-		BackPropagation(MultilayerPerceptron* in_mlp, uint32_t in_minibatchsize);
+		BackPropagation(const ModelConfig, uint32_t in_minibatchsize, int32_t in_seed);
+		BackPropagation(MultilayerPerceptron* in_mlp, uint32_t in_minibatchsize, int32_t in_seed);
 
 		~BackPropagation();
 
@@ -165,7 +175,7 @@ namespace OMLT
 		// recomplie kernel programs as necessary when parameters change
 		void free_kernels();
 		void build_kernels();
-		void build_layer(LayerConfig in_Config, float* in_weights);
+		void build_layer(LayerConfig in_Config, float* in_weights, std::mt19937_64& random);
 	};
 
 	typedef BackPropagation BP;

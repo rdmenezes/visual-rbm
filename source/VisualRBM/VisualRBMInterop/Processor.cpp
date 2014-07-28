@@ -79,6 +79,7 @@ namespace VisualRBMInterop
 
 	// number of training examples to present per training step
 	static uint32_t minibatch_size = 10;
+	static int32_t seed = 1;
 
 	// buffers we dump visible, hiddden and weights to for visualization
 	AlignedMemoryBlock<float> visible_buffer;
@@ -508,7 +509,7 @@ namespace VisualRBMInterop
 			train_config.HiddenDropout = hidden_dropout;
 		}
 
-		_schedule = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size);
+		_schedule = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size, seed);
 		_schedule->AddTrainingConfig(train_config, epochs_remaining);
 	}
 
@@ -526,12 +527,12 @@ namespace VisualRBMInterop
 
 		if(_loaded_model == nullptr)
 		{
-			_trainer = new ContrastiveDivergence(model_config, _schedule->GetMinibatchSize());
+			_trainer = new ContrastiveDivergence(model_config, _schedule->GetMinibatchSize(), _schedule->GetSeed());
 		}
 		else
 		{
 			assert(_loaded_model->visible_count == visible_count);
-			_trainer = new ContrastiveDivergence(_loaded_model, _schedule->GetMinibatchSize());
+			_trainer = new ContrastiveDivergence(_loaded_model, _schedule->GetMinibatchSize(), _schedule->GetSeed());
 			SAFE_DELETE(_loaded_model);
 		}
 	}
@@ -699,7 +700,7 @@ namespace VisualRBMInterop
 			train_config.HiddenDropout = hidden_dropout;
 		}
 
-		_schedule = new TrainingSchedule<AutoEncoderBackPropagation>(model_config, minibatch_size);
+		_schedule = new TrainingSchedule<AutoEncoderBackPropagation>(model_config, minibatch_size, seed);
 		_schedule->AddTrainingConfig(train_config, epochs_remaining);
 	}
 
@@ -717,12 +718,12 @@ namespace VisualRBMInterop
 
 		if(_loaded_model == nullptr)
 		{
-			_trainer = new AutoEncoderBackPropagation(model_config, _schedule->GetMinibatchSize());
+			_trainer = new AutoEncoderBackPropagation(model_config, _schedule->GetMinibatchSize(), _schedule->GetSeed());
 		}
 		else
 		{
 			assert(_loaded_model->visible_count == visible_count);
-			_trainer = new AutoEncoderBackPropagation(_loaded_model, _schedule->GetMinibatchSize());
+			_trainer = new AutoEncoderBackPropagation(_loaded_model, _schedule->GetMinibatchSize(), _schedule->GetSeed());
 			SAFE_DELETE(_loaded_model);
 		}
 	}
