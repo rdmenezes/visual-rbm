@@ -15,9 +15,10 @@ namespace OMLT
 	class TrainingSchedule
 	{
 	public:
-		TrainingSchedule(const struct T::ModelConfig& in_model_config, uint32_t in_minibatch_size)
+		TrainingSchedule(const struct T::ModelConfig& in_model_config, uint32_t in_minibatch_size, int32_t in_seed)
 			: model_config(in_model_config)
 			, minibatch_size(in_minibatch_size)
+			, seed(in_seed)
 			, epochs_remaining(0)
 			, index(0)
 		{
@@ -77,6 +78,11 @@ namespace OMLT
 			return minibatch_size;
 		}
 
+		int32_t GetSeed() const
+		{
+			return seed;
+		}
+
 		uint32_t GetEpochs() const
 		{
 			return epochs_remaining;
@@ -87,6 +93,7 @@ namespace OMLT
 		struct T::ModelConfig model_config;
 		std::vector<std::pair<struct T::TrainingConfig, uint32_t>> train_config;
 		uint32_t minibatch_size;
+		int32_t seed;
 
 		uint32_t epochs_remaining;
 		uint32_t index;

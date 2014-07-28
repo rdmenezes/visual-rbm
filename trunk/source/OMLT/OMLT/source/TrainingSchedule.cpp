@@ -24,16 +24,16 @@ namespace OMLT
 			cJSON* cj_hidden_type = cJSON_GetObjectItem(root, "HiddenType");
 			cJSON* cj_hidden_count = cJSON_GetObjectItem(root, "HiddenCount");
 			cJSON* cj_minibatch_size = cJSON_GetObjectItem(root, "MinibatchSize");
+			cJSON* cj_seed = cJSON_GetObjectItem(root, "Seed");
 			cJSON* cj_schedule = cJSON_GetObjectItem(root, "Schedule");
 
 			if(cj_visible_type && cj_hidden_type &&
 				cj_hidden_count && cj_minibatch_size &&
 				cj_schedule)
 			{
-				ContrastiveDivergence::ModelConfig model_config = {0};
-				model_config.VisibleType = (ActivationFunction_t)-1;
-				model_config.HiddenType = (ActivationFunction_t)-1;
+				ContrastiveDivergence::ModelConfig model_config;
 				uint32_t minibatch_size = 0;
+				int32_t seed = 1;
 
 				for(int func = 0; func < ActivationFunction::Count; func++)
 				{
@@ -72,6 +72,11 @@ namespace OMLT
 					goto Error;
 				}
 
+				if(cj_seed != nullptr)
+				{
+					seed = cj_seed->valueint;
+				}
+
 				if(cj_minibatch_size->valueint > 0)
 				{
 					minibatch_size = cj_minibatch_size->valueint;
@@ -80,6 +85,7 @@ namespace OMLT
 				{
 					goto Error;
 				}
+
 
 				// now step through schedule array 
 				std::vector<std::pair<ContrastiveDivergence::TrainingConfig, uint32_t>> schedule;
@@ -196,7 +202,7 @@ namespace OMLT
 				}
 
 				// finally construct our training schedule
-				result = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size);
+				result = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size, seed);
 				for(uint32_t k = 0; k < schedule.size(); k++)
 				{
 					result->AddTrainingConfig(schedule[k].first, schedule[k].second);
@@ -214,6 +220,7 @@ Error:
 		TrainingSchedule<BackPropagation>* result = nullptr;
 		BackPropagation::ModelConfig model_config;
 		uint32_t minibatch_size;
+		int32_t seed = 1;
 
 		std::vector<std::pair<BackPropagation::TrainingConfig, uint32_t>> schedule;
 
@@ -229,6 +236,7 @@ Error:
 			cJSON* cj_layers = cJSON_GetObjectItem(root, "Layers");
 			cJSON* cj_activation_functions = cJSON_GetObjectItem(root, "ActivationFunctions");
 			cJSON* cj_minibatch_size = cJSON_GetObjectItem(root, "MinibatchSize");
+			cJSON* cj_seed = cJSON_GetObjectItem(root, "Seed");
 			cJSON* cj_schedule = cJSON_GetObjectItem(root, "Schedule");
 
 			// make sure we have the mandatory bits
@@ -272,6 +280,11 @@ Error:
 						{
 							goto Error;
 						}
+					}
+
+					if(cj_seed != nullptr)
+					{
+						seed = cj_seed->valueint;
 					}
 
 					// minibatch size
@@ -388,7 +401,7 @@ Error:
 		}
 
 		// create result here
-		result = new TrainingSchedule<BackPropagation>(model_config, minibatch_size);
+		result = new TrainingSchedule<BackPropagation>(model_config, minibatch_size, seed);
 		for(uint32_t k = 0; k < schedule.size(); k++)
 		{
 			result->AddTrainingConfig(schedule[k].first, schedule[k].second);
@@ -418,16 +431,16 @@ Error:
 			cJSON* cj_hidden_type = cJSON_GetObjectItem(root, "HiddenType");
 			cJSON* cj_output_type = cJSON_GetObjectItem(root, "OutputType");
 			cJSON* cj_minibatch_size = cJSON_GetObjectItem(root, "MinibatchSize");
+			cJSON* cj_seed = cJSON_GetObjectItem(root, "Seed");
 			cJSON* cj_schedule = cJSON_GetObjectItem(root, "Schedule");
 
 			if(cj_output_type && cj_hidden_type &&
 				cj_hidden_count && cj_minibatch_size &&
 				cj_schedule)
 			{
-				AutoEncoderBackPropagation::ModelConfig model_config = {0};
-				model_config.HiddenType = (ActivationFunction_t)-1;
-				model_config.OutputType = (ActivationFunction_t)-1;
+				AutoEncoderBackPropagation::ModelConfig model_config;
 				uint32_t minibatch_size = 0;
+				int32_t seed = 1;
 
 				for(int func = 0; func < ActivationFunction::Count; func++)
 				{
@@ -464,6 +477,11 @@ Error:
 				else
 				{
 					goto Error;
+				}
+
+				if(cj_seed != nullptr)
+				{
+					seed = cj_seed->valueint;
 				}
 
 				if(cj_minibatch_size->valueint > 0)
@@ -589,7 +607,7 @@ Error:
 				}
 
 				// finally construct our training schedule
-				result = new TrainingSchedule<AutoEncoderBackPropagation>(model_config, minibatch_size);
+				result = new TrainingSchedule<AutoEncoderBackPropagation>(model_config, minibatch_size, seed);
 				for(uint32_t k = 0; k < schedule.size(); k++)
 				{
 					result->AddTrainingConfig(schedule[k].first, schedule[k].second);

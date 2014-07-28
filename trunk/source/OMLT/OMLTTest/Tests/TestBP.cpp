@@ -66,7 +66,7 @@ bool TrainAutoEncoder(int argc, char** argv)
 
 	printf("Constructing Backpropagation Trainer\n");
 	// construct backprop
-	BackPropagation bp(training_schedule->GetModelConfig(), training_schedule->GetMinibatchSize());
+	BackPropagation bp(training_schedule->GetModelConfig(), training_schedule->GetMinibatchSize(), 1);
 
 	// get our train config
 	BackPropagation::TrainingConfig train_config;

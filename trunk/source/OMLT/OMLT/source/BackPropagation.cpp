@@ -9,7 +9,7 @@ using std::swap;
 
 namespace OMLT
 {
-	BackPropagation::BackPropagation( const ModelConfig in_config, uint32_t in_minibatchsize )
+	BackPropagation::BackPropagation( const ModelConfig in_config, uint32_t in_minibatchsize, int32_t in_seed )
 		: _input_units(in_config.InputCount)
 		, _minibatch_size(in_minibatchsize)
 		, _recompile_required(true)
@@ -17,20 +17,26 @@ namespace OMLT
 		, _error_calculator(nullptr)
 	{
 		assert(in_config.LayerConfigs.size() > 0);
+		std::mt19937_64 random;
+		random.seed(static_cast<uint32_t>(in_seed));
+
 		for(auto it = in_config.LayerConfigs.begin(); it < in_config.LayerConfigs.end(); ++it)
 		{
-			build_layer(*it, nullptr);
+			build_layer(*it, nullptr, random);
 			_training_config.Parameters.push_back(LayerParameters());
 		}
 	}
 
-	BackPropagation::BackPropagation( MultilayerPerceptron* in_mlp, uint32_t in_minibatchsize )
+	BackPropagation::BackPropagation( MultilayerPerceptron* in_mlp, uint32_t in_minibatchsize, int32_t in_seed )
 		: _input_units(in_mlp->InputLayer()->inputs)
 		, _minibatch_size(in_minibatchsize)
 		, _recompile_required(true)
 		, _last_label(nullptr)
 		, _error_calculator(nullptr)
 	{
+		std::mt19937_64 random;
+		random.seed(static_cast<uint32_t>(in_seed));
+
 		for(uint32_t k = 0; k < in_mlp->LayerCount(); k++)
 		{
 			MLP::Layer* layer = in_mlp->GetLayer(k);
@@ -55,7 +61,7 @@ namespace OMLT
 			}
 
 			// add layer and use weight buffer as initial weights
-			build_layer(layer_config, weight_buffer);
+			build_layer(layer_config, weight_buffer, random);
 			delete[] weight_buffer;
 
 			_training_config.Parameters.push_back(LayerParameters());
@@ -356,12 +362,8 @@ namespace OMLT
 	}
 	
 	extern uint32_t* GetSeedBuffer(uint32_t, uint32_t, std::mt19937_64&);
-	void BackPropagation::build_layer( LayerConfig in_Config, float* in_weights )
+	void BackPropagation::build_layer( LayerConfig in_Config, float* in_weights, std::mt19937_64& random)
 	{
-		std::mt19937_64 random;
-		random.seed(1);
-		std::uniform_int_distribution<uint32_t> uniform(0, 0xFFFFFFFF);
-
 		Layer* result = new Layer();
 
 		if(_layers.size() == 0)
