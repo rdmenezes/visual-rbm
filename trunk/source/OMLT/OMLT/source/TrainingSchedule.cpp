@@ -192,7 +192,7 @@ namespace OMLT
 					{
 						if(cj_adadelta_decay->valuedouble >= 0.0 && cj_adadelta_decay->valuedouble < 1.0)
 						{
-							train_config.AdadeltaDecay = (float)cj_hidden_dropout->valuedouble;
+							train_config.AdadeltaDecay = (float)cj_adadelta_decay->valuedouble;
 						}
 					}
 
@@ -598,7 +598,7 @@ Error:
 					{
 						if(cj_adadelta_decay->valuedouble >= 0.0 && cj_adadelta_decay->valuedouble < 1.0)
 						{
-							train_config.AdadeltaDecay = (float)cj_hidden_dropout->valuedouble;
+							train_config.AdadeltaDecay = (float)cj_adadelta_decay->valuedouble;
 						}
 					}
 
