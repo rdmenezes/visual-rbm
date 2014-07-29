@@ -65,13 +65,14 @@ namespace VisualRBMInterop
 	static UnitType hidden_type = UnitType::Sigmoid;
 
 	// various training parameters
-	static float learning_rate = 0.001f;
+	static float learning_rate = 0.1f;
 	static float momentum = 0.5f;
 	static float l1 = 0.0f;
 	static float l2 = 0.0f;
 	static float visible_dropout = 0.0f;
 	static float hidden_dropout = 0.0f;
-	
+	static float adadelta_decay = 0.95f;
+
 	static uint32_t epochs_to_train = 100;
 	static uint32_t epochs_remaining = 100;
 	static uint32_t iterations = 0;
@@ -312,6 +313,7 @@ namespace VisualRBMInterop
 
 			minibatches_to_ui(_schedule->GetMinibatchSize());
 			epochs_to_ui(_schedule->GetEpochs());
+			seed_to_ui(_schedule->GetSeed());
 
 			build_trainer();
 
@@ -359,6 +361,10 @@ namespace VisualRBMInterop
 		void minibatches_to_ui(uint32_t minibatches)
 		{
 			Processor::MinibatchSize = minibatches;
+		}
+		void seed_to_ui(int32_t seed)
+		{
+			Processor::Seed = seed;
 		}
 
 		TRAINER* _trainer;
@@ -507,6 +513,7 @@ namespace VisualRBMInterop
 			train_config.L2Regularization = l2;
 			train_config.VisibleDropout = visible_dropout;
 			train_config.HiddenDropout = hidden_dropout;
+			train_config.AdadeltaDecay = adadelta_decay;
 		}
 
 		_schedule = new TrainingSchedule<ContrastiveDivergence>(model_config, minibatch_size, seed);
@@ -555,6 +562,7 @@ namespace VisualRBMInterop
 		Processor::L2Regularization = train_config.L2Regularization;
 		Processor::VisibleDropout = train_config.VisibleDropout;
 		Processor::HiddenDropout = train_config.HiddenDropout;
+		Processor::AdadeltaDecay = train_config.AdadeltaDecay;
 	}
 
 
@@ -698,6 +706,7 @@ namespace VisualRBMInterop
 			train_config.L2Regularization = l2;
 			train_config.VisibleDropout = visible_dropout;
 			train_config.HiddenDropout = hidden_dropout;
+			train_config.AdadeltaDecay = adadelta_decay;
 		}
 
 		_schedule = new TrainingSchedule<AutoEncoderBackPropagation>(model_config, minibatch_size, seed);
@@ -746,6 +755,7 @@ namespace VisualRBMInterop
 		Processor::L2Regularization = train_config.L2Regularization;
 		Processor::VisibleDropout = train_config.VisibleDropout;
 		Processor::HiddenDropout = train_config.HiddenDropout;
+		Processor::AdadeltaDecay = train_config.AdadeltaDecay;
 	}
 
 	void Processor::Run()
@@ -1260,6 +1270,34 @@ namespace VisualRBMInterop
 		}
 	}
 
+	float Processor::AdadeltaDecay::get()
+	{
+		return adadelta_decay;
+	}
+
+	void Processor::AdadeltaDecay::set(float ad)
+	{
+		assert(ad >= 0.0f && ad <= 1.0f);
+		if(ad != adadelta_decay)
+		{
+			adadelta_decay = ad;
+			AdadeltaDecayChanged(adadelta_decay);
+		}
+	}
+
+	int Processor::Seed::get()
+	{
+		return seed;
+	}
+
+	void Processor::Seed::set(int s)
+	{
+		if(s != seed)
+		{
+			seed = s;
+			SeedChanged(seed);
+		}
+	}
 
 	unsigned int Processor::MinibatchCount::get()
 	{

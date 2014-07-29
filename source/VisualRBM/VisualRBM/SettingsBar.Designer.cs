@@ -46,6 +46,8 @@
 			this.labelModel = new System.Windows.Forms.Label();
 			this.panelParameters = new System.Windows.Forms.Panel();
 			this.panelParametersRow3 = new System.Windows.Forms.Panel();
+			this.adadeltaDecayTextBox = new System.Windows.Forms.TextBox();
+			this.labelAdadeltaDecay = new System.Windows.Forms.Label();
 			this.epochsTextBox = new System.Windows.Forms.TextBox();
 			this.labelEpochs = new System.Windows.Forms.Label();
 			this.minibatchSizeTextBox = new System.Windows.Forms.TextBox();
@@ -90,6 +92,8 @@
 			this.exportButton = new System.Windows.Forms.Button();
 			this.importButton = new System.Windows.Forms.Button();
 			this.label1 = new System.Windows.Forms.Label();
+			this.seedTextBox = new System.Windows.Forms.TextBox();
+			this.labelSeed = new System.Windows.Forms.Label();
 			this.panelModel.SuspendLayout();
 			this.panelModelRow3.SuspendLayout();
 			this.panelModelRow2.SuspendLayout();
@@ -278,11 +282,13 @@
 			this.panelParameters.Dock = System.Windows.Forms.DockStyle.Left;
 			this.panelParameters.Location = new System.Drawing.Point(584, 0);
 			this.panelParameters.Name = "panelParameters";
-			this.panelParameters.Size = new System.Drawing.Size(319, 102);
+			this.panelParameters.Size = new System.Drawing.Size(410, 102);
 			this.panelParameters.TabIndex = 2;
 			// 
 			// panelParametersRow3
 			// 
+			this.panelParametersRow3.Controls.Add(this.adadeltaDecayTextBox);
+			this.panelParametersRow3.Controls.Add(this.labelAdadeltaDecay);
 			this.panelParametersRow3.Controls.Add(this.epochsTextBox);
 			this.panelParametersRow3.Controls.Add(this.labelEpochs);
 			this.panelParametersRow3.Controls.Add(this.minibatchSizeTextBox);
@@ -291,8 +297,28 @@
 			this.panelParametersRow3.Location = new System.Drawing.Point(0, 52);
 			this.panelParametersRow3.Name = "panelParametersRow3";
 			this.panelParametersRow3.Padding = new System.Windows.Forms.Padding(3);
-			this.panelParametersRow3.Size = new System.Drawing.Size(317, 26);
+			this.panelParametersRow3.Size = new System.Drawing.Size(408, 26);
 			this.panelParametersRow3.TabIndex = 2;
+			// 
+			// adadeltaDecayTextBox
+			// 
+			this.adadeltaDecayTextBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.adadeltaDecayTextBox.Location = new System.Drawing.Point(285, 3);
+			this.adadeltaDecayTextBox.Name = "adadeltaDecayTextBox";
+			this.adadeltaDecayTextBox.Size = new System.Drawing.Size(30, 20);
+			this.adadeltaDecayTextBox.TabIndex = 9;
+			this.adadeltaDecayTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.adadeltaDecayTextBox_KeyPress);
+			this.adadeltaDecayTextBox.Leave += new System.EventHandler(this.adadeltaDecayTextBox_Leave);
+			// 
+			// labelAdadeltaDecay
+			// 
+			this.labelAdadeltaDecay.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelAdadeltaDecay.Location = new System.Drawing.Point(202, 3);
+			this.labelAdadeltaDecay.Name = "labelAdadeltaDecay";
+			this.labelAdadeltaDecay.Size = new System.Drawing.Size(83, 20);
+			this.labelAdadeltaDecay.TabIndex = 8;
+			this.labelAdadeltaDecay.Text = "Adadelta Decay";
+			this.labelAdadeltaDecay.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 			// 
 			// epochsTextBox
 			// 
@@ -346,13 +372,13 @@
 			this.panelParametersRow2.Location = new System.Drawing.Point(0, 26);
 			this.panelParametersRow2.Name = "panelParametersRow2";
 			this.panelParametersRow2.Padding = new System.Windows.Forms.Padding(3);
-			this.panelParametersRow2.Size = new System.Drawing.Size(317, 26);
+			this.panelParametersRow2.Size = new System.Drawing.Size(408, 26);
 			this.panelParametersRow2.TabIndex = 1;
 			// 
 			// hiddenDropoutTextBox
 			// 
 			this.hiddenDropoutTextBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.hiddenDropoutTextBox.Location = new System.Drawing.Point(284, 3);
+			this.hiddenDropoutTextBox.Location = new System.Drawing.Point(285, 3);
 			this.hiddenDropoutTextBox.Name = "hiddenDropoutTextBox";
 			this.hiddenDropoutTextBox.Size = new System.Drawing.Size(30, 20);
 			this.hiddenDropoutTextBox.TabIndex = 5;
@@ -364,7 +390,7 @@
 			this.labelHiddenDropout.Dock = System.Windows.Forms.DockStyle.Left;
 			this.labelHiddenDropout.Location = new System.Drawing.Point(202, 3);
 			this.labelHiddenDropout.Name = "labelHiddenDropout";
-			this.labelHiddenDropout.Size = new System.Drawing.Size(82, 20);
+			this.labelHiddenDropout.Size = new System.Drawing.Size(83, 20);
 			this.labelHiddenDropout.TabIndex = 0;
 			this.labelHiddenDropout.Text = "Hidden Dropout";
 			this.labelHiddenDropout.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -411,6 +437,8 @@
 			// 
 			// panelParametersRow1
 			// 
+			this.panelParametersRow1.Controls.Add(this.seedTextBox);
+			this.panelParametersRow1.Controls.Add(this.labelSeed);
 			this.panelParametersRow1.Controls.Add(this.visibleDropoutTextBox);
 			this.panelParametersRow1.Controls.Add(this.labelVisibleDropout);
 			this.panelParametersRow1.Controls.Add(this.l1TextBox);
@@ -421,13 +449,13 @@
 			this.panelParametersRow1.Location = new System.Drawing.Point(0, 0);
 			this.panelParametersRow1.Name = "panelParametersRow1";
 			this.panelParametersRow1.Padding = new System.Windows.Forms.Padding(3);
-			this.panelParametersRow1.Size = new System.Drawing.Size(317, 26);
+			this.panelParametersRow1.Size = new System.Drawing.Size(408, 26);
 			this.panelParametersRow1.TabIndex = 0;
 			// 
 			// visibleDropoutTextBox
 			// 
 			this.visibleDropoutTextBox.Dock = System.Windows.Forms.DockStyle.Left;
-			this.visibleDropoutTextBox.Location = new System.Drawing.Point(284, 3);
+			this.visibleDropoutTextBox.Location = new System.Drawing.Point(285, 3);
 			this.visibleDropoutTextBox.Name = "visibleDropoutTextBox";
 			this.visibleDropoutTextBox.Size = new System.Drawing.Size(30, 20);
 			this.visibleDropoutTextBox.TabIndex = 2;
@@ -439,7 +467,7 @@
 			this.labelVisibleDropout.Dock = System.Windows.Forms.DockStyle.Left;
 			this.labelVisibleDropout.Location = new System.Drawing.Point(202, 3);
 			this.labelVisibleDropout.Name = "labelVisibleDropout";
-			this.labelVisibleDropout.Size = new System.Drawing.Size(82, 20);
+			this.labelVisibleDropout.Size = new System.Drawing.Size(83, 20);
 			this.labelVisibleDropout.TabIndex = 0;
 			this.labelVisibleDropout.Text = "Visible Dropout";
 			this.labelVisibleDropout.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -491,7 +519,7 @@
 			this.labelParameters.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.labelParameters.Location = new System.Drawing.Point(0, 78);
 			this.labelParameters.Name = "labelParameters";
-			this.labelParameters.Size = new System.Drawing.Size(317, 22);
+			this.labelParameters.Size = new System.Drawing.Size(408, 22);
 			this.labelParameters.TabIndex = 0;
 			this.labelParameters.Text = "Parameters";
 			this.labelParameters.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
@@ -503,7 +531,7 @@
 			this.loadScheduleButton.Enabled = false;
 			this.loadScheduleButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F);
 			this.loadScheduleButton.Image = ((System.Drawing.Image)(resources.GetObject("loadScheduleButton.Image")));
-			this.loadScheduleButton.Location = new System.Drawing.Point(903, 0);
+			this.loadScheduleButton.Location = new System.Drawing.Point(1054, 0);
 			this.loadScheduleButton.Name = "loadScheduleButton";
 			this.loadScheduleButton.Size = new System.Drawing.Size(60, 102);
 			this.loadScheduleButton.TabIndex = 3;
@@ -726,7 +754,7 @@
 			this.startButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.startButton.Enabled = false;
 			this.startButton.Image = ((System.Drawing.Image)(resources.GetObject("startButton.Image")));
-			this.startButton.Location = new System.Drawing.Point(1023, 0);
+			this.startButton.Location = new System.Drawing.Point(1114, 0);
 			this.startButton.Name = "startButton";
 			this.startButton.Size = new System.Drawing.Size(60, 102);
 			this.startButton.TabIndex = 5;
@@ -741,7 +769,7 @@
 			this.stopButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.stopButton.Enabled = false;
 			this.stopButton.Image = ((System.Drawing.Image)(resources.GetObject("stopButton.Image")));
-			this.stopButton.Location = new System.Drawing.Point(1143, 0);
+			this.stopButton.Location = new System.Drawing.Point(1234, 0);
 			this.stopButton.Name = "stopButton";
 			this.stopButton.Size = new System.Drawing.Size(60, 102);
 			this.stopButton.TabIndex = 7;
@@ -756,7 +784,7 @@
 			this.pauseButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.pauseButton.Enabled = false;
 			this.pauseButton.Image = ((System.Drawing.Image)(resources.GetObject("pauseButton.Image")));
-			this.pauseButton.Location = new System.Drawing.Point(1083, 0);
+			this.pauseButton.Location = new System.Drawing.Point(1174, 0);
 			this.pauseButton.Name = "pauseButton";
 			this.pauseButton.Size = new System.Drawing.Size(60, 102);
 			this.pauseButton.TabIndex = 6;
@@ -771,7 +799,7 @@
 			this.exportButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.exportButton.Enabled = false;
 			this.exportButton.Image = ((System.Drawing.Image)(resources.GetObject("exportButton.Image")));
-			this.exportButton.Location = new System.Drawing.Point(1203, 0);
+			this.exportButton.Location = new System.Drawing.Point(1294, 0);
 			this.exportButton.Name = "exportButton";
 			this.exportButton.Size = new System.Drawing.Size(60, 102);
 			this.exportButton.TabIndex = 8;
@@ -786,7 +814,7 @@
 			this.importButton.Dock = System.Windows.Forms.DockStyle.Left;
 			this.importButton.Enabled = false;
 			this.importButton.Image = ((System.Drawing.Image)(resources.GetObject("importButton.Image")));
-			this.importButton.Location = new System.Drawing.Point(963, 0);
+			this.importButton.Location = new System.Drawing.Point(994, 0);
 			this.importButton.Name = "importButton";
 			this.importButton.Size = new System.Drawing.Size(60, 102);
 			this.importButton.TabIndex = 4;
@@ -807,6 +835,26 @@
 			this.label1.TabIndex = 0;
 			this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
 			// 
+			// SeedTextBox
+			// 
+			this.seedTextBox.Dock = System.Windows.Forms.DockStyle.Left;
+			this.seedTextBox.Location = new System.Drawing.Point(347, 3);
+			this.seedTextBox.Name = "SeedTextBox";
+			this.seedTextBox.Size = new System.Drawing.Size(59, 20);
+			this.seedTextBox.TabIndex = 4;
+			this.seedTextBox.Leave += new System.EventHandler(this.seedTextBox_Leave);
+			this.seedTextBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.seedTextBox_KeyPress);
+			// 
+			// labelSeed
+			// 
+			this.labelSeed.Dock = System.Windows.Forms.DockStyle.Left;
+			this.labelSeed.Location = new System.Drawing.Point(315, 3);
+			this.labelSeed.Name = "labelSeed";
+			this.labelSeed.Size = new System.Drawing.Size(32, 20);
+			this.labelSeed.TabIndex = 3;
+			this.labelSeed.Text = "Seed";
+			this.labelSeed.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+			// 
 			// SettingsBar
 			// 
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
@@ -820,9 +868,9 @@
 			this.Controls.Add(this.panelModel);
 			this.Controls.Add(this.panelData);
 			this.Margin = new System.Windows.Forms.Padding(0);
-			this.MinimumSize = new System.Drawing.Size(1264, 102);
+			this.MinimumSize = new System.Drawing.Size(1354, 102);
 			this.Name = "SettingsBar";
-			this.Size = new System.Drawing.Size(1264, 102);
+			this.Size = new System.Drawing.Size(1354, 102);
 			this.panelModel.ResumeLayout(false);
 			this.panelModelRow3.ResumeLayout(false);
 			this.panelModelRow3.PerformLayout();
@@ -909,6 +957,10 @@
 		private System.Windows.Forms.Label labelHiddenDropout;
 		private System.Windows.Forms.TextBox visibleDropoutTextBox;
 		private System.Windows.Forms.Label labelVisibleDropout;
+		private System.Windows.Forms.TextBox adadeltaDecayTextBox;
+		private System.Windows.Forms.Label labelAdadeltaDecay;
+		private System.Windows.Forms.TextBox seedTextBox;
+		private System.Windows.Forms.Label labelSeed;
 
 	}
 }

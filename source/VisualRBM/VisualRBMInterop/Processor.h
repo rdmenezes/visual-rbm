@@ -50,7 +50,8 @@ namespace VisualRBMInterop
 		static ValueChangedHandler^ HiddenDropoutChanged;
 		static ValueChangedHandler^ MinibatchSizeChanged;
 		static ValueChangedHandler^ EpochsChanged;
-
+		static ValueChangedHandler^ AdadeltaDecayChanged;
+		static ValueChangedHandler^ SeedChanged;
 		/** Properties **/
 
 		static property bool HasTrainingData
@@ -79,6 +80,18 @@ namespace VisualRBMInterop
 		{
 			int get();
 			void set(int ms);
+		}
+
+		static property float AdadeltaDecay
+		{
+			float get();
+			void set(float ad);
+		}
+
+		static property int Seed
+		{
+			int get();
+			void set(int s);
 		}
 
 		static property unsigned int MinibatchCount
