@@ -61,6 +61,9 @@ namespace VisualRBM
 							
 							minibatchSizeTextBox.Enabled = false;							
 							epochsTextBox.Enabled = false;
+							adadeltaDecayTextBox.Enabled = false;
+
+							seedTextBox.Enabled = false;
 
 							loadScheduleButton.Enabled = false;
 
@@ -91,6 +94,9 @@ namespace VisualRBM
 							
 							minibatchSizeTextBox.Enabled = false;							
 							epochsTextBox.Enabled = false;
+							adadeltaDecayTextBox.Enabled = false;
+
+							seedTextBox.Enabled = false;
 
 							loadScheduleButton.Enabled = false;
 
@@ -121,6 +127,9 @@ namespace VisualRBM
 							
 							minibatchSizeTextBox.Enabled = false;							
 							epochsTextBox.Enabled = true;
+							adadeltaDecayTextBox.Enabled = true;
+
+							seedTextBox.Enabled = false;
 
 							loadScheduleButton.Enabled = true;
 
@@ -149,6 +158,9 @@ namespace VisualRBM
 							
 							minibatchSizeTextBox.Enabled = true;							
 							epochsTextBox.Enabled = true;
+							adadeltaDecayTextBox.Enabled = true;
+
+							seedTextBox.Enabled = true;
 
 							loadScheduleButton.Enabled = true;
 
@@ -178,6 +190,9 @@ namespace VisualRBM
 
 							minibatchSizeTextBox.Enabled = false;
 							epochsTextBox.Enabled = false;
+							adadeltaDecayTextBox.Enabled = false;
+
+							seedTextBox.Enabled = false;
 
 							loadScheduleButton.Enabled = false;
 
@@ -207,6 +222,9 @@ namespace VisualRBM
 
 							minibatchSizeTextBox.Enabled = false;
 							epochsTextBox.Enabled = false;
+							adadeltaDecayTextBox.Enabled = false;
+
+							seedTextBox.Enabled = false;
 
 							loadScheduleButton.Enabled = false;
 
@@ -255,6 +273,8 @@ namespace VisualRBM
 				
 				minibatchSizeTextBox.Text = Processor.MinibatchSize.ToString();
 				epochsTextBox.Text = Processor.Epochs.ToString();
+				adadeltaDecayTextBox.Text = Processor.AdadeltaDecay.ToString();
+				seedTextBox.Text = Processor.Seed.ToString();
 			}
 		}
 
@@ -325,7 +345,7 @@ namespace VisualRBM
 			SetToolTip("Number of visible units in each training vector of loaded training data", this.visibleUnitsLabel);
 			SetToolTip("Number of hidden units to use in trained model", this.hiddenUnitsTextBox);
 			SetToolTip("Load schedule file", this.loadScheduleButton);
-			SetToolTip("Speed of learning; reasonable values are around 0.001 (less for Gaussian visible units)", this.learningRateTextBox);
+			SetToolTip("Speed of learning", this.learningRateTextBox);
 			SetToolTip("Smooths learning by having the previous weight update contribute to the current update by the given percent.  Valid values range from 0 to 1.", this.momentumTextBox);
 			SetToolTip("L1 Regularization punishes all weights equally.  Many weights will be near zero with this method while others will grow large.", this.l1TextBox);
 			SetToolTip("L2 Regularization more heavily punishes large weights, resulting in blurrier weights that can be harder to interpret", this.l2TextBox);
@@ -333,6 +353,8 @@ namespace VisualRBM
 			SetToolTip("Probability any given hidden unit will not be activated during a single training update.", this.hiddenDropoutTextBox);
 			SetToolTip("Number of training to vectors to show the model for each weight update", this.minibatchSizeTextBox);
 			SetToolTip("The number of weight updates to perform", this.epochsTextBox);
+			SetToolTip("Decay parameter used in Adadelta; value of 1.0 is equivalent to not using Adadelta at all", this.adadeltaDecayTextBox);
+			SetToolTip("Seed to used to generate model weights and Dropout mask");
 			SetToolTip("Import RBM for further training", this.importButton);
 			SetToolTip("Start Training", this.startButton);
 			SetToolTip("Stop Training", this.stopButton);
@@ -420,6 +442,16 @@ namespace VisualRBM
 			{
 				this.BeginInvoke(new Action(() => { epochsTextBox.Text = obj.ToString(); }));
 				_main_form.trainingLog.AddLog("Epochs = {0}", obj);
+			});
+			Processor.AdadeltaDecayChanged += new Processor.ValueChangedHandler((Object obj) =>
+			{
+				this.BeginInvoke(new Action(() => { adadeltaDecayTextBox.Text = obj.ToString(); }));
+				_main_form.trainingLog.AddLog("Adadelta Decay = {0}", obj);
+			});
+			Processor.SeedChanged += new Processor.ValueChangedHandler((Object obj) =>
+			{
+				this.BeginInvoke(new Action(() => { seedTextBox.Text = obj.ToString(); }));
+				_main_form.trainingLog.AddLog("Seed = {0}", obj);
 			});
 		}
 
@@ -660,7 +692,7 @@ namespace VisualRBM
 			if (tb == null) return false;
 
 			float learning_rate;
-			if(float.TryParse(tb.Text, out learning_rate) && learning_rate > 0.0f)
+			if(float.TryParse(tb.Text, out learning_rate) && learning_rate >= 0.0f)
 			{
 				if(learning_rate != Processor.LearningRate)
 				{
@@ -935,6 +967,73 @@ namespace VisualRBM
 
 		#endregion
 
+#region Set Adadelta Decay
+		private bool updateAdadeltaDecay(TextBox tb)
+		{
+			if (tb == null) return false;
+
+			float adadeltaDecay;
+			if (float.TryParse(tb.Text, out adadeltaDecay))
+			{
+				adadeltaDecay = adadeltaDecay > 0.0f ? (adadeltaDecay < 1.0f ? adadeltaDecay : 1.0f) : 0.0f;
+
+				if (adadeltaDecay != Processor.AdadeltaDecay)
+				{
+					Processor.AdadeltaDecay = adadeltaDecay;
+					tb.Text = adadeltaDecay.ToString();
+					return true;
+				}
+				tb.Text = Processor.AdadeltaDecay.ToString();
+				return false;
+			}
+			tb.Text = Processor.AdadeltaDecay.ToString();
+			return false;
+		}
+
+		private void adadeltaDecayTextBox_KeyPress(object sender, KeyPressEventArgs e)
+		{
+			if (e.KeyChar == '\r' && updateAdadeltaDecay(sender as TextBox))
+				e.Handled = true;
+		}
+
+		private void adadeltaDecayTextBox_Leave(object sender, EventArgs e)
+		{
+			updateAdadeltaDecay(sender as TextBox);
+		}
+#endregion
+
+#region Set Seed
+		private bool updateSeed(TextBox tb)
+		{
+			if (tb == null) return false;
+
+			int seed;
+			if (int.TryParse(tb.Text, out seed))
+			{
+				if(seed != Processor.Seed)
+				{
+					Processor.Seed = seed;
+					tb.Text = seed.ToString();
+					return true;
+				}
+				return false;
+			}
+			tb.Text = Processor.Seed.ToString();
+			return false;
+		}
+
+		private void seedTextBox_KeyPress(object sender, KeyPressEventArgs e)
+		{
+			if (e.KeyChar == '\r' && updateSeed(sender as TextBox))
+				e.Handled = true;
+		}
+
+		private void seedTextBox_Leave(object sender, EventArgs e)
+		{
+			updateSeed(sender as TextBox);
+		}
+#endregion
+
 		#region Big Buttons
 
 		private void startButton_Click(object sender, EventArgs e)
@@ -1085,7 +1184,7 @@ namespace VisualRBM
 
 		#endregion
 
-		#region Parameter Saving/Loading
+		#region Training Schedule Loading
 
 		private void loadParametersButton_Click(object sender, EventArgs e)
 		{
@@ -1124,71 +1223,6 @@ namespace VisualRBM
 			}
 		}
 
-		private void saveParametersButton_Click(object sender, EventArgs e)
-		{
-			return;
-			SaveFileDialog sfd = new SaveFileDialog();
-			sfd.Filter = "Visual RBM Training Parameters|*.vrbmparameters";
-			if (sfd.ShowDialog() == DialogResult.OK)
-			{
-				// save some settings
-				try
-				{
-					using (StreamWriter sw = new StreamWriter(new FileStream(sfd.FileName, FileMode.Create)))
-					{
-						sw.WriteLine("model = RBM");
-						sw.WriteLine("visible_type = {0}", Processor.VisibleType);
-						sw.WriteLine("hidden_units = {0}", Processor.HiddenUnits);
-						sw.WriteLine("learning_rate = {0}", Processor.LearningRate);
-						sw.WriteLine("momentum = {0}", Processor.Momentum);
-						sw.WriteLine("l1_regularization = {0}", Processor.L1Regularization);
-						sw.WriteLine("l2_regularization = {0}", Processor.L2Regularization);
-						sw.WriteLine("visible_dropout = {0}", Processor.VisibleDropout);
-						sw.WriteLine("hidden_dropout = {0}", Processor.HiddenDropout);
-						sw.WriteLine("minibatch_size = {0}", Processor.MinibatchSize);
-						sw.WriteLine("epochs = {0}", Processor.Epochs);
-
-						_main_form.trainingLog.AddLog("Saved Parameters to {0}", sfd.FileName);
-					}
-				}
-				catch (System.Exception ex)
-				{
-					MessageBox.Show(String.Format("Problem Writing Parameters to \"{0}\"", sfd.FileName));
-				}
-				
-			}
-		}
-
-		private void resetParametersButton_Click(object sender, EventArgs e)
-		{
-			return;
-			if (MessageBox.Show("Reset training parameters to defaults?", "", MessageBoxButtons.YesNo) == DialogResult.Yes)
-			{
-				Processor.LearningRate = 0.001f;
-				Processor.Momentum = 0.5f;
-				Processor.L1Regularization = 0.0f;
-				Processor.L2Regularization = 0.0f;
-				Processor.VisibleDropout = 0.0f;
-				Processor.HiddenDropout = 0.5f;
-				Processor.MinibatchSize = 10;
-				Processor.Epochs = 100;
-
-				learningRateTextBox.Text = Processor.LearningRate.ToString();
-				momentumTextBox.Text = Processor.Momentum.ToString();
-				l1TextBox.Text = Processor.L1Regularization.ToString();
-				l2TextBox.Text = Processor.L2Regularization.ToString();
-				visibleDropoutTextBox.Text = Processor.VisibleDropout.ToString();
-				hiddenDropoutTextBox.Text = Processor.HiddenDropout.ToString();
-				minibatchSizeTextBox.Text = Processor.MinibatchSize.ToString();
-				epochsTextBox.Text = Processor.Epochs.ToString();
-				
-				_main_form.trainingLog.AddLog("Reset Parameters to Defaults");
-			}
-		}
-
-
 		#endregion
-
-
 	}
 }
