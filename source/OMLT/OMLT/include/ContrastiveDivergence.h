@@ -33,6 +33,15 @@ namespace OMLT
 				, HiddenUnits(0)
 				, HiddenType(ActivationFunction::Invalid)
 			{ }
+
+			bool operator==(const ModelConfig& that)
+			{
+				return this->VisibleUnits == that.VisibleUnits &&
+					   this->VisibleType == that.VisibleType &&
+					   this->HiddenUnits == that.HiddenUnits &&
+					   this->HiddenType == that.HiddenType;
+			}
+
 		};
 
 		struct TrainingConfig
@@ -61,6 +70,7 @@ namespace OMLT
 		~ContrastiveDivergence();
 
 		void SetTrainingConfig(const TrainingConfig&);
+		ModelConfig GetModelConfig() const {return _model_config;};
 
 		void Train(const OpenGLBuffer2D&);
 

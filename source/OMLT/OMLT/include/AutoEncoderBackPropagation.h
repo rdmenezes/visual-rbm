@@ -32,6 +32,14 @@ namespace OMLT
 				, HiddenType(ActivationFunction::Invalid)
 				, OutputType(ActivationFunction::Invalid)
 			{ }
+
+			bool operator==(const ModelConfig& that)
+			{
+				return this->VisibleCount == that.VisibleCount &&
+					   this->HiddenCount == that.HiddenCount &&
+					   this->HiddenType == that.HiddenType &&
+					   this->OutputType == that.OutputType;
+			}
 		};
 
 		struct TrainingConfig
@@ -59,6 +67,7 @@ namespace OMLT
 		~AutoEncoderBackPropagation();
 
 		void SetTrainingConfig(const TrainingConfig&);
+		ModelConfig GetModelConfig() const {return _model_config;};
 
 		void Train(const OpenGLBuffer2D&);
 
