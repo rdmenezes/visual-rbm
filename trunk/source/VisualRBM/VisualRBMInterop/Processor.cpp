@@ -208,7 +208,7 @@ namespace VisualRBMInterop
 		virtual void HandleGetWeightsMsg(Message^ msg) = 0;
 		virtual void HandleExportModel(Stream^ s) = 0;
 		virtual bool HandleImportModel(OMLT::Model& model) = 0;
-		virtual void HandleLoadScheduleMsg(Message^ msg) = 0;
+		virtual bool HandleLoadScheduleMsg(Message^ msg) = 0;
 		virtual float Train(OpenGLBuffer2D& train_example) = 0;
 		virtual float Validation(OpenGLBuffer2D& validation_example) = 0;
 		// returns true if training schedule is complete
@@ -292,32 +292,63 @@ namespace VisualRBMInterop
 			SAFE_DELETE(_schedule);
 			currentState = ProcessorState::Stopped;
 		}
-		virtual void HandleLoadScheduleMsg( Message^ msg)
+		virtual bool HandleLoadScheduleMsg( Message^ msg)
 		{
 			IntPtr ptr = (IntPtr)msg["schedule"];
 			assert(ptr.ToPointer() != nullptr);
 
-			SAFE_DELETE(_schedule);
+			TrainingSchedule<TRAINER>* new_schedule = (TrainingSchedule<TRAINER>*)ptr.ToPointer();
 
-			_schedule = (TrainingSchedule<TRAINER>*)ptr.ToPointer();
+			// starting completely fresh
+			if(_trainer == nullptr)
+			{
+				SAFE_DELETE(_schedule);
+				_schedule = new_schedule;
 
-			_schedule->StartTraining();
+				_schedule->StartTraining();
 
-			struct TRAINER::ModelConfig model_config = _schedule->GetModelConfig();
-			model_config_to_ui(model_config);
+				struct TRAINER::ModelConfig model_config = _schedule->GetModelConfig();
+				model_config_to_ui(model_config);
 
-			struct TRAINER::TrainingConfig train_config;
-			bool populated = _schedule->GetTrainingConfig(train_config);
-			assert(populated == true);
-			train_config_to_ui(train_config);
+				struct TRAINER::TrainingConfig train_config;
+				bool populated = _schedule->GetTrainingConfig(train_config);
+				assert(populated == true);
+				train_config_to_ui(train_config);
 
-			minibatches_to_ui(_schedule->GetMinibatchSize());
-			epochs_to_ui(_schedule->GetEpochs());
-			seed_to_ui(_schedule->GetSeed());
+				minibatches_to_ui(_schedule->GetMinibatchSize());
+				epochs_to_ui(_schedule->GetEpochs());
+				seed_to_ui(_schedule->GetSeed());
 
-			build_trainer();
+				build_trainer();
 
-			currentState = ProcessorState::ScheduleLoaded;
+				currentState = ProcessorState::ScheduleLoaded;
+				return true;
+			}
+			// training session is already in place, see if this loaded schedule is compatible
+			else if(_trainer->GetModelConfig() == new_schedule->GetModelConfig() && minibatch_size == new_schedule->GetMinibatchSize())
+			{
+				SAFE_DELETE(_schedule);
+				_schedule = new_schedule;
+
+				_schedule->StartTraining();
+
+				struct TRAINER::TrainingConfig train_config;
+				bool populated = _schedule->GetTrainingConfig(train_config);
+				assert(populated == true);
+				train_config_to_ui(train_config);
+
+				minibatches_to_ui(_schedule->GetMinibatchSize());
+				epochs_to_ui(_schedule->GetEpochs());
+				seed_to_ui(_schedule->GetSeed());
+
+				currentState = ProcessorState::ScheduleLoaded;
+				return true;
+			}
+			else
+			{
+				SAFE_DELETE(new_schedule);
+				return false;
+			}
 		}
 		virtual bool HandleEpochCompleted()
 		{
@@ -897,10 +928,11 @@ namespace VisualRBMInterop
 							if(schedule->GetModelConfig().VisibleUnits == visible_count)
 							{
 								msg["schedule"] = IntPtr(schedule);
-
-								Processor::Model = ModelType::RBM;
-								trainer->HandleLoadScheduleMsg(msg);
-								msg["loaded"] = true;
+								if(trainer->HandleLoadScheduleMsg(msg))
+								{
+									Processor::Model = ModelType::RBM;
+									msg["loaded"] = true;
+								}
 							}
 							else
 							{
@@ -913,10 +945,12 @@ namespace VisualRBMInterop
 							if(schedule->GetModelConfig().VisibleCount == visible_count)
 							{
 								msg["schedule"] = IntPtr(schedule);
+								if(trainer->HandleLoadScheduleMsg(msg))
+								{
+									Processor::Model = ModelType::AutoEncoder;
+									msg["loaded"] = true;
+								}
 
-								Processor::Model = ModelType::AutoEncoder;
-								trainer->HandleLoadScheduleMsg(msg);
-								msg["loaded"] = true;
 							}
 							else
 							{
