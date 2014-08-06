@@ -58,6 +58,8 @@ FILE* export_file = nullptr;
 // in quiet mode, reconstruction error is not calculated
 bool quiet = false;
 
+// amount of gpu memory used to allocate our data atlas
+size_t atlasSize = 0;
 
 void print_help()
 {
@@ -65,14 +67,16 @@ void print_help()
 	printf("Train a model using OpenGL\n\n");
 	printf(" Required Arguments:\n");
 	printf("  -trainingData=IDX       Specifies the training data file.\n");
-	printf("  -trainingLabels=IDX     Specifies the training label file (for MLPs only)\n");
+	printf("  -trainingLabels=IDX     Specifies the training label file (for MLPs only).\n");
 	printf("  -schedule=SCHEDULE      Load training schedule to use during training.\n");
 	printf("  -export=OUT             Specifies filename to save trained model as.\n\n");
 	printf(" Optional Arguments:\n");
 	printf("  -validationData=IDX     Specifies an optional validation data file.\n");
 	printf("  -validationLabels=IDX   Specifies an optional validation label file (for MLPs only)\n");
 	printf("  -import=IN              Specifies filename of optional model to import and train.\n");
-	printf("  -quiet                  Suppresses all stdout output\n");
+	printf("  -quiet                  Suppresses all stdout output.\n");
+	printf("  -atlasSize=SIZE         Specifies the total memory allocated for our data atlas in\n");
+	printf("                          megabytes.  Default value is 512.");
 }
 
 enum HandleArgumentsResults
@@ -93,10 +97,11 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 		Import,
 		Export,
 		Quiet,
+		AtlasSize,
 		Count
 	};
 
-	const char* flags[Count] = {"-trainingData=", "-trainingLabels=", "-validationData=", "-validationLabels=", "-schedule=", "-import=", "-export=", "-quiet"};
+	const char* flags[Count] = {"-trainingData=", "-trainingLabels=", "-validationData=", "-validationLabels=", "-schedule=", "-import=", "-export=", "-quiet", "-atlasSize="};
 	char* arguments[Count] = {0};
 
 	for(int i = 1; i < argc; i++)
@@ -341,6 +346,18 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	// should we calculate error/free energy
 	quiet = arguments[Quiet] != nullptr;
 
+	// figure out what our atlas size should be
+	if(arguments[AtlasSize] == nullptr)
+	{
+		atlasSize = 512;
+	}
+	else if(sscanf(arguments[AtlasSize], "%u", &atlasSize) != 1 || atlasSize < 128)
+	{
+		printf("Could not parse \"%s\" as a valid size, must be at least 128 megabytes\n", arguments[AtlasSize]);
+		return Error;
+	}
+
+
 	return Success;
 }
 
@@ -365,13 +382,13 @@ void GetOptimalParitioning(uint32_t total_atlas_size, uint32_t a_size, uint32_t 
 	else if(f_a_size > 0.75f && f_b_size <= 0.75f)
 	{
 		out_b_atlas_size = b_size;
-		out_a_atlas_size = 512 - out_b_atlas_size;
+		out_a_atlas_size = total_atlas_size - out_b_atlas_size;
 	}
 	// same as before but swapped
 	else if(f_a_size <= 0.75f && f_b_size > 0.75f)
 	{
 		out_a_atlas_size = a_size;
-		out_b_atlas_size = 512 - out_a_atlas_size;
+		out_b_atlas_size = total_atlas_size - out_a_atlas_size;
 	}
 	// finally, if both are smaller than the 3/4 total memory, put the smaller
 	// one entirely in memory and give the other one the rest
@@ -380,12 +397,12 @@ void GetOptimalParitioning(uint32_t total_atlas_size, uint32_t a_size, uint32_t 
 		if(f_a_size > f_b_size)
 		{
 			out_b_atlas_size = b_size;
-			out_a_atlas_size = 512 - out_b_atlas_size;
+			out_a_atlas_size = total_atlas_size - out_b_atlas_size;
 		}
 		else
 		{
 			out_a_atlas_size = a_size;
-			out_b_atlas_size = 512 - out_a_atlas_size;
+			out_b_atlas_size = total_atlas_size - out_a_atlas_size;
 		}
 	}
 }
@@ -409,7 +426,7 @@ void InitDataAtlas(uint32_t minibatch_size)
 	if(validation_data)
 	{
 		uint32_t training_atlas_size, validation_atlas_size;
-		GetOptimalParitioning(512, training_data->GetDatasetSize(), validation_data->GetDatasetSize(), training_atlas_size, validation_atlas_size);
+		GetOptimalParitioning(atlasSize, training_data->GetDatasetSize(), validation_data->GetDatasetSize(), training_atlas_size, validation_atlas_size);
 
 		// load and initialize data
 		training_data_atlas = new DataAtlas(training_atlas_size);
@@ -420,7 +437,7 @@ void InitDataAtlas(uint32_t minibatch_size)
 	}
 	else
 	{
-		uint32_t training_atlas_size = training_data->GetDatasetSize() > 512 ? 512 : training_data->GetDatasetSize();
+		uint32_t training_atlas_size = training_data->GetDatasetSize() > atlasSize ? atlasSize : training_data->GetDatasetSize();
 		training_data_atlas = new DataAtlas(training_atlas_size);
 		training_data_atlas->Initialize(training_data, minibatch_size);
 	}
@@ -706,7 +723,7 @@ void InitDataAtlas<BP>(uint32_t minibatch_size)
 	{
 		// load and initialize data
 		uint32_t training_data_atlas_size, training_label_atlas_size;
-		GetOptimalParitioning(256, training_data->GetDatasetSize(), training_labels->GetDatasetSize(), training_data_atlas_size, training_label_atlas_size);
+		GetOptimalParitioning(atlasSize / 2, training_data->GetDatasetSize(), training_labels->GetDatasetSize(), training_data_atlas_size, training_label_atlas_size);
 
 		training_data_atlas = new DataAtlas(training_data_atlas_size);
 		training_data_atlas->Initialize(training_data, minibatch_size);
@@ -714,7 +731,7 @@ void InitDataAtlas<BP>(uint32_t minibatch_size)
 		training_label_atlas->Initialize(training_labels, minibatch_size);
 
 		uint32_t validation_data_atlas_size, validation_label_atlas_size;
-		GetOptimalParitioning(256, validation_data->GetDatasetSize(), validation_labels->GetDatasetSize(), validation_data_atlas_size, validation_label_atlas_size);
+		GetOptimalParitioning(atlasSize / 2, validation_data->GetDatasetSize(), validation_labels->GetDatasetSize(), validation_data_atlas_size, validation_label_atlas_size);
 
 		validation_data_atlas = new DataAtlas(validation_data_atlas_size);
 		validation_data_atlas->Initialize(validation_data, minibatch_size);
@@ -725,7 +742,7 @@ void InitDataAtlas<BP>(uint32_t minibatch_size)
 	{
 		// load and initialize data
 		uint32_t training_data_atlas_size, training_label_atlas_size;
-		GetOptimalParitioning(512, training_data->GetDatasetSize(), training_labels->GetDatasetSize(), training_data_atlas_size, training_label_atlas_size);
+		GetOptimalParitioning(atlasSize, training_data->GetDatasetSize(), training_labels->GetDatasetSize(), training_data_atlas_size, training_label_atlas_size);
 
 		training_data_atlas = new DataAtlas(training_data_atlas_size);
 		training_data_atlas->Initialize(training_data, minibatch_size);
