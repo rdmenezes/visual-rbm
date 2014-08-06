@@ -162,7 +162,7 @@ namespace VisualRBMInterop
 		static bool LoadTrainingSchedule(Stream^ stream);
 
 		// public command methods
-		static void Run();
+		static void Run(uint32_t atlasSize);
 		// takes a callback for when rbmtrainer init is complete
 		static void Start(Action^);
 		static void Pause();

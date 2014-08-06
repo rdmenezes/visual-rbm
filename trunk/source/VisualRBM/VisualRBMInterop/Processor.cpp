@@ -789,7 +789,7 @@ namespace VisualRBMInterop
 		Processor::AdadeltaDecay = train_config.AdadeltaDecay;
 	}
 
-	void Processor::Run()
+	void Processor::Run(uint32_t atlasSize)
 	{
 		if(SiCKL::OpenGLRuntime::Initialize() == false)
 		{
@@ -807,8 +807,8 @@ namespace VisualRBMInterop
 		// start with an RBMTrainer by default
 		trainer = new RBMTrainer();
 
-		training_data = new DataAtlas(384);
-		validation_data = new DataAtlas(128);
+		training_data = new DataAtlas(atlasSize * 0.75f);
+		validation_data = new DataAtlas(atlasSize * 0.25f);
 
 		while(true)
 		{
