@@ -577,11 +577,11 @@ bool Initialize<CD>()
 			return false;
 		}
 
-		trainer.cd = new ContrastiveDivergence(loaded.rbm, schedule.cd->GetMinibatchSize());
+		trainer.cd = new ContrastiveDivergence(loaded.rbm, schedule.cd->GetMinibatchSize(), schedule.cd->GetSeed());
 	}
 	else
 	{
-		trainer.cd = new ContrastiveDivergence(model_config, schedule.cd->GetMinibatchSize());
+		trainer.cd = new ContrastiveDivergence(model_config, schedule.cd->GetMinibatchSize(), schedule.cd->GetSeed());
 	}
 	
 	CD::TrainingConfig train_config;
@@ -649,11 +649,11 @@ bool Initialize<AutoEncoderBackPropagation>()
 			return false;
 		}
 		
-		trainer.aebp = new AutoEncoderBackPropagation(loaded.ae, schedule.aebp->GetMinibatchSize());
+		trainer.aebp = new AutoEncoderBackPropagation(loaded.ae, schedule.aebp->GetMinibatchSize(), schedule.aebp->GetSeed());
 	}
 	else
 	{
-		trainer.aebp = new AutoEncoderBackPropagation(model_config, schedule.aebp->GetMinibatchSize());
+		trainer.aebp = new AutoEncoderBackPropagation(model_config, schedule.aebp->GetMinibatchSize(), schedule.aebp->GetSeed());
 	}
 
 	AutoEncoderBackPropagation::TrainingConfig train_config;
@@ -776,7 +776,7 @@ bool Initialize<BP>()
 
 		if(matches)
 		{
-			trainer.bp = new BackPropagation(loaded.mlp, schedule.bp->GetMinibatchSize());
+			trainer.bp = new BackPropagation(loaded.mlp, schedule.bp->GetMinibatchSize(), schedule.bp->GetSeed());
 		}
 		else
 		{
@@ -787,7 +787,7 @@ bool Initialize<BP>()
 	}
 	else
 	{
-		trainer.bp = new BackPropagation(model_config, schedule.bp->GetMinibatchSize());
+		trainer.bp = new BackPropagation(model_config, schedule.bp->GetMinibatchSize(), schedule.bp->GetSeed());
 	}
 
 	BP::TrainingConfig train_config;
