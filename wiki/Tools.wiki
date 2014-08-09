@@ -40,6 +40,7 @@ cltrain [ARGS]
   * -validationLabels=*IDX* - Specifies an optional validation label file (for MLP training only)
   * -import=*MODEL* - Specifies an initial set of weights to start from (rather than randomly initialization the weights).
   * -quiet - Suppresses all stdout output and omits any reconstruction error calculations.
+  * -atlasSize=*SIZE* - Specifies the total memory allocated for our data atlas in megabytes.  Default value is 512.
 
 ----
 
