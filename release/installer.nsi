@@ -10,8 +10,7 @@
 !define APPNAME "VisualRBM"
 # These three must be integers
 !define VERSIONMAJOR 1
-!define VERSIONMINOR 0
-!define VERSIONBUILD 0
+!define VERSIONMINOR 1
 # These will be displayed by the "Click here for support information" link in "Add/Remove Programs"
 # It is possible to use "mailto:" links in here to open the email client
 !define HELPURL "http://..." # "Support Information" link
@@ -28,7 +27,7 @@ InstallDir "$PROGRAMFILES\${APPNAME}"
 # This will be in the installer/uninstaller's title bar
 Name "${APPNAME}"
 Icon "visualrbm.ico"
-outFile "visualrbm-setup.${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}.exe"
+outFile "visualrbm-setup.${VERSIONMAJOR}.${VERSIONMINOR}.exe"
  
 !include LogicLib.nsh
 !include EnvVarUpdate.nsh
@@ -66,6 +65,7 @@ section "install"
 	file "idx2csv.exe"
 	file "idxinfo.exe"
 	file "image2csv.exe"
+	file "joinidx.exe"
 	file "shuffleidx.exe"
 	file "splitidx.exe"
 
@@ -97,7 +97,7 @@ section "install"
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "HelpLink" "$\"${HELPURL}$\""
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "URLUpdateInfo" "$\"${UPDATEURL}$\""
 	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "URLInfoAbout" "$\"${ABOUTURL}$\""
-	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "$\"${VERSIONMAJOR}.${VERSIONMINOR}.${VERSIONBUILD}$\""
+	WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "DisplayVersion" "$\"${VERSIONMAJOR}.${VERSIONMINOR}$\""
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "VersionMajor" ${VERSIONMAJOR}
 	WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APPNAME}" "VersionMinor" ${VERSIONMINOR}
 	# There is no option for modifying or repairing the install
@@ -135,6 +135,7 @@ section "uninstall"
 	delete $INSTDIR\idx2csv.exe
 	delete $INSTDIR\idxinfo.exe
 	delete $INSTDIR\image2csv.exe
+	delete $INSTDIR\joinidx.exe
 	delete $INSTDIR\shuffleidx.exe
 	delete $INSTDIR\splitidx.exe
 
