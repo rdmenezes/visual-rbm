@@ -1,6 +1,6 @@
 == Overview ==
 
-The visual-rbm reepository contains three Visual Studio 2010 solutions:
+The visual-rbm repository contains three Visual Studio 2010 solutions:
  * OMLT - The machine learning backend
  * VisualRBM - UI frontend and CLI/Interop code interfacing with OMLT
  * Tools - Command line tools for handling IDX data files as well as the command-line trainer
