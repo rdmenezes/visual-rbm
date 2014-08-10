@@ -2,7 +2,9 @@
 
 == What are the system requirements for VisualRBM? ==
 
-VisualRBM requires a system with a GPU which supports OpenGL 3.3 or newer.  For Nvidia, this means a card from the GeForce 8 series or newer.  For ATI/AMD, thish means a Radeon HD series or newer.  If VisualRBM fails to run, claiming your OpenGL version is too old, update your graphics drivers and try again.
+VisualRBM requires a system with a GPU which supports OpenGL 3.3 or newer.  For Nvidia, this means a card from the GeForce 8 series or newer.  For ATI/AMD, thish means a Radeon HD series or newer.
+
+If VisualRBM fails to run, claiming your OpenGL version is too old, update your graphics drivers and try again.
 
 == VisualRBM crashes immediately on first run, how do I fix this? ==
 
