@@ -32,4 +32,4 @@ Alternatively, I've also written a few classes in various languages for reading 
 
 You don't have to do anything at all!  VisualRBM will automatically stream data from disk if it cannot all be uploaded to the GPU.  
 
-To decrease the amount of time spent streaming from disk, you can create a virtual RAM disk using the [http://www.ltr-data.se/opencode.html/ ImDisk Virtual Disk Driver] and store your data there during training.  This way, you'll be streaming data from system RAM to GPU RAM instead from disk to GPU RAM.
+To decrease the amount of time spent streaming from disk, you can create a virtual RAM disk using the [http://www.ltr-data.se/opencode.html/#ImDisk ImDisk Virtual Disk Driver] and store your data there during training.  This way, you'll be streaming data from system RAM to GPU RAM instead from disk to GPU RAM.
