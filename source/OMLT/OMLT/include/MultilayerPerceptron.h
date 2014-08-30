@@ -38,18 +38,13 @@ namespace OMLT
 		uint32_t LayerCount() const {return _layers.size();}
 
 		// serialization
-		std::string ToJSON() const;
 		void ToJSON(std::ostream& stream) const;
 
-		static MultilayerPerceptron* FromJSON(const std::string& in_JSON);
 		static MultilayerPerceptron* FromJSON(std::istream& stream);
 	private: 
 		std::vector<Layer*> _layers;
 		// properly aligned scratch buffers
 		mutable std::vector<float*> _activations;
-		// private parse method
-		static MultilayerPerceptron* FromJSON(cJSON* root);
-		friend bool Model::FromJSON(const std::string& in_json, struct Model& out_model);
 		friend class BackPropagation;
 	};
 	typedef MultilayerPerceptron MLP;

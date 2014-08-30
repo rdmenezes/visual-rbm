@@ -33,6 +33,6 @@ namespace OMLT
 		};
 		Model() : type(ModelType::NotSet), ptr(nullptr) {}
 
-		static bool FromJSON(const std::string& in_json, Model& out_model);
+		static bool FromJSON(std::istream& in_stream, Model& out_model);
 	};
 }
