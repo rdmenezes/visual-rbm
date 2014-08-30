@@ -8,11 +8,14 @@
 
 // tries to consume a token of type TOK from reader READER, returns RESULT if we get something else
 
+#define THROW_ERROR return __result
+//#define THROW_ERROR __debugbreak()
+
 #define SetReader(READER) cppJSONStream::Reader& __reader = READER
-#define SetErrorResult(RESULT) auto __result = RESULT
-#define TryGetToken(TOK) do { cppJSONStream::Token_t __tok = __reader.next(); if(__tok != TOK) {return __result;}} while(0,0)
-#define TryGetNameValuePair(NAME, TOK) do { cppJSONStream::Token_t __tok = __reader.next(); if(__tok != cppJSONStream::Token::ValueName) {return __result;} if(__reader.readString() == NAME){ __tok = __reader.next(); if(__tok != TOK) {return __result;} } else{return __result;}} while(0,0)
-#define VerifyEqual(A, B) do { if((A) != (B)) {return __result;}} while(0,0)
+#define SetErrorResult(RESULT) const auto& __result = RESULT
+#define TryGetToken(TOK) do { cppJSONStream::Token_t __tok = __reader.next(); if(__tok != TOK) {THROW_ERROR;}} while(0,0)
+#define TryGetNameValuePair(NAME, TOK) do { cppJSONStream::Token_t __tok = __reader.next(); if(__tok != cppJSONStream::Token::ValueName) {THROW_ERROR;} if(__reader.readString() == NAME){ __tok = __reader.next(); if(__tok != TOK) {THROW_ERROR;} } else{THROW_ERROR;}} while(0,0)
+#define VerifyEqual(A, B) do { if((A) != (B)) {THROW_ERROR;}} while(0,0)
 
 namespace cppJSONStream
 {
