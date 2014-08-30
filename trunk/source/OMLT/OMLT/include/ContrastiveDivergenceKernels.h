@@ -361,7 +361,7 @@ struct SourceCalcWeightUpdates : public SiCKL::Source
 				delta_w = 0.0f;
 				weight_decay = 0.0f;
 			ElseIf(i == 0 && (in_enabled_hidden(j - 1, 0) == 1u))
-				// visible bias
+				// hidden bias
 				delta_w = 0.0f;
 				ForInRange(m, 0, MINIBATCH_SIZE)
 					const Float hj = in_hidden(j - 1, m);
@@ -371,7 +371,7 @@ struct SourceCalcWeightUpdates : public SiCKL::Source
 				EndFor
 				weight_decay = 0.0f;				
 			ElseIf(j == 0 && (in_enabled_visible(i - 1, 0) == 1u))
-				// hidden bias
+				// visible bias
 				delta_w = 0.0f;
 				ForInRange(m, 0, MINIBATCH_SIZE)
 					const Float vi = in_visible(i - 1, m);
@@ -455,7 +455,7 @@ struct SourceCalcWeightUpdates : public SiCKL::Source
 
 			Else
 				out_delta = in_delta(Index());
-				out_weight = in_weight(Index());
+				out_weight = prev_weight;
 				out_mean_square = in_mean_square(Index());
 				out_nesterov_weight = out_weight + MOMENTUM * out_delta;
 			EndIf
