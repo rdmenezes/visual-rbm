@@ -156,8 +156,8 @@ namespace VisualRBMInterop
 		static bool SetTrainingData(String^ filename);
 		static bool SetValidationData(String^ filename);
 
-		static bool SaveModel(Stream^ stream);
-		static bool LoadModel(Stream^ stream);
+		static bool SaveModel(String^ filename);
+		static bool LoadModel(String^ filename);
 
 		static bool LoadTrainingSchedule(Stream^ stream);
 
