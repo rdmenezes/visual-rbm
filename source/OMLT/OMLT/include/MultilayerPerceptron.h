@@ -39,7 +39,10 @@ namespace OMLT
 
 		// serialization
 		std::string ToJSON() const;
+		void ToJSON(std::ostream& stream) const;
+
 		static MultilayerPerceptron* FromJSON(const std::string& in_JSON);
+		static MultilayerPerceptron* FromJSON(std::istream& stream);
 	private: 
 		std::vector<Layer*> _layers;
 		// properly aligned scratch buffers

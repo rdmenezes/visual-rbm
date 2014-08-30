@@ -1,11 +1,20 @@
 // c
 #include <assert.h>
 
+// c++
+#include <string>
+#include <limits>
+using std::string;
+#include <memory>
+using std::auto_ptr;
+
 // windows
 #include <intrin.h>
 
 // extern
 #include <cJSON.h>
+#include <cppJSONStream.hpp>
+using namespace cppJSONStream;
 
 // OMLT
 #include "Common.h"
@@ -114,6 +123,30 @@ namespace OMLT
 		cJSON_Delete(root);
 
 		return result;
+	}
+
+	void RestrictedBoltzmannMachine::ToJSON(std::ostream& stream) const
+	{
+		cppJSONStream::Writer w(stream, true);
+
+		w.begin_object();
+			w.write_namevalue("Type", "RestrictedBoltzmannMachine");
+			w.write_namevalue("VisibleCount", (uint64_t)visible_count);
+			w.write_namevalue("HiddenCount", (uint64_t)hidden_count);
+			w.write_namevalue("VisibleType", ActivationFunctionNames[visible_type]);
+			w.write_namevalue("HiddenType", ActivationFunctionNames[hidden_type]);
+			w.write_name("VisibleBiases");
+				w.write_array(visible.biases(), visible_count);
+			w.write_name("HiddenBiases");
+				w.write_array(hidden.biases(), hidden_count);
+			w.write_name("Weights");
+				w.begin_array();
+				for(uint32_t j = 0; j < hidden_count; j++)
+				{
+					w.write_array(hidden.feature(j), visible_count);
+				}
+				w.end_array();
+		w.end_object();
 	}
 
 	RestrictedBoltzmannMachine* RestrictedBoltzmannMachine::FromJSON( cJSON* in_root )
@@ -243,5 +276,79 @@ Malformed:
 		RBM* rbm = FromJSON(root);
 		cJSON_Delete(root);
 		return rbm;
+	}
+
+	RestrictedBoltzmannMachine* RestrictedBoltzmannMachine::FromJSON(std::istream& stream)
+	{
+		Reader r(stream);
+
+		SetReader(r);
+		SetErrorResult(nullptr);
+		TryGetToken(Token::BeginObject);
+		// make sure we're actually parsing an RBM
+		TryGetNameValuePair("Type", Token::String);
+		VerifyEqual(r.readString(), "RestrictedBoltzmannMachine");
+			
+		// get visible, hidden counts and activations
+		TryGetNameValuePair("VisibleCount", Token::Number);
+		uint64_t visible_count = r.readUInt();
+		TryGetNameValuePair("HiddenCount", Token::Number);
+		uint64_t hidden_count = r.readUInt();
+		TryGetNameValuePair("VisibleType", Token::String);
+		ActivationFunction_t visible_type = ParseFunction(r.readString().c_str());
+		TryGetNameValuePair("HiddenType", Token::String);
+		ActivationFunction_t hidden_type = ParseFunction(r.readString().c_str());
+
+		// validate these parameters
+		if(visible_count > (uint64_t)std::numeric_limits<uint32_t>::max() ||
+		   visible_count == 0 ||
+		   hidden_count > (uint64_t)std::numeric_limits<uint32_t>::max() ||
+		   hidden_count == 0 ||
+		   visible_type == ActivationFunction::Invalid ||
+		   hidden_type == ActivationFunction::Invalid)
+		{
+			return nullptr;
+		}
+
+		// ok, create our RBM
+		auto_ptr<RBM> rbm(new RBM(visible_count, hidden_count, visible_type, hidden_type));
+
+		// now load our biases
+
+		TryGetNameValuePair("VisibleBiases", Token::BeginArray);
+		for(size_t i = 0; i < rbm->visible_count; i++)
+		{
+			TryGetToken(Token::Number);
+			rbm->visible.biases()[i] = (float)r.readDouble();
+		}
+		TryGetToken(Token::EndArray);
+
+		TryGetNameValuePair("HiddenBiases", Token::BeginArray);
+		for(size_t j = 0; j < rbm->hidden_count; j++)
+		{
+			TryGetToken(Token::Number);
+			rbm->hidden.biases()[j] = (float)r.readDouble();
+		}
+		TryGetToken(Token::EndArray);
+
+		// now load our weights
+
+		TryGetNameValuePair("Weights", Token::BeginArray);
+		for(size_t j = 0; j < rbm->hidden_count; j++)
+		{
+			TryGetToken(Token::BeginArray);
+			for(size_t i = 0; i < rbm->visible_count; i++)
+			{
+				TryGetToken(Token::Number);
+				float w_ij = (float)r.readDouble();
+				rbm->hidden.feature(j)[i] = w_ij;
+				rbm->visible.feature(i)[j] = w_ij;
+			}
+			TryGetToken(Token::EndArray);
+		}
+		TryGetToken(Token::EndArray);
+		TryGetToken(Token::EndObject);
+
+		return rbm.release();
 	}
 }
