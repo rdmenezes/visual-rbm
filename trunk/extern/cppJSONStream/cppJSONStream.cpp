@@ -381,16 +381,12 @@ namespace cppJSONStream
 				return tok;
 			}
 		}
-		else 
+		Token_t tok = parse_value();
+		if(tok == Token::Invalid)
 		{
-			Token_t tok = parse_value();
-			if(tok == Token::Invalid)
-			{
-				_error = true;
-			}
-			return tok;
-
+			_error = true;
 		}
+		return tok;
 	}
 
 	bool Reader::readBoolean()
@@ -629,7 +625,13 @@ namespace cppJSONStream
 	{
 		begin_write();
 
-		_stream << value;
+		char buff[64];
+
+		if (fabs(floor(value)-value)<=DBL_EPSILON && fabs(value)<1.0e60) sprintf(buff,"%.0f",value);
+		else if (fabs(value)<1.0e-6 || fabs(value)>1.0e9)                sprintf(buff,"%e",value);
+		else                                                             sprintf(buff,"%f",value);
+
+		_stream << buff;
 
 		end_write();
 
