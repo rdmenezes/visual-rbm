@@ -53,7 +53,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>include;$(SolutionDir)\..\..\extern\SiCKL\include;$(SolutionDir)\..\..\extern\cJSON</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)\..\..\extern\SiCKL\include;$(SolutionDir)\..\..\extern\cJSON;$(SolutionDir)\..\..\extern\cppJSONStream</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -69,7 +69,7 @@
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
-      <AdditionalIncludeDirectories>include;$(SolutionDir)\..\..\extern\SiCKL\include;$(SolutionDir)\..\..\extern\cJSON</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;$(SolutionDir)\..\..\extern\SiCKL\include;$(SolutionDir)\..\..\extern\cJSON;$(SolutionDir)\..\..\extern\cppJSONStream</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -79,6 +79,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\..\extern\cJSON\cJSON.c" />
+    <ClCompile Include="..\..\..\extern\cppJSONStream\cppJSONStream.cpp" />
     <ClCompile Include="source\AutoEncoder.cpp" />
     <ClCompile Include="source\AutoEncoderBackPropagation.cpp" />
     <ClCompile Include="source\Common.cpp" />
