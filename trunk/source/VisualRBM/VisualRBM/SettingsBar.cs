@@ -1119,7 +1119,7 @@ namespace VisualRBM
 				bool saved;
 				try
 				{
-					saved = Processor.SaveModel(sfd.OpenFile());
+					saved = Processor.SaveModel(sfd.FileName);
 				}
 				catch (Exception)
 				{
@@ -1152,7 +1152,7 @@ namespace VisualRBM
 				bool loaded;
 				try
 				{
-					loaded = Processor.LoadModel(ofd.OpenFile());
+					loaded = Processor.LoadModel(ofd.FileName);
 				}
 				catch(Exception)
 				{

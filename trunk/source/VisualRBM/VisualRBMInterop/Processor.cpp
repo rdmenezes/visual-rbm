@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cstring>
 #include <cmath>
+#include <fstream>
 
 // VisualRBM Interop
 #include "Processor.h"
@@ -206,7 +207,7 @@ namespace VisualRBMInterop
 		virtual void HandleGetVisibleMsg(Message^ msg) = 0;
 		virtual void HandleGetHiddenMsg(Message^ msg) = 0;
 		virtual void HandleGetWeightsMsg(Message^ msg) = 0;
-		virtual void HandleExportModel(Stream^ s) = 0;
+		virtual void HandleExportModel(String^ path) = 0;
 		virtual bool HandleImportModel(OMLT::Model& model) = 0;
 		virtual bool HandleLoadScheduleMsg(Message^ msg) = 0;
 		virtual float Train(OpenGLBuffer2D& train_example) = 0;
@@ -481,18 +482,18 @@ namespace VisualRBMInterop
 				weight_list->Add(IntPtr(weight_ptr + 1 + (visible_count + 1) * j));
 			}
 		}
-		virtual void HandleExportModel(Stream^ s)
+		virtual void HandleExportModel(String^ path)
 		{
 			assert(_trainer != nullptr);
 
+			IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(path);
+			char* filename = static_cast<char*>(p.ToPointer());
+
 			RBM* rbm = _trainer->GetRestrictedBoltzmannMachine();
 			assert(rbm != nullptr);
-			std::string model_json = rbm->ToJSON();
-			delete rbm;
-			for(size_t k = 0; k < model_json.size(); k++)
-			{
-				s->WriteByte(model_json[k]);
-			}
+			
+			std::fstream fs(filename, std::ios_base::out | std::ios_base::binary);
+			rbm->ToJSON(fs);
 		}
 		virtual bool HandleImportModel(OMLT::Model& model)
 		{
@@ -674,19 +675,18 @@ namespace VisualRBMInterop
 				weight_list->Add(IntPtr(weight_ptr + 1 + (visible_count + 1) * j));
 			}
 		}
-		virtual void HandleExportModel(Stream^ s)
+		virtual void HandleExportModel(String^ path)
 		{
 			assert(_trainer != nullptr);
 
+			IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(path);
+			char* filename = static_cast<char*>(p.ToPointer());
+
 			AutoEncoder* ae = _trainer->GetAutoEncoder();
 			assert(ae != nullptr);
-			std::string model_json = ae->ToJSON();
-			delete ae;
 
-			for(size_t k = 0; k < model_json.size(); k++)
-			{
-				s->WriteByte(model_json[k]);
-			}
+			std::fstream fs(filename, std::ios_base::out | std::ios_base::binary);
+			ae->ToJSON(fs);
 		}
 
 		virtual bool HandleImportModel(OMLT::Model& model)
@@ -872,26 +872,25 @@ namespace VisualRBMInterop
 					{
 						msg["saved"] = false;
 
-						Stream^ fs = (Stream^)msg["output_stream"];
+						String^ path = (String^)msg["path"];
 
-						trainer->HandleExportModel(fs);
-
-						fs->Flush();
-						fs->Close();
+						trainer->HandleExportModel(path);
 
 						msg["saved"] = true;
 					}
 					break;
 				case MessageType::ImportModel:
 					{
-						Stream^ fs = (Stream^)msg["input_stream"];
+						String^ path = (String^)msg["path"];
+						IntPtr p = System::Runtime::InteropServices::Marshal::StringToHGlobalAnsi(path);
+						char* filename = static_cast<char*>(p.ToPointer());
 						
-						const std::string& model_json = LoadFile(fs);
+						std::fstream fs(filename, std::ios_base::in | std::ios_base::binary);
 
 						msg["loaded"] = false;
 
 						OMLT::Model model;
-						if(OMLT::Model::FromJSON(model_json ,model))
+						if(OMLT::Model::FromJSON(fs, model))
 						{
 							bool invalid_type = false;
 							switch(model.type)
@@ -911,7 +910,6 @@ namespace VisualRBMInterop
 							{
 								msg["loaded"] = true;
 							}
-
 						}
 					}
 					break;
@@ -1100,10 +1098,10 @@ namespace VisualRBMInterop
 		}
 	}
 
-	bool Processor::SaveModel(Stream^ in_stream)
+	bool Processor::SaveModel(String^ filepath)
 	{
 		Message^ msg = gcnew Message(MessageType::ExportModel);
-		msg["output_stream"] = in_stream;
+		msg["path"] = filepath;
 
 		_message_queue->Enqueue(msg);
 		while(!msg->Handled)
@@ -1114,10 +1112,10 @@ namespace VisualRBMInterop
 		return (bool)msg["saved"];
 	}
 
-	bool Processor::LoadModel(Stream^ in_stream)
+	bool Processor::LoadModel(String^ filepath)
 	{
 		Message^ msg = gcnew Message(MessageType::ImportModel);
-		msg["input_stream"] = in_stream;
+		msg["path"] = filepath;
 
 		_message_queue->Enqueue(msg);
 		while(!msg->Handled)
