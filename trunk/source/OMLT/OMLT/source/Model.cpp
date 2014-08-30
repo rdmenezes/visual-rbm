@@ -1,5 +1,8 @@
 // cJSON
 #include <cJSON.h>
+// cppJSONStream
+#include <cppJSONStream.hpp>
+using namespace cppJSONStream;
 
 // OMLT
 #include "Model.h"
@@ -9,48 +12,57 @@
 
 namespace OMLT
 {
-	bool Model::FromJSON(const std::string& in_json, Model& out_model)
+	bool Model::FromJSON(std::istream& in_stream, Model& out_model)
 	{
-		bool result = false;
 		out_model.type = ModelType::Invalid;
 		out_model.ptr = nullptr;
 
-		cJSON* cj_root = cJSON_Parse(in_json.c_str());
-		if(cj_root)
+		// save our current position
+		std::streampos pos = in_stream.tellg();
+
+		cppJSONStream::Reader r(in_stream);
+
+		SetReader(r);
+		SetErrorResult(false);
+		TryGetToken(Token::BeginObject);
+
+		TryGetNameValuePair("Type", Token::String);
+
+		std::string type = r.readString();
+
+		// reset stream to beginning
+		in_stream.seekg(pos, in_stream.beg);
+		if(type == "RestrictedBoltzmannMachine")
 		{
-			if(cJSON* cj_type = cJSON_GetObjectItem(cj_root, "Type"))
+			RBM* rbm = RBM::FromJSON(in_stream);
+			if(rbm != nullptr)
 			{
-				if(strcmp(cj_type->valuestring, "RestrictedBoltzmannMachine") == 0)
-				{
-					if(RBM* rbm = RBM::FromJSON(cj_root))
-					{
-						out_model.type = ModelType::RBM;
-						out_model.rbm = rbm;
-						result = true;
-					}
-				}
-				else if(strcmp(cj_type->valuestring, "MultilayerPerceptron") == 0)
-				{
-					if(MLP* mlp = MLP::FromJSON(cj_root))
-					{
-						out_model.type = ModelType::MLP;
-						out_model.mlp = mlp;
-						result = true;
-					}
-				}
-				else if(strcmp(cj_type->valuestring, "AutoEncoder") == 0)
-				{
-					if(AE* ae = AE::FromJSON(cj_root))
-					{
-						out_model.type = ModelType::AE;
-						out_model.ae = ae;
-						result = true;
-					}
-				}
+				out_model.rbm = rbm;
+				out_model.type = ModelType::RBM;
+				return true;
+			}
+		}
+		else if(type == "AutoEncoder")
+		{
+			AE* ae = AE::FromJSON(in_stream);
+			if(ae != nullptr)
+			{
+				out_model.ae = ae;
+				out_model.type = ModelType::AE;
+				return true;
+			}
+		}
+		else if(type == "MultilayerPerceptron")
+		{
+			MLP* mlp = MLP::FromJSON(in_stream);
+			if(mlp != nullptr)
+			{
+				out_model.mlp = mlp;
+				out_model.type = ModelType::MLP;
+				return true;
 			}
 		}
 
-		cJSON_Delete(cj_root);
-		return result;
+		return false;
 	}
 }

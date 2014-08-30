@@ -261,9 +261,12 @@ bool SerializeRBM(int argc, char** argv)
 	RBM* rbm = cd1.GetRestrictedBoltzmannMachine();
 
 	printf("Serializing to disk\n");
-
-	fprintf(rbm_json, "%s\n", rbm->ToJSON().c_str());
-	fclose(rbm_json);
+	{
+		std::stringstream ss;
+		rbm->ToJSON(ss);
+		fprintf(rbm_json, "%s\n", ss.str().c_str());
+		fclose(rbm_json);
+	}
 	
 	printf("Creating new CD\n");
 
@@ -274,9 +277,12 @@ bool SerializeRBM(int argc, char** argv)
 	RBM* rbm_reserial = cd2.GetRestrictedBoltzmannMachine();
 	
 	printf("And Serializing that to disk\n");
-	
-	fprintf(rbm_reserial_json, "%s\n", rbm_reserial->ToJSON().c_str());
-	fclose(rbm_reserial_json);
+	{
+		std::stringstream ss;
+		rbm_reserial->ToJSON(ss);
+		fprintf(rbm_reserial_json, "%s\n", ss.str().c_str());
+		fclose(rbm_reserial_json);
+	}
 
 	printf("Cleanup\n");
 

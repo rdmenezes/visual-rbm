@@ -20,10 +20,8 @@ namespace OMLT
 		// assumption that both the visible and hidden types are sigmoid
 		float CalcFreeEnergy(const float* in_visible) const;
 
-		std::string ToJSON() const;
 		void ToJSON(std::ostream& stream) const;
 
-		static RestrictedBoltzmannMachine* FromJSON(const std::string& in_JSON);
 		static RestrictedBoltzmannMachine* FromJSON(std::istream& stream);
 
 		const uint32_t visible_count;
@@ -37,14 +35,8 @@ namespace OMLT
 		// used to calculate visible feature vector
 		FeatureMap visible;
 	private:
-
-		
 		RestrictedBoltzmannMachine(uint32_t in_visible_count, uint32_t in_hidden_count, ActivationFunction_t in_visible_type, ActivationFunction_t in_hidden_type);
 
-		// private parse method
-		static RestrictedBoltzmannMachine* FromJSON(struct cJSON* root);
-		
-		friend struct Model;
 		friend class ContrastiveDivergence;
 	};
 	typedef RestrictedBoltzmannMachine RBM;

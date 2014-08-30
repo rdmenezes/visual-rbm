@@ -17,10 +17,8 @@ namespace OMLT
 		void Encode(const float* in_raw, float* out_encoded) const;
 		void Decode(const float* in_decoded, float* out_raw) const;
 
-		std::string ToJSON() const;
 		void ToJSON(std::ostream& stream) const;
 
-		static AutoEncoder* FromJSON(const std::string& in_json);
 		static AutoEncoder* FromJSON(std::istream& stream);
 
 		const uint32_t hidden_count;
@@ -32,13 +30,8 @@ namespace OMLT
 		FeatureMap encoder;
 		FeatureMap decoder;
 	private:
-
 		AutoEncoder(uint32_t in_visible_count, uint32_t in_hidden_count, ActivationFunction_t in_hidden_type, ActivationFunction_t in_output_type);
 
-		// private parse method
-		static AutoEncoder* FromJSON(struct cJSON* root);
-
-		friend struct Model;
 		friend class AutoEncoderBackPropagation;
 	};
 	typedef AutoEncoder AE;
