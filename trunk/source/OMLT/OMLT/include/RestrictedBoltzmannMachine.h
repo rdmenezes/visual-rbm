@@ -21,7 +21,10 @@ namespace OMLT
 		float CalcFreeEnergy(const float* in_visible) const;
 
 		std::string ToJSON() const;
+		void ToJSON(std::ostream& stream) const;
+
 		static RestrictedBoltzmannMachine* FromJSON(const std::string& in_JSON);
+		static RestrictedBoltzmannMachine* FromJSON(std::istream& stream);
 
 		const uint32_t visible_count;
 		const uint32_t hidden_count;

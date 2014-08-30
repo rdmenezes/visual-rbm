@@ -18,7 +18,10 @@ namespace OMLT
 		void Decode(const float* in_decoded, float* out_raw) const;
 
 		std::string ToJSON() const;
+		void ToJSON(std::ostream& stream) const;
+
 		static AutoEncoder* FromJSON(const std::string& in_json);
+		static AutoEncoder* FromJSON(std::istream& stream);
 
 		const uint32_t hidden_count;
 		const uint32_t visible_count;
