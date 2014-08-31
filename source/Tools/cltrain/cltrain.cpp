@@ -1,6 +1,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <vector>
+#include <fstream>
+using std::fstream;
 
 // OMLT
 #include <IDX.hpp>
@@ -54,7 +56,7 @@ static union
 } trainer = {0};
 
 // file to save rbm to
-FILE* export_file = nullptr;
+fstream export_file;
 // in quiet mode, reconstruction error is not calculated
 bool quiet = false;
 
@@ -291,8 +293,9 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 	// get model to start from
 	if(arguments[Import])
 	{
-		std::string model_json;
-		if(!OMLT::ReadTextFile(arguments[Import], model_json))
+		fstream fs;
+		fs.open(arguments[Import], std::ios_base::in | std::ios_base::binary);
+		if(fs.is_open() == false)
 		{
 			printf("Problem loading model JSON from: \"%s\"\n", arguments[Import]);
 			return Error;
@@ -300,7 +303,7 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 		else
 		{
 			OMLT::Model model;
-			if(!Model::FromJSON(model_json, model))
+			if(!Model::FromJSON(fs, model))
 			{
 				printf("Problem parsing model JSON from: \"%s\"\n", arguments[Import]);
 				return Error;
@@ -335,8 +338,8 @@ HandleArgumentsResults handle_arguments(int argc, char** argv)
 		return Error;
 	}
 
-	export_file = fopen(arguments[Export], "wb");
-	if(export_file == nullptr)
+	export_file.open(arguments[Export], std::ios_base::out | std::ios_base::binary);
+	if(export_file.is_open() == false)
 	{
 		printf("Could not open \"%s\" for writing.\n", arguments[Export]);
 		return Error;
@@ -530,11 +533,10 @@ bool Run(MODEL* in_model, TrainingSchedule<TRAINER>* in_schedule)
 				if(in_schedule->TrainingComplete())
 				{
 					// get model JSOn and write to disk
-					std::string model_json = ToJSON<TRAINER>();
-					fwrite(model_json.c_str(), model_json.size(), sizeof(uint8_t), export_file);
-					fflush(export_file);
-					fclose(export_file);
-					
+					ToJSON<TRAINER>(export_file);
+					export_file.flush();
+					export_file.close();
+
 					return true;
 				}
 				else
@@ -566,7 +568,7 @@ template <typename TRAINER>
 float Validate() { return 0.0f; }
 
 template <typename TRAINER>
-std::string ToJSON() {return "";}
+void ToJSON(std::fstream&) {}
 
 #pragma region Contrastive Divergencce
 
@@ -628,13 +630,11 @@ float Validate<CD>()
 }
 
 template <>
-std::string ToJSON<CD>()
+void ToJSON<CD>(fstream& out)
 {
 	RBM* rbm = trainer.cd->GetRestrictedBoltzmannMachine();
-	std::string json = rbm->ToJSON();
+	rbm->ToJSON(out);
 	delete rbm;
-
-	return json;
 }
 
 #pragma endregion
@@ -700,13 +700,11 @@ float Validate<AutoEncoderBackPropagation>()
 }
 
 template <>
-std::string ToJSON<AutoEncoderBackPropagation>()
+void ToJSON<AutoEncoderBackPropagation>(fstream& out)
 {
 	AutoEncoder* ae = trainer.aebp->GetAutoEncoder();
-	std::string json = ae->ToJSON();
+	ae->ToJSON(out);
 	delete ae;
-
-	return json;
 }
 
 #pragma endregion
@@ -834,13 +832,11 @@ float Validate<BP>()
 }
 
 template <>
-std::string ToJSON<BP>()
+void ToJSON<BP>(fstream& out)
 {
 	MLP* mlp = trainer.bp->GetMultilayerPerceptron();
-	std::string json = mlp->ToJSON();
+	mlp->ToJSON(out);
 	delete mlp;
-
-	return json;
 }
 
 #pragma endregion

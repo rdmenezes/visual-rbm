@@ -9,6 +9,7 @@ using namespace OMLT;
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include <fstream>
 using namespace std;
 
 const char* Usage =
@@ -87,7 +88,7 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-	FILE* model_dest = nullptr;
+	fstream model_dest;
 
 	// parse command line options
 	std::vector<Layer> layers;
@@ -213,8 +214,8 @@ int main(int argc, char** argv)
 				}
 				break;
 			case OUT_FILENAME:
-				model_dest = fopen(argv[k], "wb");
-				if(model_dest == nullptr)
+				model_dest.open(argv[k], std::ios_base::out | std::ios_base::binary);
+				if(model_dest.is_open() == false)
 				{
 					printf("Could not open \"%s\" for writing\n");
 					return -1;
@@ -226,7 +227,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	if(model_dest == nullptr)
+	if(model_dest.is_open() == false)
 	{
 		printf("No output file specified\n");
 		return -1;
@@ -235,14 +236,15 @@ int main(int argc, char** argv)
 	// load up models
 	for(auto it = layers.begin(); it < layers.end(); ++it)
 	{
-		string json;
-		if(ReadTextFile(it->filename, json) == false)
+		fstream fs;
+		fs.open(it->filename, std::ios_base::in | std::ios_base::binary);;
+		if(fs.is_open() == false)
 		{
 			printf("Could not load model \"%s\"\n", it->filename.c_str());
 			return -1;
 		}
 
-		if(Model::FromJSON(json, it->model) == false)
+		if(Model::FromJSON(fs, it->model) == false)
 		{
 			printf("Could not parse model \"%s\"\n", it->filename.c_str());
 			return -1;
@@ -344,11 +346,8 @@ int main(int argc, char** argv)
 		result->AddLayer(*it);
 	}
 
-	// convert to json
-	string mlp_json = result->ToJSON();
-
-	// print to file
-	fwrite(mlp_json.c_str(), sizeof(uint8_t), mlp_json.size(), model_dest);
-
+	// write to json
+	result->ToJSON(model_dest);
+	model_dest.flush();
 	return 0;
 }
