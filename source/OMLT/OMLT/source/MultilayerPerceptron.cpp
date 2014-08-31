@@ -134,10 +134,8 @@ namespace OMLT
 		auto_ptr<MLP> mlp(new MLP());
 
 		// read each layer
-		for(Token_t t = r.next(); t != Token::EndArray; t = r.next())
+		for(Token_t t = r.next(); t == Token::BeginObject; t = r.next())
 		{
-			VerifyEqual(t, Token::BeginObject);
-			
 			TryGetNameValuePair("Inputs", Token::Number);
 			uint64_t inputs = r.readUInt();
 			TryGetNameValuePair("Outputs", Token::Number);
@@ -180,6 +178,7 @@ namespace OMLT
 			}
 			TryGetToken(Token::EndArray);
 			mlp->AddLayer(layer.release());
+			TryGetToken(Token::EndObject);
 		}
 		TryGetToken(Token::EndObject);
 
