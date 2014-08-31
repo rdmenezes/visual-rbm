@@ -8,6 +8,8 @@ using namespace OMLT;
 #include <string.h>
 #include <math.h>
 #include <sstream>
+#include <fstream>
+using std::fstream;
 
 const char* Usage = 
 	"Calculates the appropriate output for an input IDX dataset and trained\n"
@@ -38,10 +40,12 @@ int main(int argc, char** argv)
 
 	IDX* input = nullptr;
 	IDX* output = nullptr;
-	std::string model_json;
+
 	Model model;
 	uint32_t input_count = 0;
 	uint32_t output_count = 0;
+
+	fstream fs;
 
 	input = IDX::Load(input_string);
 	if(input == nullptr)
@@ -56,10 +60,10 @@ int main(int argc, char** argv)
 	}
 	input_count = input->GetRowLength();
 
-
-	if(OMLT::ReadTextFile(model_string, model_json))
+	fs.open(model_string, std::ios_base::in | std::ios_base::binary);
+	if(fs.is_open())
 	{
-		if(!Model::FromJSON(model_json, model))
+		if(!Model::FromJSON(fs, model))
 		{
 			printf("Could not parse model json from \"%s\"\n", model_string);
 			goto CLEANUP;
