@@ -10,22 +10,17 @@ set TOOLS="..\source\Tools\Tools.sln"
 set DEVENV="C:\Program Files (x86)\Microsoft Visual Studio 10.0\Common7\IDE\devenv.exe"
 set MAKENSIS="C:\Program Files (x86)\NSIS\makensis.exe"
 
-:: delete odl releases
-
-del VisualRBM.zip
-del Tools.zip
-
 :: clean build
 
-:: %DEVENV% %OMLT% /Clean Release
-:: %DEVENV% %VISUALRBM% /Clean Release
-:: %DEVENV% %TOOLS% /Clean Release
+%DEVENV% %OMLT% /Clean Release
+%DEVENV% %VISUALRBM% /Clean Release
+%DEVENV% %TOOLS% /Clean Release
 
 :: build releases
 
-:: %DEVENV% %OMLT% /Build Release
-:: %DEVENV% %VISUALRBM% /Build Release
-:: %DEVENV% %TOOLS% /Build Release
+%DEVENV% %OMLT% /Build Release
+%DEVENV% %VISUALRBM% /Build Release
+%DEVENV% %TOOLS% /Build Release
 
 :: delete binaries from this folder
 DEL *.exe
