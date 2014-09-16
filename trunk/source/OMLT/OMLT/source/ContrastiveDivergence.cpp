@@ -221,23 +221,74 @@ namespace OMLT
 
 	float ContrastiveDivergence::GetReconstructionError( const OpenGLBuffer2D& in_example)
 	{
-		/// Calc Hidden
+		if(_recompile_required)
+		{
+			free_kernels();
+			build_kernels();
 
-		_calc_hidden->SetInput(0, _visible0);
-		_calc_hidden->SetInput(1, _weights0);
-		_calc_hidden->SetInput(2, _enabled_visible);
-		_calc_hidden->BindOutput(0, _hidden0);
-		_calc_hidden->Run();
+			_recompile_required = false;
+		}
+
+		OpenGLBuffer2D prev_visible0 = _visible0;
+		_visible0 = in_example;
+
+		/// Calc Hidden and States from Visible
+		if(_model_config.HiddenType != ActivationFunction::Softmax)
+		{
+			_calc_hidden_states->SetInput(0, _visible0);
+			_calc_hidden_states->SetInput(1, _nesterov_weight);
+			_calc_hidden_states->SetInput(2, _enabled_visible);
+			_calc_hidden_states->SetInput(3, _hidden_random0);
+			_calc_hidden_states->BindOutput(0, _hidden_random1);
+			_calc_hidden_states->BindOutput(1, _hidden0);
+			_calc_hidden_states->BindOutput(2, _hidden_states);
+			_calc_hidden_states->Run();
+
+			swap(_hidden_random0, _hidden_random1);
+		}
+		/// Calc Hidden Softmax and States from Visible
+		else
+		{
+			_calc_hidden->SetInput(0, _visible0);
+			_calc_hidden->SetInput(1, _nesterov_weight);
+			_calc_hidden->SetInput(2, _calc_enabled_visible);
+			_calc_hidden->BindOutput(0, _hidden0);
+			_calc_hidden->Run();
+
+			_calc_hidden_softmax_states->SetInput(0, _hidden0);
+			_calc_hidden_softmax_states->SetInput(1, _hidden_random0);
+			_calc_hidden_softmax_states->BindOutput(0, _hidden_random1);
+			_calc_hidden_softmax_states->BindOutput(1, _hidden1);
+			_calc_hidden_softmax_states->BindOutput(2, _hidden_states);
+			_calc_hidden_softmax_states->Run();
+
+			swap(_hidden_random0, _hidden_random1);
+			swap(_hidden0, _hidden1);
+		}
 
 		/// Calc Visible Prime
 
-		_calc_visible->SetInput(0, _hidden0);
-		_calc_visible->SetInput(1, _weights0);
+		_calc_visible->SetInput(0, _hidden_states);
+		_calc_visible->SetInput(1, _nesterov_weight);
 		_calc_visible->SetInput(2, _enabled_hidden);
 		_calc_visible->BindOutput(0, _visible_prime0);
 		_calc_visible->Run();
 
-		return GetLastReconstructionError();
+		/// Calc Visible Softmax
+
+		if(_model_config.VisibleType == ActivationFunction::Softmax)
+		{
+			_calc_visible_softmax->SetInput(0, _visible_prime0);
+			_calc_visible_softmax->BindOutput(0, _visible_prime1);
+			_calc_visible_softmax->Run();
+
+			swap(_visible_prime0, _visible_prime1);
+		}
+
+		float error = GetLastReconstructionError();
+
+		_visible0 = prev_visible0;
+		return error;
 	}
 
 	RestrictedBoltzmannMachine* ContrastiveDivergence::GetRestrictedBoltzmannMachine() const
