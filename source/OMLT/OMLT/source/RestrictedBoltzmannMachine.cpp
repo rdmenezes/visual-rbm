@@ -85,6 +85,7 @@ namespace OMLT
 		for(uint32_t k = 0; k < hidden_buffer.BlockCount(); k++)
 		{
 			sum = _mm_add_ps(sum, _mm_ln_1_plus_e_x_ps(_mm_load_ps(head)));
+			head += 4;
 		}
 		
 		sum = _mm_hadd_ps(sum, sum);
