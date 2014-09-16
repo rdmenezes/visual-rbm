@@ -490,18 +490,19 @@ bool Run(MODEL* in_model, TrainingSchedule<TRAINER>* in_schedule)
 	uint32_t epoch_count = 0;
 	while(in_schedule->TrainingComplete() == false)
 	{
+		if(!quiet && validation_data_atlas)
+		{
+			validation_error += Validate<TRAINER>();
+		}
+
 		NextExample<TRAINER>();
-
 		Train<TRAINER>();
-
 		if(!quiet)
 		{
 			train_error += GetError<TRAINER>();
-			if(validation_data_atlas)
-			{
-				validation_error += Validate<TRAINER>();
-			}
 		}
+
+
 
 		iterations = (iterations + 1) % total_batches;
 		if(iterations == 0)

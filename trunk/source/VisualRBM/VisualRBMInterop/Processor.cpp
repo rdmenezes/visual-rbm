@@ -995,14 +995,17 @@ namespace VisualRBMInterop
 					float training_error = -1.0f;
 					float validation_error = -1.0f;
 
-					// get next training example
-					training_data->Next(training_example);
-					training_error = trainer->Train(training_example);
+					// do validation error calcluation
 					if(validation_idx != nullptr)
 					{
 						validation_data->Next(validation_example);
 						validation_error = trainer->Validation(validation_example);
 					}
+
+					// train
+					training_data->Next(training_example);
+					training_error = trainer->Train(training_example);
+
 
 					training_error = CapError(training_error);
 					validation_error = CapError(validation_error);
