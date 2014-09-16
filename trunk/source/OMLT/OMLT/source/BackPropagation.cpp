@@ -224,8 +224,9 @@ namespace OMLT
 				calc_sensitivities->SetInput(0, lay->NextLayer->NesterovWeight);
 				calc_sensitivities->SetInput(1, lay->NextLayer->Sensitivities);
 				calc_sensitivities->SetInput(2, lay->Activation0);
-				calc_sensitivities->SetInput(3, lay->InputEnabled);
+				calc_sensitivities->SetInput(3, *lay->OutputEnabled);
 				assert(lay->NextLayer->NesterovWeight.Width == (lay->OutputUnits + 1));
+				assert((*lay->OutputEnabled).Width == lay->Sensitivities.Width);
 
 				calc_sensitivities->BindOutput(0, lay->Sensitivities);
 				assert(lay->Sensitivities.Width == lay->OutputUnits);
