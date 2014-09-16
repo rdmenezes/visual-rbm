@@ -251,13 +251,21 @@ namespace OMLT
 
 	float AutoEncoderBackPropagation::GetLastError()
 	{
-		return _error_calculator->CalcError(Target, Output0);
+		return _error_calculator->CalcError(Visible, Output0);
 	}
 	
 	float AutoEncoderBackPropagation::GetError(const OpenGLBuffer2D& in_example)
 	{
-		OpenGLBuffer2D previous = Target;
-		Target = in_example;
+		if(_recompile_required)
+		{
+			free_kernels();
+			build_kernels();
+
+			_recompile_required = false;
+		}
+
+		OpenGLBuffer2D previous_Visible = Visible;
+		Visible = in_example;
 
 		// calc hidden activation
 		CalcHidden->SetInput(0, Visible);
@@ -291,10 +299,10 @@ namespace OMLT
 			std::swap(Output0, Output1);
 		}
 
-		float result = GetLastError();
+		float error = GetLastError();
 
-		Target = previous;
-		return result;
+		Visible = previous_Visible;
+		return error;
 	}
 
 	void AutoEncoderBackPropagation::free_kernels()
