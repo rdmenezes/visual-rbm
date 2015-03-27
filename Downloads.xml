@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?> 
+<Module>
+<ModulePrefs title="hello world example" /> 
+<Content type="html">
+	<![CDATA[
+	<head>
+		<style>
+		table, tbody, tfoot, thead, tr, th, td
+		{
+			font-size: 100%;
+		}
+		td
+		{
+			border: 1px solid #ccc;
+			padding: 5px;
+		}
+		</style>
+		<!-- I'm not sure, but I think this is the right way to get hese css files-->
+		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/core.css">
+		<link type="text/css" rel="stylesheet" href="http://www.gstatic.com/codesite/ph/17134919371905794448/css/ph_detail.css">
+		<base target="_parent" />
+	</head>
+	
+	<body>
+		<h1>Releases</h1>
+		
+		<table class="wikitable" id="releases">
+			<tbody >
+				<tr>
+					<td>
+						<strong>File</strong>
+					</td>
+					<td>
+						<strong>Description</strong>
+					</td>
+					<td>
+						<strong>Version</strong>
+					</td>
+					<td>
+						<strong>History</strong>
+					</td>
+				</tr>
+		</tbody>
+		</table>
+		<br>
+		<h1>Data Sets</h1>
+		
+		<table class="wikitable" id="datasets">
+			<tbody >
+				<tr>
+					<td>
+						<strong>File</strong>
+					</td>
+					<td>
+						<strong>Description</strong>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+		
+		<script type="text/javascript">
+			/// Google Analytics Code 
+			var _gaq = _gaq || [];
+			_gaq.push(['_setAccount', 'UA-34133374-1']);
+			_gaq.push(['_trackPageview']);
+
+			(function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+			})();
+		</script>
+		
+		<script type="text/javascript" language="javascript"> 
+			function AddReleaseEntry(FileName, Description, Version)
+			{
+				table = document.getElementById("releases");
+				tbody = table.children[0];
+				tr = document.createElement("tr");
+				
+				// file link
+				file_td = document.createElement("td");
+				file_td_a = document.createElement("a");
+				file_td_a.setAttribute("href", "http://visual-rbm.googlecode.com/svn/trunk/release/" + FileName);
+				file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Releases', 'Download', '" + FileName + "-" + Version + "']);setTimeout(function(){window.parent.location.href=that.href;},200);return false;");
+				
+				file_td_a.innerHTML = FileName;
+
+				file_td.appendChild(file_td_a);
+				tr.appendChild(file_td);
+				
+				// description
+				desc_td = document.createElement("td");
+				desc_td.innerHTML = Description;
+
+				tr.appendChild(desc_td);
+
+				// version
+				vers_td = document.createElement("td");
+				vers_td.innerHTML = Version;
+				
+				tr.appendChild(vers_td);
+				
+				// History
+				hist_td = document.createElement("td");
+				hist_td_a = document.createElement("a");
+				hist_td_a.setAttribute("href", "http://code.google.com/p/visual-rbm/source/list?path=/trunk/release/" + FileName);
+				hist_td_a.innerHTML = "&hellip;";
+				
+				hist_td.appendChild(hist_td_a);
+				tr.appendChild(hist_td);
+				
+				tbody.appendChild(tr);
+			}
+			
+			function AddDataEntry(FileName, Description)
+			{
+				table = document.getElementById("datasets");
+				tbody = table.children[0];
+				tr = document.createElement("tr");
+
+				// file link
+				file_td = document.createElement("td");
+				file_td_a = document.createElement("a");
+				
+				file_td_a.setAttribute("href", "http://code.google.com/p/visual-rbm/downloads/detail?name=" + FileName + "&can=2&q=");
+				file_td_a.setAttribute("onclick", "var that=this;_gaq.push(['_trackEvent','Datasets', 'Download', '" + FileName + "']);setTimeout(function(){window.parent.location.href=that.href;},200);return false;");
+				
+				file_td_a.innerHTML = FileName;
+				
+				file_td.appendChild(file_td_a);
+				tr.appendChild(file_td);
+				
+				// description
+				desc_td = document.createElement("td");
+				desc_td.innerHTML = Description;
+
+				tr.appendChild(desc_td);
+				
+				tbody.appendChild(tr);
+			}
+			
+			AddReleaseEntry("VisualRBM.zip", "The latest VisualRBM Windows client", "r293");
+			AddReleaseEntry("Tools.zip", "A set of tools for manipulating IDX data files and training RBMs from the command-line", "r293");
+			
+			AddDataEntry("mnist-train-labels.idx", "MNIST Training Labels");
+			AddDataEntry("mnist-test-labels.idx", "MNIST Test Labels");
+			AddDataEntry("mnist-train-images.idx", "MNIST Training Images");
+			AddDataEntry("mnist-test-images.idx", "MNIST Test Images");
+			
+		</script>
+	</body>
+	]]>
+</Content> 
+</Module>
